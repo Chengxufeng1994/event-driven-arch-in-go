@@ -1,0 +1,21 @@
+openapiOptions:
+  file:
+    - file: api/payment/v1/messages.proto
+      option:
+        info:
+          title: Payments API
+          version: "1.0.0"
+        basePath: /
+  method:
+    - method: api.payment.v1.PaymentsService.AuthorizePayment
+      option:
+        operationId: authorizePayment
+        tags:
+          - Payment
+        summary: Authorize a future payment
+    - method: api.payment.v1.PaymentsService.PayInvoice
+      option:
+        operationId: payInvoice
+        tags:
+          - Invoice
+        summary: Pay an invoice

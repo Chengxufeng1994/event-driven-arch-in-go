@@ -1,0 +1,30 @@
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/api
+  disable:
+    - module: buf.build/googleapis/googleapis
+      file_option: go_package_prefix
+plugins:
+  - local: protoc-gen-go
+    out: .
+    opt:
+      - paths=source_relative
+  - local: protoc-gen-go-grpc
+    out: .
+    opt:
+      - paths=source_relative
+  - local: protoc-gen-grpc-gateway
+    out: .
+    opt:
+      - paths=source_relative
+      - grpc_api_configuration=docs/api.annotations.yaml
+  - local: protoc-gen-openapiv2
+    out: docs
+    opt:
+      - grpc_api_configuration=docs/api.annotations.yaml
+      - openapi_configuration=docs/api.openapi.yaml
+      - allow_merge=true
+      - merge_file_name=api

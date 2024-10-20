@@ -1,0 +1,43 @@
+environment: develop
+
+logger:
+  formant: text
+  level: INFO
+  audit_log_level: DEBUG
+  output: "-"
+  file_max_size_mb: 100
+  files_keep: 1024000
+
+sever:
+  mode: debug
+  enable_profiling: false
+  enable_metrics: false
+
+http:
+  host: 0.0.0.0
+  port: 8080
+
+https:
+  host: 0.0.0.0
+  port: 8443
+  tls:
+    enabled: false
+    cert_file:
+    key_file:
+
+grpc:
+  host: 0.0.0.0
+  port: 8081
+
+infrastructure:
+  gorm:
+    debug: true
+    db_type: postgres
+    dsn: "host=localhost user=postgres password=postgres dbname=mallbots port=5432 sslmode=disable TimeZone=Asia/Taipei"
+    max_life_time: 7200
+    max_idle_time: 7200
+    max_open_conns: 150
+    max_idle_conns: 100
+    table_prefix: ""
+    enable_auto_migrate: true
+

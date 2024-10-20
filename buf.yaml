@@ -1,0 +1,11 @@
+version: v2
+modules:
+  - path: basket
+  - path: customer
+  - path: depot
+  - path: notification
+  - path: ordering
+  - path: payment
+  - path: store
+deps:
+  - buf.build/googleapis/googleapis

@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package api.order.v1;
+
+import "api/order/v1/messages.proto";
+
+option go_package = "github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/api/order/v1";
+
+service OrderingService {
+  rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse) {};
+  rpc GetOrder(GetOrderRequest) returns (GetOrderResponse) {};
+  rpc CancelOrder(CancelOrderRequest) returns (CancelOrderResponse) {};
+  rpc ReadyOrder(ReadyOrderRequest) returns (ReadyOrderResponse) {};
+  rpc CompleteOrder(CompleteOrderRequest) returns (CompleteOrderResponse) {};
+}
+
+message CreateOrderRequest {
+  repeated Item items = 1;
+  string customer_id = 2;
+  string payment_id = 3;
+}
+
+message CreateOrderResponse {
+  string id = 1;
+}
+
+message GetOrderRequest {
+  string id = 1;
+}
+
+message GetOrderResponse {
+  Order order = 1;
+}
+
+message CancelOrderRequest {
+  string id = 1;
+}
+
+message CancelOrderResponse {}
+
+message ReadyOrderRequest {
+  string id = 1;
+}
+
+message ReadyOrderResponse {}
+
+message CompleteOrderRequest {
+  string id = 1;
+  string invoice_id = 2;
+}
+
+message CompleteOrderResponse {}

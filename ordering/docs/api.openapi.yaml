@@ -1,0 +1,27 @@
+openapiOptions:
+  file:
+    - file: "api/order/v1/messages.proto"
+      option:
+        info:
+          title: Order Processing
+          version: "1.0.0"
+        basePath: /
+  method:
+    - method: api.order.v1.OrderingService.CreateOrder
+      option:
+        operationId: createOrder
+        tags:
+          - Order
+        summary: Start a new order
+    - method: api.order.v1.OrderingService.GetOrder
+      option:
+        operationId: getOrder
+        tags:
+          - Order
+        summary: Get na order
+    - method: api.order.v1.OrderingService.CancelOrder
+      option:
+        operationId: cancelOrder
+        tags:
+          - Order
+        summary: Cancel an order

@@ -1,0 +1,10 @@
+type: google.api.Service
+config_version: 3
+http:
+  rules:
+    - selector: api.payment.v1.PaymentsService.AuthorizePayment
+      post: /api/v1/payments
+      body: "*"
+    - selector: api.payment.v1.PaymentsService.PayInvoice
+      put: /api/v1/payments/invoices/{id}/pay
+      body: "*"
