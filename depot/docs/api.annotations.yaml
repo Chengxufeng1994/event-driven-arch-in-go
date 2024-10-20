@@ -1,0 +1,16 @@
+type: google.api.Service
+config_version: 3
+http:
+  rules:
+    - selector: api.depot.v1.DepotService.CreateShoppingList
+      post: /api/v1/depots/shopping
+      body: "*"
+    - selector: api.depot.v1.DepotService.CancelShoppingList
+      post: /api/v1/depots/shopping/{id}
+      body: "*"
+    - selector: api.depot.v1.DepotService.AssignShoppingList
+      put: /api/v1/depots/shopping/{id}/assign
+      body: "*"
+    - selector: api.depot.v1.DepotService.CompleteShoppingList
+      put: /api/v1/depots/shopping/{id}/complete
+      body: "*"

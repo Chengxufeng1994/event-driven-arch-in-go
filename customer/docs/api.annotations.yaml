@@ -1,0 +1,15 @@
+type: google.api.Service
+config_version: 3
+http:
+  rules:
+    - selector: api.customer.v1.CustomersService.RegisterCustomer
+      post: /api/v1/customers
+      body: "*"
+    - selector: api.customer.v1.CustomersService.GetCustomer
+      get: /api/v1/customers/{id}
+    - selector: api.customer.v1.CustomersService.EnableCustomer
+      put: /api/v1/customers/{id}/enable
+      body: "*"
+    - selector: api.customer.v1.CustomersService.DisableCustomer
+      put: /api/v1/customers/{id}/disable
+      body: "*"

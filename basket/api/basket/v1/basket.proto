@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package api.basket.v1;
+
+import "api/basket/v1/messages.proto";
+
+option go_package = "github.com/Chengxufeng1994/event-driven-arch-in-go/basket/api/basket/v1";
+
+service BasketService {
+  rpc StartBasket(StartBasketRequest) returns (StartBasketResponse) {};
+  rpc CancelBasket(CancelBasketRequest) returns (CancelBasketResponse) {};
+  rpc CheckoutBasket(CheckoutBasketRequest) returns (CheckoutBasketResponse) {};
+  rpc AddItem(AddItemRequest) returns (AddItemResponse) {};
+  rpc RemoveItem(RemoveItemRequest) returns (RemoveItemResponse) {};
+  rpc GetBasket(GetBasketRequest) returns (GetBasketResponse) {};
+}
+
+message StartBasketRequest {
+  string customer_id = 1;
+}
+
+message StartBasketResponse {
+  string id = 1;
+}
+
+message CancelBasketRequest {
+  string id = 1;
+}
+
+message CancelBasketResponse {}
+
+message CheckoutBasketRequest {
+  string id = 1;
+  string payment_id = 2;
+}
+
+message CheckoutBasketResponse {}
+
+message AddItemRequest {
+  string id = 1;
+  string product_id = 3;
+  int32 quantity = 4;
+}
+
+message AddItemResponse {}
+
+message RemoveItemRequest {
+  string id = 1;
+  string product_id = 3;
+  int32 quantity = 4;
+}
+
+message RemoveItemResponse {}
+
+message GetBasketRequest {
+  string id = 1;
+}
+
+message GetBasketResponse {
+  Basket basket = 1;
+}
