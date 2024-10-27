@@ -20,7 +20,7 @@ func NewGrpcOrderClient(conn *grpc.ClientConn) *GrpcOrderClient {
 	return &GrpcOrderClient{client: orderv1.NewOrderingServiceClient(conn)}
 }
 
-func (c *GrpcOrderClient) Save(ctx context.Context, paymentID, customerID string, basketItems []*entity.Item) (string, error) {
+func (c *GrpcOrderClient) Save(ctx context.Context, paymentID, customerID string, basketItems map[string]*entity.Item) (string, error) { //nolint:funlen]) (string, error) {
 	items := make([]*orderv1.Item, 0, len(basketItems))
 	for _, item := range basketItems {
 		items = append(items, &orderv1.Item{

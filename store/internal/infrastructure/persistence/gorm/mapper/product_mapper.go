@@ -1,7 +1,7 @@
 package mapper
 
 import (
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/es"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/domain/aggregate"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/infrastructure/persistence/gorm/po"
 	"github.com/shopspring/decimal"
@@ -25,7 +25,7 @@ func NewProductMapper() *ProductMapper {
 func (p *ProductMapper) ToPersistent(product *aggregate.Product) *po.Product {
 
 	return &po.Product{
-		ID:          product.ID,
+		ID:          product.ID(),
 		StoreID:     product.StoreID,
 		Name:        product.Name,
 		Description: product.Description,
@@ -37,7 +37,7 @@ func (p *ProductMapper) ToPersistent(product *aggregate.Product) *po.Product {
 func (p *ProductMapper) ToDomain(product *po.Product) *aggregate.Product {
 	price, _ := product.Price.Float64()
 	return &aggregate.Product{
-		AggregateBase: ddd.NewAggregateBase(product.ID),
+		AggregateBase: es.NewAggregateBase(product.ID, aggregate.ProductAggregate),
 		StoreID:       product.StoreID,
 		Name:          product.Name,
 		Description:   product.Description,

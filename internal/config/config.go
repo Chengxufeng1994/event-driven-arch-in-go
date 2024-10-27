@@ -81,6 +81,14 @@ type GORM struct {
 	TablePrefix string `mapstructure:"table_prefix"`
 	// Whether to enable automatic mapping of database table structure
 	EnableAutoMigrate bool `mapstructure:"enable_auto_migrate"`
+	// Whether to ignore ErrRecordNotFound
+	IgnoreErrRecordNotFound bool `mapstructure:"ignore_err_record_not_found"`
+	// Whether to enable parameterized queries
+	ParameterizedQueries bool `mapstructure:"parameterized_queries"`
+	// Whether to enable colorful logs
+	Colorful bool `mapstructure:"colorful"`
+	//  Whether to enable prepare statement
+	PrepareStmt bool `mapstructure:"prepare_stmt"`
 }
 
 const (

@@ -23,6 +23,7 @@ func NewModule() *Module {
 }
 
 func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
+	// setup Driver adapters
 	endpoint := fmt.Sprintf("%s:%d", mono.Config().Server.GPPC.Host, mono.Config().Server.GPPC.Port)
 	db := mono.Database()
 	conn, err := grpc.Dial(ctx, endpoint)
@@ -34,11 +35,13 @@ func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 	paymentRepository := gorm.NewGormPaymentRepository(db)
 	orderClient := grpc.NewGrpcOrderClient(conn)
 
+	// setup application
 	application := logging.NewLogApplicationAccess(
 		application.NewPaymentApplication(invoiceRepository, paymentRepository, orderClient),
 		mono.Logger(),
 	)
 
+	// setup Driver adapters
 	if err := v1.RegisterServer(ctx, application, mono.RPC().GRPCServer()); err != nil {
 		return err
 	}

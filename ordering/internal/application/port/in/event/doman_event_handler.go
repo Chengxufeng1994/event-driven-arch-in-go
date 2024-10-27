@@ -7,8 +7,8 @@ import (
 )
 
 type DomainEventHandlers interface {
-	OnOrderCreated(ctx context.Context, event ddd.DomainEvent) error
-	OnOrderReadied(ctx context.Context, event ddd.DomainEvent) error
-	OnOrderCanceled(ctx context.Context, event ddd.DomainEvent) error
-	OnOrderCompleted(ctx context.Context, event ddd.DomainEvent) error
+	OnOrderCreated(ctx context.Context, event ddd.Event) error
+	OnOrderReadied(ctx context.Context, event ddd.Event) error
+	OnOrderCanceled(ctx context.Context, event ddd.Event) error
+	OnOrderCompleted(ctx context.Context, event ddd.Event) error
 }

@@ -10,13 +10,13 @@ import (
 type GetParticipatingStores struct{}
 
 type GetParticipatingStoresHandler struct {
-	participatingStores repository.ParticipatingStoreRepository
+	mall repository.MallRepository
 }
 
-func NewGetParticipatingStoresHandler(participatingStores repository.ParticipatingStoreRepository) GetParticipatingStoresHandler {
-	return GetParticipatingStoresHandler{participatingStores: participatingStores}
+func NewGetParticipatingStoresHandler(mall repository.MallRepository) GetParticipatingStoresHandler {
+	return GetParticipatingStoresHandler{mall: mall}
 }
 
-func (h GetParticipatingStoresHandler) GetParticipatingStores(ctx context.Context, _ GetParticipatingStores) ([]*aggregate.Store, error) {
-	return h.participatingStores.FindAll(ctx)
+func (h GetParticipatingStoresHandler) GetParticipatingStores(ctx context.Context, _ GetParticipatingStores) ([]*aggregate.MallStore, error) {
+	return h.mall.AllParticipating(ctx)
 }

@@ -28,5 +28,5 @@ func NewGetBasketHandler(baskets repository.BasketRepository) GetBasketHandler {
 }
 
 func (h GetBasketHandler) GetBasket(ctx context.Context, query GetBasket) (*aggregate.Basket, error) {
-	return h.basketRepository.Find(ctx, query.ID)
+	return h.basketRepository.Load(ctx, query.ID)
 }

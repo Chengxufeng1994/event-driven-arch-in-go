@@ -202,6 +202,8 @@ func (app *MonolithApplication) waitForRpc(ctx context.Context) error {
 }
 
 func (app *MonolithApplication) Run() error {
+	app.logger.Info("started mallbots application")
+	defer app.logger.Info("stopped mallbots application")
 	app.printWorkingDir()
 
 	if err := app.PrepareRunModules(); err != nil {

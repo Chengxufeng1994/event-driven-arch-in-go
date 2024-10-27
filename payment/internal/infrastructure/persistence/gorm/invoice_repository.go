@@ -5,7 +5,6 @@ import (
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
-	"gorm.io/hints"
 
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/payment/internal/domain/aggregate"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/payment/internal/domain/repository"
@@ -100,9 +99,6 @@ func (r *GormInvoiceRepository) Find(ctx context.Context, invoiceID string) (*ag
 	var invoice *po.Invoice
 
 	result := r.db.WithContext(ctx).
-		Clauses(
-			hints.UseIndex("invoices_order_id_idx"),
-			clause.Locking{Strength: "UPDATE"}).
 		Model(&po.Invoice{}).
 		Where("id = ?", invoiceID).
 		First(&invoice)

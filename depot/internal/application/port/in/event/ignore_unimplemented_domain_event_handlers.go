@@ -15,21 +15,21 @@ func NewIgnoreUnimplementedDomainEventHandler() IgnoreUnimplementedDomainEventHa
 }
 
 // OnShoppingListAssigned implements DomainEventHandlers.
-func (i *IgnoreUnimplementedDomainEventHandler) OnShoppingListAssigned(ctx context.Context, event ddd.DomainEvent) error {
+func (i *IgnoreUnimplementedDomainEventHandler) OnShoppingListAssigned(ctx context.Context, event ddd.Event) error {
 	return nil
 }
 
 // OnShoppingListCanceled implements DomainEventHandlers.
-func (i *IgnoreUnimplementedDomainEventHandler) OnShoppingListCanceled(ctx context.Context, event ddd.DomainEvent) error {
+func (i *IgnoreUnimplementedDomainEventHandler) OnShoppingListCanceled(ctx context.Context, event ddd.Event) error {
 	return nil
 }
 
 // OnShoppingListCompleted implements DomainEventHandlers.
-func (i *IgnoreUnimplementedDomainEventHandler) OnShoppingListCompleted(ctx context.Context, event ddd.DomainEvent) error {
+func (i *IgnoreUnimplementedDomainEventHandler) OnShoppingListCompleted(ctx context.Context, event ddd.Event) error {
 	return nil
 }
 
 // OnShoppingListCreated implements DomainEventHandlers.
-func (i *IgnoreUnimplementedDomainEventHandler) OnShoppingListCreated(ctx context.Context, event ddd.DomainEvent) error {
+func (i *IgnoreUnimplementedDomainEventHandler) OnShoppingListCreated(ctx context.Context, event ddd.Event) error {
 	return nil
 }

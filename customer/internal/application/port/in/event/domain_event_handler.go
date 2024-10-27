@@ -7,8 +7,8 @@ import (
 )
 
 type DomainEventHandlers interface {
-	OnCustomerRegistered(ctx context.Context, event ddd.DomainEvent) error
-	OnCustomerAuthorized(ctx context.Context, event ddd.DomainEvent) error
-	OnCustomerEnabled(ctx context.Context, event ddd.DomainEvent) error
-	OnCustomerDisabled(ctx context.Context, event ddd.DomainEvent) error
+	OnCustomerRegistered(ctx context.Context, event ddd.Event) error
+	OnCustomerAuthorized(ctx context.Context, event ddd.Event) error
+	OnCustomerEnabled(ctx context.Context, event ddd.Event) error
+	OnCustomerDisabled(ctx context.Context, event ddd.Event) error
 }

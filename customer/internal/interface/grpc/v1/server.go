@@ -58,7 +58,7 @@ func (s server) DisableCustomer(ctx context.Context, request *customerv1.Disable
 
 func (s server) customerFromDomain(customer *aggregate.Customer) *customerv1.Customer {
 	return &customerv1.Customer{
-		Id:        customer.ID,
+		Id:        customer.ID(),
 		Name:      customer.Name,
 		SmsNumber: customer.SmsNumber,
 		Enabled:   customer.Enabled,

@@ -19,8 +19,8 @@ func NewOnShoppingListCompletedHandler(orderClient client.OrderClient) OnShoppin
 	}
 }
 
-func (h *OnShoppingListCompletedHandler) OnShoppingListCompleted(ctx context.Context, event ddd.DomainEvent) error {
-	shoppingListCompleted, ok := event.(*domainevent.ShoppingListCompleted)
+func (h *OnShoppingListCompletedHandler) OnShoppingListCompleted(ctx context.Context, event ddd.Event) error {
+	shoppingListCompleted, ok := event.Payload().(*domainevent.ShoppingListCompleted)
 	if !ok {
 		return fmt.Errorf("unexpected event type: %T", event)
 	}

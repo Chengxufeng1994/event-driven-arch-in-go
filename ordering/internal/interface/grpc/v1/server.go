@@ -94,7 +94,7 @@ func (s *server) itemToDomainItem(item *orderv1.Item) valueobject.Item {
 
 func (s *server) orderFromDomain(orderAgg *aggregate.Order) *orderv1.Order {
 	return &orderv1.Order{
-		Id:         orderAgg.ID,
+		Id:         orderAgg.ID(),
 		CustomerId: orderAgg.CustomerID,
 		PaymentId:  orderAgg.PaymentID,
 		Items:      s.itemsFromDomainItems(orderAgg.Items),

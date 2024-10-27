@@ -20,12 +20,12 @@ func NewDisableCustomer(id string) DisableCustomer {
 
 type DisableCustomerHandler struct {
 	customerRepository   repository.CustomerRepository
-	domainEventPublisher ddd.EventPublisher
+	domainEventPublisher ddd.EventPublisher[ddd.AggregateEvent]
 }
 
 func NewDisableCustomerHandler(
 	customerRepository repository.CustomerRepository,
-	domainEventPublisher ddd.EventPublisher,
+	domainEventPublisher ddd.EventPublisher[ddd.AggregateEvent],
 ) DisableCustomerHandler {
 	return DisableCustomerHandler{
 		customerRepository:   customerRepository,
@@ -48,7 +48,7 @@ func (h DisableCustomerHandler) DisableCustomer(ctx context.Context, disable Dis
 		return err
 	}
 
-	if err := h.domainEventPublisher.Publish(ctx, customer.GetEvents()...); err != nil {
+	if err := h.domainEventPublisher.Publish(ctx, customer.Events()...); err != nil {
 		return errors.Wrap(err, "could not publish events")
 	}
 

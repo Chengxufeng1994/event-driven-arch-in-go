@@ -22,14 +22,14 @@ type CreateShoppingListHandler struct {
 	shoppingRepository   repository.ShoppingListRepository
 	storeClient          client.StoreClient
 	productClient        client.ProductClient
-	domainEventPublisher ddd.EventPublisher
+	domainEventPublisher ddd.EventPublisher[ddd.AggregateEvent]
 }
 
 func NewCreateShoppingListHandler(
 	shoppingRepository repository.ShoppingListRepository,
 	storeClient client.StoreClient,
 	productClient client.ProductClient,
-	domainEventPublisher ddd.EventPublisher,
+	domainEventPublisher ddd.EventPublisher[ddd.AggregateEvent],
 ) CreateShoppingListHandler {
 	return CreateShoppingListHandler{
 		shoppingRepository:   shoppingRepository,
@@ -63,5 +63,5 @@ func (h CreateShoppingListHandler) CreateShoppingList(ctx context.Context, cmd C
 	}
 
 	// publish domain events
-	return h.domainEventPublisher.Publish(ctx, shoppingList.GetEvents()...)
+	return h.domainEventPublisher.Publish(ctx, shoppingList.Events()...)
 }

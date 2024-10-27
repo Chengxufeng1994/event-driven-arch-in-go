@@ -5,7 +5,6 @@ import (
 
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/aggregate"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/repository"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/stackus/errors"
 )
 
@@ -22,14 +21,12 @@ func NewStartBasket(id, customerID string) StartBasket {
 }
 
 type StartBasketHandler struct {
-	basketRepository     repository.BasketRepository
-	domainEventPublisher ddd.EventPublisher
+	basketRepository repository.BasketRepository
 }
 
-func NewStartBasketHandler(basketRepository repository.BasketRepository, domainEventPublisher ddd.EventPublisher) StartBasketHandler {
+func NewStartBasketHandler(basketRepository repository.BasketRepository) StartBasketHandler {
 	return StartBasketHandler{
-		basketRepository:     basketRepository,
-		domainEventPublisher: domainEventPublisher,
+		basketRepository: basketRepository,
 	}
 }
 
@@ -45,6 +42,5 @@ func (h StartBasketHandler) StartBasket(ctx context.Context, cmd StartBasket) er
 		return errors.Wrap(err, "start basket command")
 	}
 
-	// publish domain events
-	return h.domainEventPublisher.Publish(ctx, basket.GetEvents()...)
+	return nil
 }

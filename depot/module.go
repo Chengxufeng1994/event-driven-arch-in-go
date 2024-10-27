@@ -20,24 +20,22 @@ type Module struct{}
 
 var _ monolith.Module = (*Module)(nil)
 
-func NewModule() *Module {
-	return &Module{}
-}
+func NewModule() *Module { return &Module{} }
 
 func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
+	// setup Driver adapters
 	endpoint := fmt.Sprintf("%s:%d", mono.Config().Server.GPPC.Host, mono.Config().Server.GPPC.Port)
-
-	shoppingListRepository := gorm.NewGormShoppingListRepository(mono.Database())
 	conn, err := infragrpc.Dial(ctx, endpoint)
 	if err != nil {
 		return err
 	}
-
-	domainEventDispatcher := ddd.NewEventDispatcher()
+	domainEventDispatcher := ddd.NewEventDispatcher[ddd.AggregateEvent]()
+	shoppingListRepository := gorm.NewGormShoppingListRepository(mono.Database())
 	grpcOrderClient := infragrpc.NewGrpcOrderClient(conn)
 	grpcStoreClient := infragrpc.NewGrpcStoreClient(conn)
 	grpcProductClient := infragrpc.NewGrpcProductClient(conn)
 
+	// setup application
 	logApplication := logging.NewLogApplicationAccess(
 		application.NewShoppingListApplication(
 			shoppingListRepository,
@@ -48,13 +46,12 @@ func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 		),
 		mono.Logger(),
 	)
-
-	logDomainEventHandler := logging.NewLogDomainEventHandlerAccess(
+	logDomainEventHandler := logging.NewLogDomainEventHandlerAccess[ddd.AggregateEvent](
 		application.NewShoppingListDomainEventHandler(grpcOrderClient),
+		"Order",
 		mono.Logger())
 
-	handler.RegisterDomainEventHandlers(ctx, logDomainEventHandler, domainEventDispatcher)
-
+	// setup Driver adapters
 	if err := grpcv1.RegisterServer(ctx, logApplication, mono.RPC().GRPCServer()); err != nil {
 		return err
 	}
@@ -63,7 +60,13 @@ func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 		return err
 	}
 
-	return docs.RegisterSwagger(mono.Gin())
+	if err := docs.RegisterSwagger(mono.Gin()); err != nil {
+		return err
+	}
+
+	handler.RegisterOrderDomainEventHandlers(logDomainEventHandler, domainEventDispatcher)
+
+	return nil
 }
 
 func (m *Module) Name() string {

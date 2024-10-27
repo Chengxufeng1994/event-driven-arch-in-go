@@ -3,7 +3,7 @@ package mapper
 import (
 	"encoding/json"
 
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/es"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/domain/aggregate"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/domain/valueobject"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/infrastructure/persistence/gorm/po"
@@ -30,7 +30,7 @@ func (m *OrderMapper) ToPersistence(order *aggregate.Order) (*po.Order, error) {
 	}
 
 	return &po.Order{
-		ID:         order.ID,
+		ID:         order.ID(),
 		CustomerID: order.CustomerID,
 		PaymentID:  order.PaymentID,
 		InvoiceID:  order.InvoiceID,
@@ -47,7 +47,7 @@ func (m *OrderMapper) ToDomain(order *po.Order) (*aggregate.Order, error) {
 	}
 
 	return &aggregate.Order{
-		AggregateBase: ddd.NewAggregateBase(order.ID),
+		AggregateBase: es.NewAggregateBase(order.ID, aggregate.OrderAggregate),
 		CustomerID:    order.CustomerID,
 		PaymentID:     order.PaymentID,
 		InvoiceID:     order.InvoiceID,

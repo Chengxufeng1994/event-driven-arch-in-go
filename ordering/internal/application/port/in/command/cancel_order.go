@@ -3,7 +3,6 @@ package command
 import (
 	"context"
 
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/application/port/out/client"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/domain/repository"
 	"github.com/stackus/errors"
@@ -14,25 +13,22 @@ type CancelOrder struct {
 }
 
 type CancelOrderHandler struct {
-	orderRepository      repository.OrderRepository
-	shopping             client.ShoppingClient
-	domainEventPublisher ddd.EventPublisher
+	orderRepository repository.OrderRepository
+	shopping        client.ShoppingClient
 }
 
 func NewCancelOrderHandler(
 	orderRepository repository.OrderRepository,
 	shopping client.ShoppingClient,
-	domainEventPublisher ddd.EventPublisher,
 ) CancelOrderHandler {
 	return CancelOrderHandler{
-		orderRepository:      orderRepository,
-		shopping:             shopping,
-		domainEventPublisher: domainEventPublisher,
+		orderRepository: orderRepository,
+		shopping:        shopping,
 	}
 }
 
 func (h CancelOrderHandler) CancelOrder(ctx context.Context, cmd CancelOrder) error {
-	orderAgg, err := h.orderRepository.Find(ctx, cmd.ID)
+	orderAgg, err := h.orderRepository.Load(ctx, cmd.ID)
 	if err != nil {
 		return errors.Wrap(err, "cancel order command")
 	}
@@ -45,13 +41,8 @@ func (h CancelOrderHandler) CancelOrder(ctx context.Context, cmd CancelOrder) er
 		return errors.Wrap(err, "order shopping cancel")
 	}
 
-	if err = h.orderRepository.Update(ctx, orderAgg); err != nil {
-		return errors.Wrap(err, "order update")
-	}
-
-	// publish domain events
-	if err := h.domainEventPublisher.Publish(ctx, orderAgg.GetEvents()...); err != nil {
-		return errors.Wrap(err, "publish domain events")
+	if err = h.orderRepository.Save(ctx, orderAgg); err != nil {
+		return errors.Wrap(err, "saving order")
 	}
 
 	return nil

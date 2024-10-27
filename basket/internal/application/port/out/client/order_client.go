@@ -7,5 +7,5 @@ import (
 )
 
 type OrderClient interface {
-	Save(ctx context.Context, paymentID, customerID string, basketItems []*entity.Item) (string, error)
+	Save(ctx context.Context, paymentID, customerID string, basketItems map[string]*entity.Item) (string, error)
 }

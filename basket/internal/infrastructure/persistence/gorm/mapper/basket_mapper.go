@@ -8,7 +8,7 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/entity"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/valueobject"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/infrastructure/persistence/gorm/po"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/es"
 	"github.com/stackus/errors"
 )
 
@@ -33,7 +33,7 @@ func (b *BasketMapper) ToPersistent(basket *aggregate.Basket) (*po.Basket, error
 	}
 
 	return &po.Basket{
-		ID:         basket.ID,
+		ID:         basket.ID(),
 		CustomerID: basket.CustomerID,
 		PaymentID:  basket.PaymentID,
 		Items:      byt,
@@ -42,7 +42,7 @@ func (b *BasketMapper) ToPersistent(basket *aggregate.Basket) (*po.Basket, error
 }
 
 func (b *BasketMapper) ToDomain(basket *po.Basket) (*aggregate.Basket, error) {
-	var items []*entity.Item
+	var items map[string]*entity.Item
 	err := json.Unmarshal(basket.Items, &items)
 	if err != nil {
 		return nil, errors.ErrInternalServerError.Err(err)
@@ -54,7 +54,7 @@ func (b *BasketMapper) ToDomain(basket *po.Basket) (*aggregate.Basket, error) {
 	}
 
 	return &aggregate.Basket{
-		AggregateBase: ddd.NewAggregateBase(basket.ID),
+		AggregateBase: es.NewAggregateBase(basket.ID, aggregate.BasketAggregate),
 		CustomerID:    basket.CustomerID,
 		PaymentID:     basket.PaymentID,
 		Items:         items,
@@ -78,12 +78,12 @@ func (b *BasketMapper) ToDomainList(baskets []*po.Basket) ([]*aggregate.Basket, 
 
 func (b *BasketMapper) statusToDomain(status string) (valueobject.BasketStatus, error) {
 	switch status {
-	case valueobject.BasketOpen.String():
-		return valueobject.BasketOpen, nil
-	case valueobject.BasketCancelled.String():
-		return valueobject.BasketCancelled, nil
-	case valueobject.BasketCheckedOut.String():
-		return valueobject.BasketCheckedOut, nil
+	case valueobject.BasketIsOpen.String():
+		return valueobject.BasketIsOpen, nil
+	case valueobject.BasketIsCancelled.String():
+		return valueobject.BasketIsCancelled, nil
+	case valueobject.BasketIsCheckedOut.String():
+		return valueobject.BasketIsCheckedOut, nil
 	default:
 		return valueobject.BasketUnknown, fmt.Errorf("unknown basket status: %s", status)
 	}

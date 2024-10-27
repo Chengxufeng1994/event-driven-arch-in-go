@@ -1,19 +1,38 @@
 package ddd
 
+type IDer interface {
+	ID() string
+}
+
+type EntityNamer interface {
+	EntityName() string
+}
+
 type Entity interface {
-	GetID() string
+	IDer
+	IDSetter
+	EntityNamer
+	NameSetter
 }
 
 type EntityBase struct {
-	ID string
+	id   string
+	name string
 }
 
 var _ Entity = (*EntityBase)(nil)
 
-func NewEntityBase(id string) EntityBase {
-	return EntityBase{ID: id}
+func NewEntityBase(id, name string) EntityBase {
+	return EntityBase{
+		id:   id,
+		name: name,
+	}
 }
 
-func (e EntityBase) GetID() string {
-	return e.ID
-}
+func (e *EntityBase) ID() string         { return e.id }
+func (e *EntityBase) EntityName() string { return e.name }
+
+func (e *EntityBase) setID(id string)     { e.id = id }
+func (e *EntityBase) setName(name string) { e.name = name }
+
+func (e *EntityBase) Equals(other IDer) bool { return e.id == other.ID() }

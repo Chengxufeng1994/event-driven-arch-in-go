@@ -3,7 +3,6 @@ package command
 import (
 	"context"
 
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/domain/repository"
 	"github.com/stackus/errors"
 )
@@ -13,22 +12,19 @@ type RemoveProduct struct {
 }
 
 type RemoveProductHandler struct {
-	productRepository    repository.ProductRepository
-	domainEventPublisher ddd.EventPublisher
+	productRepository repository.ProductRepository
 }
 
 func NewRemoveProductHandler(
 	productRepository repository.ProductRepository,
-	domainEventPublisher ddd.EventPublisher,
 ) RemoveProductHandler {
 	return RemoveProductHandler{
-		productRepository:    productRepository,
-		domainEventPublisher: domainEventPublisher,
+		productRepository: productRepository,
 	}
 }
 
 func (h RemoveProductHandler) RemoveProduct(ctx context.Context, cmd RemoveProduct) error {
-	product, err := h.productRepository.Find(ctx, cmd.ID)
+	product, err := h.productRepository.Load(ctx, cmd.ID)
 	if err != nil {
 		return errors.Wrap(err, "remove product command")
 	}
@@ -37,9 +33,9 @@ func (h RemoveProductHandler) RemoveProduct(ctx context.Context, cmd RemoveProdu
 		return errors.Wrap(err, "remove product command")
 	}
 
-	if err := h.productRepository.Delete(ctx, cmd.ID); err != nil {
-		return errors.Wrap(err, "remove product command")
+	if err := h.productRepository.Save(ctx, product); err != nil {
+		return errors.Wrap(err, "saving product")
 	}
 
-	return h.domainEventPublisher.Publish(ctx, product.GetEvents()...)
+	return nil
 }

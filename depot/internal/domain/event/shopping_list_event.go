@@ -1,5 +1,7 @@
 package event
 
+import "github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/domain/entity"
+
 const (
 	ShoppingListCreatedEvent   = "depot.ShoppingListCreated"
 	ShoppingListCanceledEvent  = "depot.ShoppingListCanceled"
@@ -7,42 +9,58 @@ const (
 	ShoppingListCompletedEvent = "depot.ShoppingListCompleted"
 )
 
-type ShoppingListCreated struct{}
-
-func NewShoppingListCreated() *ShoppingListCreated {
-	return &ShoppingListCreated{}
+type ShoppingListCreated struct {
+	ShoppingListID string
+	OrderID        string
+	Stops          entity.Stops
 }
 
-func (ShoppingListCreated) EventName() string { return ShoppingListCreatedEvent }
-
-type ShoppingListCanceled struct{}
-
-func NewShoppingListCanceled() *ShoppingListCanceled {
-	return &ShoppingListCanceled{}
+func NewShoppingListCreated(shoppingListID, orderID string, stops entity.Stops) *ShoppingListCreated {
+	return &ShoppingListCreated{
+		ShoppingListID: shoppingListID,
+		OrderID:        orderID,
+		Stops:          stops,
+	}
 }
 
-func (ShoppingListCanceled) EventName() string { return ShoppingListCanceledEvent }
+func (ShoppingListCreated) Key() string { return ShoppingListCreatedEvent }
+
+type ShoppingListCanceled struct {
+	ShoppingListID string
+}
+
+func NewShoppingListCanceled(shoppingListID string) *ShoppingListCanceled {
+	return &ShoppingListCanceled{
+		ShoppingListID: shoppingListID,
+	}
+}
+
+func (ShoppingListCanceled) Key() string { return ShoppingListCanceledEvent }
 
 type ShoppingListAssigned struct {
-	BotID string
+	ShoppingListID string
+	BotID          string
 }
 
-func NewShoppingListAssigned(botID string) *ShoppingListAssigned {
+func NewShoppingListAssigned(shoppingListID, botID string) *ShoppingListAssigned {
 	return &ShoppingListAssigned{
-		BotID: botID,
+		ShoppingListID: shoppingListID,
+		BotID:          botID,
 	}
 }
 
-func (ShoppingListAssigned) EventName() string { return ShoppingListAssignedEvent }
+func (ShoppingListAssigned) Key() string { return ShoppingListAssignedEvent }
 
 type ShoppingListCompleted struct {
-	OrderID string
+	ShoppingListID string
+	OrderID        string
 }
 
-func NewShoppingListCompleted(orderID string) *ShoppingListCompleted {
+func NewShoppingListCompleted(shoppingListID, orderID string) *ShoppingListCompleted {
 	return &ShoppingListCompleted{
-		OrderID: orderID,
+		ShoppingListID: shoppingListID,
+		OrderID:        orderID,
 	}
 }
 
-func (ShoppingListCompleted) EventName() string { return ShoppingListCompletedEvent }
+func (ShoppingListCompleted) Key() string { return ShoppingListCompletedEvent }

@@ -12,13 +12,13 @@ type GetCatalog struct {
 }
 
 type GetCatalogHandler struct {
-	products repository.ProductRepository
+	catalog repository.CatalogRepository
 }
 
-func NewGetCatalogHandler(products repository.ProductRepository) GetCatalogHandler {
-	return GetCatalogHandler{products: products}
+func NewGetCatalogHandler(catalog repository.CatalogRepository) GetCatalogHandler {
+	return GetCatalogHandler{catalog: catalog}
 }
 
-func (h GetCatalogHandler) GetCatalog(ctx context.Context, query GetCatalog) ([]*aggregate.Product, error) {
-	return h.products.FindCatalog(ctx, query.StoreID)
+func (h GetCatalogHandler) GetCatalog(ctx context.Context, query GetCatalog) ([]*aggregate.CatalogProduct, error) {
+	return h.catalog.GetCatalog(ctx, query.StoreID)
 }

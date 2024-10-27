@@ -20,12 +20,12 @@ func NewAuthorizeCustomer(id string) AuthorizeCustomer {
 
 type AuthorizeCustomerHandler struct {
 	customerRepository   repository.CustomerRepository
-	domainEventPublisher ddd.EventPublisher
+	domainEventPublisher ddd.EventPublisher[ddd.AggregateEvent]
 }
 
 func NewAuthorizeCustomerHandler(
 	customerRepository repository.CustomerRepository,
-	domainEventPublisher ddd.EventPublisher,
+	domainEventPublisher ddd.EventPublisher[ddd.AggregateEvent],
 ) AuthorizeCustomerHandler {
 	return AuthorizeCustomerHandler{
 		customerRepository:   customerRepository,
@@ -43,7 +43,7 @@ func (h AuthorizeCustomerHandler) AuthorizeCustomer(ctx context.Context, authori
 		return errors.Wrap(errors.ErrUnauthorized, "customer is not authorized")
 	}
 
-	if err := h.domainEventPublisher.Publish(ctx, customer.GetEvents()...); err != nil {
+	if err := h.domainEventPublisher.Publish(ctx, customer.Events()...); err != nil {
 		return errors.Wrap(err, "could not publish events")
 	}
 

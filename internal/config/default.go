@@ -40,4 +40,9 @@ func setDefaults() {
 	viper.SetDefault("infrastructure.gorm.max_idle_conns", 50)
 	viper.SetDefault("infrastructure.gorm.table_prefix", "")
 	viper.SetDefault("infrastructure.gorm.enable_auto_migrate", false)
+	viper.SetDefault("infrastructure.gorm.ignore_err_record_not_found", true)
+	viper.SetDefault("infrastructure.gorm.parameterized_queries", true)
+	viper.SetDefault("infrastructure.gorm.colorful", true)
+	viper.SetDefault("infrastructure.gorm.prepare_stmt", true)
+	viper.SetDefault("infrastructure.gorm.dry_run", true)
 }

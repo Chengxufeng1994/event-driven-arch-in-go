@@ -5,7 +5,6 @@ import (
 
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/application/port/out/client"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/repository"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/stackus/errors"
 )
 
@@ -24,16 +23,14 @@ func NewRemoveItem(id, productID string, quantity int) RemoveItem {
 }
 
 type RemoveItemHandler struct {
-	basketRepository     repository.BasketRepository
-	productClient        client.ProductClient
-	domainEventPublisher ddd.EventPublisher
+	basketRepository repository.BasketRepository
+	productClient    client.ProductClient
 }
 
-func NewRemoveItemHandler(basketRepository repository.BasketRepository, productClient client.ProductClient, domainEventPublisher ddd.EventPublisher) RemoveItemHandler {
+func NewRemoveItemHandler(basketRepository repository.BasketRepository, productClient client.ProductClient) RemoveItemHandler {
 	return RemoveItemHandler{
-		basketRepository:     basketRepository,
-		productClient:        productClient,
-		domainEventPublisher: domainEventPublisher,
+		basketRepository: basketRepository,
+		productClient:    productClient,
 	}
 }
 
@@ -43,7 +40,7 @@ func (h RemoveItemHandler) RemoveItem(ctx context.Context, cmd RemoveItem) error
 		return errors.Wrap(err, "fetching product")
 	}
 
-	basket, err := h.basketRepository.Find(ctx, cmd.ID)
+	basket, err := h.basketRepository.Load(ctx, cmd.ID)
 	if err != nil {
 		return errors.Wrap(err, "finding basket")
 	}
@@ -53,9 +50,9 @@ func (h RemoveItemHandler) RemoveItem(ctx context.Context, cmd RemoveItem) error
 		return errors.Wrap(err, "remove item command")
 	}
 
-	if err := h.basketRepository.Update(ctx, basket); err != nil {
-		return errors.Wrap(err, "update basket")
+	if err := h.basketRepository.Save(ctx, basket); err != nil {
+		return errors.Wrap(err, "save basket")
 	}
 
-	return h.domainEventPublisher.Publish(ctx, basket.GetEvents()...)
+	return nil
 }

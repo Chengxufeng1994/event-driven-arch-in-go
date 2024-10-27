@@ -21,7 +21,7 @@ func NewCompleteOrderHandler(orderRepository repository.OrderRepository) Complet
 }
 
 func (h CompleteOrderHandler) CompleteOrder(ctx context.Context, cmd CompleteOrder) error {
-	orderAgg, err := h.orderRepository.Find(ctx, cmd.ID)
+	orderAgg, err := h.orderRepository.Load(ctx, cmd.ID)
 	if err != nil {
 		return errors.Wrap(err, "complete order command")
 	}
@@ -30,5 +30,5 @@ func (h CompleteOrderHandler) CompleteOrder(ctx context.Context, cmd CompleteOrd
 		return errors.Wrap(err, "complete order command")
 	}
 
-	return errors.Wrap(h.orderRepository.Update(ctx, orderAgg), "complete order command")
+	return errors.Wrap(h.orderRepository.Save(ctx, orderAgg), "complete order command")
 }

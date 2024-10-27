@@ -36,7 +36,7 @@ var _ usecase.CustomerUsecase = (*CustomerApplication)(nil)
 
 func NewCustomerApplication(
 	customerRepository repository.CustomerRepository,
-	domainEventDispatcher ddd.EventDispatcherIntf,
+	domainEventDispatcher ddd.EventDispatcher[ddd.AggregateEvent],
 ) *CustomerApplication {
 	return &CustomerApplication{
 		appCommands: appCommands{

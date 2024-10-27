@@ -5,59 +5,64 @@ import (
 	"sync"
 )
 
-type EventSubscriber interface {
-	Subscribe(event DomainEvent, eventHandler EventHandler)
-}
+type (
+	EventHandler[T Event] interface {
+		HandleEvent(ctx context.Context, event T) error
+	}
 
-type EventPublisher interface {
-	Publish(ctx context.Context, events ...DomainEvent) error
-}
+	EventHandlerFunc[T Event] func(ctx context.Context, event T) error
 
-type EventDispatcherIntf interface {
-	EventSubscriber
-	EventPublisher
-}
+	EventSubscriber[T Event] interface {
+		Subscribe(event string, eventHandler EventHandler[T])
+	}
 
-// another way
-// var _ interface {
-// 	EventSubscriber
-// 	EventPublisher
-// } = (*EventDispatcher)(nil)
+	EventPublisher[T Event] interface {
+		Publish(ctx context.Context, events ...T) error
+	}
+	EventDispatcher[T Event] interface {
+		EventSubscriber[T]
+		EventPublisher[T]
+	}
+)
 
-type EventDispatcher struct {
-	handlers map[string][]EventHandler
+type EventDispatcherBase[T Event] struct {
+	handlers map[string][]EventHandler[T]
 	mu       sync.Mutex
 }
 
-var _ EventDispatcherIntf = (*EventDispatcher)(nil)
+var _ EventDispatcher[Event] = (*EventDispatcherBase[Event])(nil)
 
-func NewEventDispatcher() *EventDispatcher {
-	return &EventDispatcher{
-		handlers: make(map[string][]EventHandler),
+func NewEventDispatcher[T Event]() *EventDispatcherBase[T] {
+	return &EventDispatcherBase[T]{
+		handlers: make(map[string][]EventHandler[T]),
 		mu:       sync.Mutex{},
 	}
 }
 
 // Subscribe implements EventDispatcherIntf.
-func (e *EventDispatcher) Subscribe(event DomainEvent, eventHandler EventHandler) {
+func (e *EventDispatcherBase[T]) Subscribe(name string, eventHandler EventHandler[T]) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	if _, ok := e.handlers[event.EventName()]; !ok {
-		e.handlers[event.EventName()] = make([]EventHandler, 0)
+	if _, ok := e.handlers[name]; !ok {
+		e.handlers[name] = make([]EventHandler[T], 0)
 	}
 
-	e.handlers[event.EventName()] = append(e.handlers[event.EventName()], eventHandler)
+	e.handlers[name] = append(e.handlers[name], eventHandler)
 }
 
 // Publish implements EventDispatcherIntf.
-func (e *EventDispatcher) Publish(ctx context.Context, events ...DomainEvent) error {
+func (e *EventDispatcherBase[T]) Publish(ctx context.Context, events ...T) error {
 	for _, event := range events {
 		for _, handler := range e.handlers[event.EventName()] {
-			err := handler(ctx, event)
+			err := handler.HandleEvent(ctx, event)
 			if err != nil {
 				return err
 			}
 		}
 	}
 	return nil
+}
+
+func (f EventHandlerFunc[T]) HandleEvent(ctx context.Context, event T) error {
+	return f(ctx, event)
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/domain/aggregate"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/domain/repository"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/infrastructure/persistence/gorm/mapper"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/infrastructure/persistence/gorm/po"
 	"github.com/stackus/errors"
@@ -12,12 +11,11 @@ import (
 	"gorm.io/gorm/clause"
 )
 
+// deprecated: use event sourcing
 type GormOrderRepository struct {
 	db     *gorm.DB
 	mapper mapper.OrderMapperIntf
 }
-
-var _ repository.OrderRepository = (*GormOrderRepository)(nil)
 
 func NewGormOrderRepository(db *gorm.DB) *GormOrderRepository {
 	return &GormOrderRepository{

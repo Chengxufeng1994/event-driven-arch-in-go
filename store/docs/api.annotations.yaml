@@ -5,23 +5,36 @@ http:
     - selector: api.store.v1.StoresService.CreateStore
       post: /api/v1/stores
       body: "*"
-    - selector: api.store.v1.StoresService.GetStores
-      get: /api/v1/stores
-    - selector: api.store.v1.StoresService.GetStore
-      get: /api/v1/stores/{id}
     - selector: api.store.v1.StoresService.EnableParticipation
       put: /api/v1/stores/{id}/participating
       body: "*"
     - selector: api.store.v1.StoresService.DisableParticipation
       delete: /api/v1/stores/{id}/participating
+    - selector: api.store.v1.StoresService.RebrandStore
+      put: /api/v1/stores/{id}/rebrand
+      body: "*"
+    - selector: api.store.v1.StoresService.GetStores
+      get: /api/v1/stores
+    - selector: api.store.v1.StoresService.GetStore
+      get: /api/v1/stores/{id}
     - selector: api.store.v1.StoresService.GetParticipatingStores
       get: /api/v1/stores/participating
+
     - selector: api.store.v1.StoresService.AddProduct
       post: /api/v1/stores/{store_id}/products
       body: "*"
-    - selector: api.store.v1.StoresService.GetProduct
-      get: /api/v1/stores/products/{id}
+    - selector: api.store.v1.StoresService.RebrandProduct
+      put: /api/v1/stores/products/{id}/rebrand
+      body: "*"
+    - selector: api.store.v1.StoresService.IncreaseProductPrice
+      put: /api/v1/stores/products/{id}/increasePrice
+      body: "*"
+    - selector: api.store.v1.StoresService.DecreaseProductPrice
+      put: /api/v1/stores/products/{id}/decreasePrice
+      body: "*"
     - selector: api.store.v1.StoresService.RemoveProduct
       delete: /api/v1/stores/products/{id}
+    - selector: api.store.v1.StoresService.GetProduct
+      get: /api/v1/stores/products/{id}
     - selector: api.store.v1.StoresService.GetCatalog
       get: /api/v1/stores/{store_id}/products

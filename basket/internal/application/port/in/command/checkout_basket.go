@@ -5,7 +5,6 @@ import (
 
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/application/port/out/client"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/repository"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/stackus/errors"
 )
 
@@ -22,21 +21,19 @@ func NewCheckoutBasket(id, paymentID string) CheckoutBasket {
 }
 
 type CheckoutBasketHandler struct {
-	basketRepository     repository.BasketRepository
-	orderClient          client.OrderClient
-	domainEventPublisher ddd.EventPublisher
+	basketRepository repository.BasketRepository
+	orderClient      client.OrderClient
 }
 
-func NewCheckoutBasketHandler(basketRepository repository.BasketRepository, orderClient client.OrderClient, domainEventPublisher ddd.EventPublisher) CheckoutBasketHandler {
+func NewCheckoutBasketHandler(basketRepository repository.BasketRepository, orderClient client.OrderClient) CheckoutBasketHandler {
 	return CheckoutBasketHandler{
-		basketRepository:     basketRepository,
-		orderClient:          orderClient,
-		domainEventPublisher: domainEventPublisher,
+		basketRepository: basketRepository,
+		orderClient:      orderClient,
 	}
 }
 
 func (h CheckoutBasketHandler) CheckoutBasket(ctx context.Context, cmd CheckoutBasket) error {
-	basket, err := h.basketRepository.Find(ctx, cmd.ID)
+	basket, err := h.basketRepository.Load(ctx, cmd.ID)
 	if err != nil {
 		return err
 	}
@@ -45,11 +42,10 @@ func (h CheckoutBasketHandler) CheckoutBasket(ctx context.Context, cmd CheckoutB
 		return errors.Wrap(err, "checkout basket")
 	}
 
-	// update the basket
-	if err := h.basketRepository.Update(ctx, basket); err != nil {
-		return errors.Wrap(err, "updating basket")
+	// save the basket
+	if err := h.basketRepository.Save(ctx, basket); err != nil {
+		return errors.Wrap(err, "saving basket")
 	}
 
-	// publish domain events
-	return h.domainEventPublisher.Publish(ctx, basket.GetEvents()...)
+	return nil
 }

@@ -7,7 +7,6 @@ import (
 )
 
 type OrderRepository interface {
-	Find(ctx context.Context, orderID string) (*aggregate.Order, error)
+	Load(ctx context.Context, orderID string) (*aggregate.Order, error)
 	Save(ctx context.Context, order *aggregate.Order) error
-	Update(ctx context.Context, order *aggregate.Order) error
 }

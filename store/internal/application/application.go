@@ -1,7 +1,6 @@
 package application
 
 import (
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/application/port/in/command"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/application/port/in/query"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/application/usecase"
@@ -16,10 +15,14 @@ type (
 
 	appCommands struct {
 		command.CreateStoreHandler
+		command.RebrandStoreHandler
 		command.EnableParticipationHandler
 		command.DisableParticipationHandler
 		command.AddProductHandler
 		command.RemoveProductHandler
+		command.RebrandProductHandler
+		command.IncreaseProductPriceHandler
+		command.DecreaseProductPriceHandler
 	}
 
 	appQueries struct {
@@ -35,24 +38,28 @@ var _ usecase.StoreUseCase = (*StoreApplication)(nil)
 
 func NewStoreApplication(
 	storeRepository repository.StoreRepository,
-	participatingStoreRepository repository.ParticipatingStoreRepository,
 	productRepository repository.ProductRepository,
-	domainEventDispatcher ddd.EventDispatcherIntf,
+	mallRepository repository.MallRepository,
+	catalogRepository repository.CatalogRepository,
 ) *StoreApplication {
 	return &StoreApplication{
 		appCommands: appCommands{
-			CreateStoreHandler:          command.NewCreateStoreHandler(storeRepository, domainEventDispatcher),
-			EnableParticipationHandler:  command.NewEnableParticipationHandler(storeRepository, domainEventDispatcher),
-			DisableParticipationHandler: command.NewDisableParticipationHandler(storeRepository, domainEventDispatcher),
-			AddProductHandler:           command.NewAddProductHandler(storeRepository, productRepository, domainEventDispatcher),
-			RemoveProductHandler:        command.NewRemoveProductHandler(productRepository, domainEventDispatcher),
+			CreateStoreHandler:          command.NewCreateStoreHandler(storeRepository),
+			RebrandStoreHandler:         command.NewRebrandStoreHandler(storeRepository),
+			EnableParticipationHandler:  command.NewEnableParticipationHandler(storeRepository),
+			DisableParticipationHandler: command.NewDisableParticipationHandler(storeRepository),
+			AddProductHandler:           command.NewAddProductHandler(storeRepository, productRepository),
+			RemoveProductHandler:        command.NewRemoveProductHandler(productRepository),
+			RebrandProductHandler:       command.NewRebrandProductHandler(productRepository),
+			IncreaseProductPriceHandler: command.NewIncreaseProductPriceHandler(productRepository),
+			DecreaseProductPriceHandler: command.NewDecreaseProductPriceHandler(productRepository),
 		},
 		appQueries: appQueries{
-			GetStoreHandler:               query.NewGetStoreHandler(storeRepository),
-			GetStoresHandler:              query.NewGetStoresHandler(storeRepository),
-			GetParticipatingStoresHandler: query.NewGetParticipatingStoresHandler(participatingStoreRepository),
-			GetCatalogHandler:             query.NewGetCatalogHandler(productRepository),
-			GetProductHandler:             query.NewGetProductHandler(productRepository),
+			GetStoreHandler:               query.NewGetStoreHandler(mallRepository),
+			GetStoresHandler:              query.NewGetStoresHandler(mallRepository),
+			GetParticipatingStoresHandler: query.NewGetParticipatingStoresHandler(mallRepository),
+			GetCatalogHandler:             query.NewGetCatalogHandler(catalogRepository),
+			GetProductHandler:             query.NewGetProductHandler(catalogRepository),
 		},
 	}
 }

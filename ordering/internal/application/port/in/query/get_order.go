@@ -20,5 +20,5 @@ func NewGetOrderHandler(orderRepository repository.OrderRepository) GetOrderHand
 }
 
 func (h GetOrderHandler) GetOrder(ctx context.Context, query GetOrder) (*aggregate.Order, error) {
-	return h.orderRepository.Find(ctx, query.OrderID)
+	return h.orderRepository.Load(ctx, query.OrderID)
 }

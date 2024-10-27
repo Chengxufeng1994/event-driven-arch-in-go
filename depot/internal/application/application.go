@@ -34,7 +34,7 @@ func NewShoppingListApplication(
 	storeClient client.StoreClient,
 	productClient client.ProductClient,
 	orderClient client.OrderClient,
-	domainEventDispatcher ddd.EventDispatcherIntf,
+	domainEventDispatcher ddd.EventDispatcher[ddd.AggregateEvent],
 ) *ShoppingListApplication {
 	return &ShoppingListApplication{
 		appCommands: appCommands{

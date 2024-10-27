@@ -11,21 +11,21 @@ type IgnoreUnimplementedDomainEventHandler struct{}
 var _ DomainEventHandlers = (*IgnoreUnimplementedDomainEventHandler)(nil)
 
 // OnOrderCanceled implements DomainEventHandlers.
-func (i *IgnoreUnimplementedDomainEventHandler) OnOrderCanceled(ctx context.Context, event ddd.DomainEvent) error {
+func (i *IgnoreUnimplementedDomainEventHandler) OnOrderCanceled(ctx context.Context, event ddd.Event) error {
 	return nil
 }
 
 // OnOrderCompleted implements DomainEventHandlers.
-func (i *IgnoreUnimplementedDomainEventHandler) OnOrderCompleted(ctx context.Context, event ddd.DomainEvent) error {
+func (i *IgnoreUnimplementedDomainEventHandler) OnOrderCompleted(ctx context.Context, event ddd.Event) error {
 	return nil
 }
 
 // OnOrderCreated implements DomainEventHandlers.
-func (i *IgnoreUnimplementedDomainEventHandler) OnOrderCreated(ctx context.Context, event ddd.DomainEvent) error {
+func (i *IgnoreUnimplementedDomainEventHandler) OnOrderCreated(ctx context.Context, event ddd.Event) error {
 	return nil
 }
 
 // OnOrderReadied implements DomainEventHandlers.
-func (i *IgnoreUnimplementedDomainEventHandler) OnOrderReadied(ctx context.Context, event ddd.DomainEvent) error {
+func (i *IgnoreUnimplementedDomainEventHandler) OnOrderReadied(ctx context.Context, event ddd.Event) error {
 	return nil
 }

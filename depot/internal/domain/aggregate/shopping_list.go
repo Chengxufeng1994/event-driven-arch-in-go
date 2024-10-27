@@ -8,6 +8,8 @@ import (
 	"github.com/stackus/errors"
 )
 
+const ShoppingListAggregate = "depot.ShoppingListAggregate"
+
 var (
 	ErrShoppingCannotBeCanceled  = errors.Wrap(errors.ErrBadRequest, "the shopping list cannot be canceled")
 	ErrShoppingCannotBeAssigned  = errors.Wrap(errors.ErrBadRequest, "the shopping list cannot be assigned")
@@ -22,15 +24,24 @@ type ShoppingList struct {
 	Status        valueobject.ShoppingListStatus
 }
 
-func CreateShoppingList(id, orderID string) *ShoppingList {
-	shoppingList := &ShoppingList{
-		AggregateBase: ddd.NewAggregateBase(id),
-		OrderID:       orderID,
-		Status:        valueobject.ShoppingListIsAvailable,
-		Stops:         entity.NewStops(),
+func NewShoppingList(id string) *ShoppingList {
+	return &ShoppingList{
+		AggregateBase: ddd.NewAggregateBase(id, ShoppingListAggregate),
 	}
+}
 
-	shoppingList.AddEvent(event.NewShoppingListCreated())
+func CreateShoppingList(id, orderID string) *ShoppingList {
+	shoppingList := NewShoppingList(id)
+	shoppingList.OrderID = orderID
+	shoppingList.Status = valueobject.ShoppingListIsAvailable
+	shoppingList.Stops = entity.NewStops()
+
+	shoppingList.AddEvent(event.ShoppingListCreatedEvent,
+		event.NewShoppingListCreated(
+			shoppingList.ID(),
+			shoppingList.OrderID,
+			shoppingList.Stops,
+		))
 
 	return shoppingList
 }
@@ -60,7 +71,7 @@ func (shoppingList *ShoppingList) Cancel() error {
 
 	shoppingList.Status = valueobject.ShoppingListIsCancelled
 
-	shoppingList.AddEvent(event.NewShoppingListCanceled())
+	shoppingList.AddEvent(event.ShoppingListCanceledEvent, event.NewShoppingListCanceled(shoppingList.ID()))
 
 	return nil
 }
@@ -69,15 +80,15 @@ func (shoppingList *ShoppingList) isAssignable() bool {
 	return shoppingList.Status == valueobject.ShoppingListIsAvailable
 }
 
-func (shoppingList *ShoppingList) Assign(BotID string) error {
+func (shoppingList *ShoppingList) Assign(botID string) error {
 	if !shoppingList.isAssignable() {
 		return ErrShoppingCannotBeAssigned
 	}
 
-	shoppingList.AssignedBotID = BotID
+	shoppingList.AssignedBotID = botID
 	shoppingList.Status = valueobject.ShoppingListIsAssigned
 
-	shoppingList.AddEvent(event.NewShoppingListAssigned(BotID))
+	shoppingList.AddEvent(event.ShoppingListAssignedEvent, event.NewShoppingListAssigned(shoppingList.ID(), botID))
 
 	return nil
 }
@@ -93,7 +104,7 @@ func (shoppingList *ShoppingList) Complete() error {
 
 	shoppingList.Status = valueobject.ShoppingListIsCompleted
 
-	shoppingList.AddEvent(event.NewShoppingListCompleted(shoppingList.OrderID))
+	shoppingList.AddEvent(event.ShoppingListCompletedEvent, event.NewShoppingListCompleted(shoppingList.ID(), shoppingList.OrderID))
 
 	return nil
 }

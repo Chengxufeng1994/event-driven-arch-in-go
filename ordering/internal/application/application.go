@@ -1,7 +1,6 @@
 package application
 
 import (
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/application/port/in/command"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/application/port/in/query"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/application/port/out/client"
@@ -34,13 +33,12 @@ func NewOrderApplication(
 	customerClient client.CustomerClient,
 	paymentClient client.PaymentClient,
 	shoppingClient client.ShoppingClient,
-	domainEventPublisher ddd.EventPublisher,
 ) *OrderApplication {
 	return &OrderApplication{
 		appCommands: appCommands{
-			CreateOrderHandler:   command.NewCreateOrderHandler(orderRepository, customerClient, paymentClient, shoppingClient, domainEventPublisher),
-			CancelOrderHandler:   command.NewCancelOrderHandler(orderRepository, shoppingClient, domainEventPublisher),
-			ReadyOrderHandler:    command.NewReadyOrderHandler(orderRepository, domainEventPublisher),
+			CreateOrderHandler:   command.NewCreateOrderHandler(orderRepository, customerClient, paymentClient, shoppingClient),
+			CancelOrderHandler:   command.NewCancelOrderHandler(orderRepository, shoppingClient),
+			ReadyOrderHandler:    command.NewReadyOrderHandler(orderRepository),
 			CompleteOrderHandler: command.NewCompleteOrderHandler(orderRepository),
 		},
 		appQueries: appQueries{

@@ -18,23 +18,22 @@ type Module struct{}
 
 var _ monolith.Module = (*Module)(nil)
 
-func NewModule() *Module {
-	return &Module{}
-}
+func NewModule() *Module { return &Module{} }
 
 func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
+	// setup Driver adapters
 	endpoint := fmt.Sprintf("%s:%d", mono.Config().Server.GPPC.Host, mono.Config().Server.GPPC.Port)
-	db := mono.Database()
+	domainEventDispatcher := ddd.NewEventDispatcher[ddd.AggregateEvent]()
+	customerRepository := gorm.NewGormCustomerRepository(mono.Database())
 
-	domainEventDispatcher := ddd.NewEventDispatcher()
-	customerRepository := gorm.NewGormCustomerRepository(db)
-
+	// setup application
 	logApplication := logging.NewLogApplicationAccess(
 		application.NewCustomerApplication(customerRepository, domainEventDispatcher),
 		mono.Logger(),
 	)
 	// TODO: new domain event handlers, register domain events...
 
+	// setup Driver adapters
 	if err := grpcv1.RegisterServer(ctx, logApplication, mono.RPC().GRPCServer()); err != nil {
 		return err
 	}

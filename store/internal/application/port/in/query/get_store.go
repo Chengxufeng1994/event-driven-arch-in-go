@@ -12,13 +12,13 @@ type GetStore struct {
 }
 
 type GetStoreHandler struct {
-	stores repository.StoreRepository
+	mall repository.MallRepository
 }
 
-func NewGetStoreHandler(stores repository.StoreRepository) GetStoreHandler {
-	return GetStoreHandler{stores: stores}
+func NewGetStoreHandler(mall repository.MallRepository) GetStoreHandler {
+	return GetStoreHandler{mall: mall}
 }
 
-func (h GetStoreHandler) GetStore(ctx context.Context, query GetStore) (*aggregate.Store, error) {
-	return h.stores.Find(ctx, query.ID)
+func (h GetStoreHandler) GetStore(ctx context.Context, query GetStore) (*aggregate.MallStore, error) {
+	return h.mall.Find(ctx, query.ID)
 }

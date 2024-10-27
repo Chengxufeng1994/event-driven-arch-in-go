@@ -4,7 +4,7 @@ const (
 	StoreCreatedEvent               = "stores.StoreCreated"
 	StoreParticipationEnabledEvent  = "stores.StoreParticipationEnabled"
 	StoreParticipationDisabledEvent = "stores.StoreParticipationDisabled"
-	StoreReBrandedEvent             = "stores.StoreReBranded"
+	StoreRebrandedEvent             = "stores.StoreRebranded"
 )
 
 type StoreCreated struct {
@@ -19,24 +19,24 @@ func NewStoreCreatedEvent(name, location string) *StoreCreated {
 	}
 }
 
-func (StoreCreated) EventName() string { return StoreCreatedEvent }
+func (StoreCreated) Key() string { return StoreCreatedEvent }
 
-type StoreParticipationDisabled struct {
+type StoreParticipationToggled struct {
 	Participating bool
 }
 
-func NewStoreParticipationDisabledEvent() *StoreParticipationDisabled {
-	return &StoreParticipationDisabled{Participating: false}
+func NewStoreParticipationToggled(participating bool) *StoreParticipationToggled {
+	return &StoreParticipationToggled{Participating: participating}
 }
 
-func (StoreParticipationDisabled) EventName() string { return StoreParticipationDisabledEvent }
+func (StoreParticipationToggled) Key() string { return StoreParticipationEnabledEvent }
 
-type StoreParticipationEnabled struct {
-	Participating bool
+type StoreRebranded struct {
+	Name string
 }
 
-func NewStoreParticipationEnabledEvent() *StoreParticipationEnabled {
-	return &StoreParticipationEnabled{Participating: true}
+func NewStoreRebranded(name string) *StoreRebranded {
+	return &StoreRebranded{Name: name}
 }
 
-func (StoreParticipationEnabled) EventName() string { return StoreParticipationEnabledEvent }
+func (StoreRebranded) Key() string { return StoreRebrandedEvent }

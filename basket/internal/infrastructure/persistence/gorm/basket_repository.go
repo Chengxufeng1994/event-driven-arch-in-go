@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/aggregate"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/repository"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/infrastructure/persistence/gorm/mapper"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/infrastructure/persistence/gorm/po"
 	"github.com/stackus/errors"
@@ -12,12 +11,11 @@ import (
 	"gorm.io/gorm/clause"
 )
 
+// deprecated: use event sourcing
 type GormBasketRepository struct {
 	db           *gorm.DB
 	basketMapper mapper.BasketMapperIntf
 }
-
-var _ repository.BasketRepository = (*GormBasketRepository)(nil)
 
 func NewGormBasketRepository(db *gorm.DB) *GormBasketRepository {
 	return &GormBasketRepository{

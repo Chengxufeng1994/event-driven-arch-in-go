@@ -12,23 +12,21 @@ import (
 	"google.golang.org/grpc"
 )
 
-type handler struct {
+type server struct {
 	app usecase.StoreUseCase
 	storev1.UnimplementedStoresServiceServer
 }
 
-var _ storev1.StoresServiceServer = (*handler)(nil)
+var _ storev1.StoresServiceServer = (*server)(nil)
 
-func RegisterServer(_ context.Context, application usecase.StoreUseCase, registrar grpc.ServiceRegistrar) error {
-	handler := &handler{
-		app: application,
-	}
+func RegisterServer(app usecase.StoreUseCase, registrar grpc.ServiceRegistrar) error {
+	handler := &server{app: app}
 	storev1.RegisterStoresServiceServer(registrar, handler)
 	return nil
 }
 
 // AddProduct implements storev1.StoresServiceServer.
-func (s *handler) AddProduct(ctx context.Context, request *storev1.AddProductRequest) (*storev1.AddProductResponse, error) {
+func (s *server) AddProduct(ctx context.Context, request *storev1.AddProductRequest) (*storev1.AddProductResponse, error) {
 	id := uuid.New().String()
 	err := s.app.AddProduct(ctx, command.AddProduct{
 		ID:          id,
@@ -46,7 +44,7 @@ func (s *handler) AddProduct(ctx context.Context, request *storev1.AddProductReq
 }
 
 // CreateStore implements storev1.StoresServiceServer.
-func (s *handler) CreateStore(ctx context.Context, request *storev1.CreateStoreRequest) (*storev1.CreateStoreResponse, error) {
+func (s *server) CreateStore(ctx context.Context, request *storev1.CreateStoreRequest) (*storev1.CreateStoreResponse, error) {
 	storeID := uuid.New().String()
 
 	err := s.app.CreateStore(ctx, command.CreateStore{
@@ -64,7 +62,7 @@ func (s *handler) CreateStore(ctx context.Context, request *storev1.CreateStoreR
 }
 
 // DisableParticipation implements storev1.StoresServiceServer.
-func (s *handler) DisableParticipation(ctx context.Context, request *storev1.DisableParticipationRequest) (*storev1.DisableParticipationResponse, error) {
+func (s *server) DisableParticipation(ctx context.Context, request *storev1.DisableParticipationRequest) (*storev1.DisableParticipationResponse, error) {
 	err := s.app.DisableParticipation(ctx, command.DisableParticipation{
 		ID: request.GetId(),
 	})
@@ -76,7 +74,7 @@ func (s *handler) DisableParticipation(ctx context.Context, request *storev1.Dis
 }
 
 // EnableParticipation implements storev1.StoresServiceServer.
-func (s *handler) EnableParticipation(ctx context.Context, request *storev1.EnableParticipationRequest) (*storev1.EnableParticipationResponse, error) {
+func (s *server) EnableParticipation(ctx context.Context, request *storev1.EnableParticipationRequest) (*storev1.EnableParticipationResponse, error) {
 	err := s.app.EnableParticipation(ctx, command.EnableParticipation{
 		ID: request.GetId(),
 	})
@@ -87,25 +85,8 @@ func (s *handler) EnableParticipation(ctx context.Context, request *storev1.Enab
 	return &storev1.EnableParticipationResponse{}, nil
 }
 
-// GetCatalog implements storev1.StoresServiceServer.
-func (s *handler) GetCatalog(ctx context.Context, request *storev1.GetCatalogRequest) (*storev1.GetCatalogResponse, error) {
-	products, err := s.app.GetCatalog(ctx, query.GetCatalog{StoreID: request.GetStoreId()})
-	if err != nil {
-		return nil, err
-	}
-
-	protoProducts := []*storev1.Product{}
-	for _, product := range products {
-		protoProducts = append(protoProducts, s.productFromDomain(product))
-	}
-
-	return &storev1.GetCatalogResponse{
-		Products: protoProducts,
-	}, nil
-}
-
 // GetParticipatingStores implements storev1.StoresServiceServer.
-func (s *handler) GetParticipatingStores(ctx context.Context, request *storev1.GetParticipatingStoresRequest) (*storev1.GetParticipatingStoresResponse, error) {
+func (s *server) GetParticipatingStores(ctx context.Context, request *storev1.GetParticipatingStoresRequest) (*storev1.GetParticipatingStoresResponse, error) {
 	stores, err := s.app.GetParticipatingStores(ctx, query.GetParticipatingStores{})
 	if err != nil {
 		return nil, err
@@ -121,20 +102,16 @@ func (s *handler) GetParticipatingStores(ctx context.Context, request *storev1.G
 	}, nil
 }
 
-// GetProduct implements storev1.StoresServiceServer.
-func (s *handler) GetProduct(ctx context.Context, request *storev1.GetProductRequest) (*storev1.GetProductResponse, error) {
-	product, err := s.app.GetProduct(ctx, query.GetProduct{
-		ID: request.GetId(),
+func (s *server) RebrandStore(ctx context.Context, request *storev1.RebrandStoreRequest) (*storev1.RebrandStoreResponse, error) {
+	err := s.app.RebrandStore(context.Background(), command.RebrandStore{
+		ID:   request.GetId(),
+		Name: request.GetName(),
 	})
-	if err != nil {
-		return nil, err
-	}
 
-	return &storev1.GetProductResponse{Product: s.productFromDomain(product)}, nil
+	return &storev1.RebrandStoreResponse{}, err
 }
 
-// GetStore implements storev1.StoresServiceServer.
-func (s *handler) GetStore(ctx context.Context, request *storev1.GetStoreRequest) (*storev1.GetStoreResponse, error) {
+func (s *server) GetStore(ctx context.Context, request *storev1.GetStoreRequest) (*storev1.GetStoreResponse, error) {
 	store, err := s.app.GetStore(ctx, query.GetStore{ID: request.GetId()})
 	if err != nil {
 		return nil, err
@@ -143,8 +120,7 @@ func (s *handler) GetStore(ctx context.Context, request *storev1.GetStoreRequest
 	return &storev1.GetStoreResponse{Store: s.storeFromDomain(store)}, nil
 }
 
-// GetStores implements storev1.StoresServiceServer.
-func (s *handler) GetStores(ctx context.Context, request *storev1.GetStoresRequest) (*storev1.GetStoresResponse, error) {
+func (s *server) GetStores(ctx context.Context, request *storev1.GetStoresRequest) (*storev1.GetStoresResponse, error) {
 	stores, err := s.app.GetStores(ctx, query.GetStores{})
 	if err != nil {
 		return nil, err
@@ -160,8 +136,17 @@ func (s *handler) GetStores(ctx context.Context, request *storev1.GetStoresReque
 	}, nil
 }
 
-// RemoveProduct implements storev1.StoresServiceServer.
-func (s *handler) RemoveProduct(ctx context.Context, request *storev1.RemoveProductRequest) (*storev1.RemoveProductResponse, error) {
+func (s *server) RebrandProduct(ctx context.Context, request *storev1.RebrandProductRequest) (*storev1.RebrandProductResponse, error) {
+	err := s.app.RebrandProduct(context.Background(), command.RebrandProduct{
+		ID:          request.GetId(),
+		Name:        request.GetName(),
+		Description: request.GetDescription(),
+	})
+
+	return &storev1.RebrandProductResponse{}, err
+}
+
+func (s *server) RemoveProduct(ctx context.Context, request *storev1.RemoveProductRequest) (*storev1.RemoveProductResponse, error) {
 	err := s.app.RemoveProduct(ctx, command.RemoveProduct{
 		ID: request.GetId(),
 	})
@@ -169,7 +154,52 @@ func (s *handler) RemoveProduct(ctx context.Context, request *storev1.RemoveProd
 	return &storev1.RemoveProductResponse{}, err
 }
 
-func (s *handler) storeFromDomain(store *aggregate.Store) *storev1.Store {
+func (s *server) IncreaseProductPrice(ctx context.Context, request *storev1.IncreaseProductPriceRequest) (*storev1.IncreaseProductPriceResponse, error) {
+	err := s.app.IncreaseProductPrice(context.Background(), command.IncreaseProductPrice{
+		ID:    request.GetId(),
+		Price: request.GetPrice(),
+	})
+	return &storev1.IncreaseProductPriceResponse{}, err
+}
+
+func (s *server) DecreaseProductPrice(ctx context.Context, request *storev1.DecreaseProductPriceRequest) (*storev1.DecreaseProductPriceResponse, error) {
+	err := s.app.DecreaseProductPrice(context.Background(), command.DecreaseProductPrice{
+		ID:    request.GetId(),
+		Price: request.GetPrice(),
+	})
+	return &storev1.DecreaseProductPriceResponse{}, err
+}
+
+// GetProduct implements storev1.StoresServiceServer.
+func (s *server) GetProduct(ctx context.Context, request *storev1.GetProductRequest) (*storev1.GetProductResponse, error) {
+	product, err := s.app.GetProduct(ctx, query.GetProduct{
+		ID: request.GetId(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &storev1.GetProductResponse{Product: s.productFromDomain(product)}, nil
+}
+
+// GetCatalog implements storev1.StoresServiceServer.
+func (s *server) GetCatalog(ctx context.Context, request *storev1.GetCatalogRequest) (*storev1.GetCatalogResponse, error) {
+	products, err := s.app.GetCatalog(ctx, query.GetCatalog{StoreID: request.GetStoreId()})
+	if err != nil {
+		return nil, err
+	}
+
+	protoProducts := []*storev1.Product{}
+	for _, product := range products {
+		protoProducts = append(protoProducts, s.productFromDomain(product))
+	}
+
+	return &storev1.GetCatalogResponse{
+		Products: protoProducts,
+	}, nil
+}
+
+func (s *server) storeFromDomain(store *aggregate.MallStore) *storev1.Store {
 	return &storev1.Store{
 		Id:            store.ID,
 		Name:          store.Name,
@@ -178,7 +208,7 @@ func (s *handler) storeFromDomain(store *aggregate.Store) *storev1.Store {
 	}
 }
 
-func (s *handler) productFromDomain(product *aggregate.Product) *storev1.Product {
+func (s *server) productFromDomain(product *aggregate.CatalogProduct) *storev1.Product {
 	return &storev1.Product{
 		Id:          product.ID,
 		StoreId:     product.StoreID,

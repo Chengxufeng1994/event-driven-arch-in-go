@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/repository"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/stackus/errors"
 )
 
@@ -19,22 +18,18 @@ func NewCancelBasket(id string) CancelBasket {
 }
 
 type CancelBasketHandler struct {
-	basketRepository     repository.BasketRepository
-	domainEventPublisher ddd.EventPublisher
+	basketRepository repository.BasketRepository
 }
 
-func NewCancelBasketHandler(basketRepository repository.BasketRepository, domainEventPublisher ddd.EventPublisher) CancelBasketHandler {
-	return CancelBasketHandler{
-		basketRepository:     basketRepository,
-		domainEventPublisher: domainEventPublisher,
-	}
+func NewCancelBasketHandler(basketRepository repository.BasketRepository) CancelBasketHandler {
+	return CancelBasketHandler{basketRepository: basketRepository}
 }
 
 func (h CancelBasketHandler) CancelBasket(ctx context.Context, cmd CancelBasket) error {
 	// find a basket
-	basketAgg, err := h.basketRepository.Find(ctx, cmd.ID)
+	basketAgg, err := h.basketRepository.Load(ctx, cmd.ID)
 	if err != nil {
-		return errors.Wrap(err, "finding")
+		return errors.Wrap(err, "finding basket")
 	}
 
 	// cancel the basket
@@ -42,11 +37,10 @@ func (h CancelBasketHandler) CancelBasket(ctx context.Context, cmd CancelBasket)
 		return errors.Wrap(err, "canceling the basket")
 	}
 
-	// update the basket
-	if err := h.basketRepository.Update(ctx, basketAgg); err != nil {
-		return errors.Wrap(err, "updating basket")
+	// save the basket
+	if err := h.basketRepository.Save(ctx, basketAgg); err != nil {
+		return errors.Wrap(err, "saving basket")
 	}
 
-	// publish domain events
-	return h.domainEventPublisher.Publish(ctx, basketAgg.GetEvents()...)
+	return nil
 }

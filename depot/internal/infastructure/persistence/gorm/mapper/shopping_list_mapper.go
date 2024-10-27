@@ -31,7 +31,7 @@ func (m *ShoppingListMapper) ToPersistent(shoppingList *aggregate.ShoppingList) 
 	}
 
 	return &po.ShoppingList{
-		ID:            shoppingList.ID,
+		ID:            shoppingList.ID(),
 		OrderID:       shoppingList.OrderID,
 		AssignedBotID: shoppingList.AssignedBotID,
 		Stops:         byt,
@@ -47,7 +47,7 @@ func (m *ShoppingListMapper) ToDomain(shoppingList *po.ShoppingList) (*aggregate
 	}
 
 	return &aggregate.ShoppingList{
-		AggregateBase: ddd.NewAggregateBase(shoppingList.ID),
+		AggregateBase: ddd.NewAggregateBase(shoppingList.ID, aggregate.ShoppingListAggregate),
 		OrderID:       shoppingList.OrderID,
 		AssignedBotID: shoppingList.AssignedBotID,
 		Stops:         stops,

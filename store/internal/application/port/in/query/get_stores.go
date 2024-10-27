@@ -10,13 +10,13 @@ import (
 type GetStores struct{}
 
 type GetStoresHandler struct {
-	stores repository.StoreRepository
+	mall repository.MallRepository
 }
 
-func NewGetStoresHandler(stores repository.StoreRepository) GetStoresHandler {
-	return GetStoresHandler{stores: stores}
+func NewGetStoresHandler(mall repository.MallRepository) GetStoresHandler {
+	return GetStoresHandler{mall: mall}
 }
 
-func (h GetStoresHandler) GetStores(ctx context.Context, _ GetStores) ([]*aggregate.Store, error) {
-	return h.stores.FindAll(ctx)
+func (h GetStoresHandler) GetStores(ctx context.Context, _ GetStores) ([]*aggregate.MallStore, error) {
+	return h.mall.All(ctx)
 }

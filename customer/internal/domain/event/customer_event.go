@@ -9,10 +9,18 @@ const (
 
 type CustomerRegistered struct {
 	CustomerID string
+	Name       string
+	SmsNumber  string
+	Enabled    bool
 }
 
-func NewCustomerRegistered(customerID string) *CustomerRegistered {
-	return &CustomerRegistered{CustomerID: customerID}
+func NewCustomerRegistered(customerID, name, smsNumber string, enabled bool) *CustomerRegistered {
+	return &CustomerRegistered{
+		CustomerID: customerID,
+		Name:       name,
+		SmsNumber:  smsNumber,
+		Enabled:    enabled,
+	}
 }
 
 func (CustomerRegistered) EventName() string { return CustomerRegisteredEvent }

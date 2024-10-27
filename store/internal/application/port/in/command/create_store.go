@@ -3,7 +3,6 @@ package command
 import (
 	"context"
 
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/domain/aggregate"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/domain/repository"
 	"github.com/stackus/errors"
@@ -17,15 +16,13 @@ type (
 	}
 
 	CreateStoreHandler struct {
-		stores               repository.StoreRepository
-		domainEventPublisher ddd.EventPublisher
+		stores repository.StoreRepository
 	}
 )
 
-func NewCreateStoreHandler(stores repository.StoreRepository, domainEventPublisher ddd.EventPublisher) CreateStoreHandler {
+func NewCreateStoreHandler(stores repository.StoreRepository) CreateStoreHandler {
 	return CreateStoreHandler{
-		stores:               stores,
-		domainEventPublisher: domainEventPublisher,
+		stores: stores,
 	}
 }
 
@@ -37,10 +34,6 @@ func (h CreateStoreHandler) CreateStore(ctx context.Context, cmd CreateStore) er
 
 	if err = h.stores.Save(ctx, store); err != nil {
 		return errors.Wrap(err, "creating store")
-	}
-
-	if err := h.domainEventPublisher.Publish(ctx, store.GetEvents()...); err != nil {
-		return errors.Wrap(err, "publishing events")
 	}
 
 	return nil

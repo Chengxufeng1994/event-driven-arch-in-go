@@ -20,7 +20,7 @@ func NewBasketStarted(customerID string) *BasketStarted {
 	}
 }
 
-func (BasketStarted) EventName() string { return BasketStartedEvent }
+func (BasketStarted) Key() string { return BasketStartedEvent }
 
 type BasketItemAdded struct {
 	Item *entity.Item
@@ -30,7 +30,7 @@ func NewBasketItemAdded(item *entity.Item) *BasketItemAdded {
 	return &BasketItemAdded{Item: item}
 }
 
-func (BasketItemAdded) EventName() string { return BasketItemAddedEvent }
+func (BasketItemAdded) Key() string { return BasketItemAddedEvent }
 
 type BasketItemRemoved struct {
 	ProductID string
@@ -44,7 +44,7 @@ func NewBasketItemRemoved(productID string, quantity int) *BasketItemRemoved {
 	}
 }
 
-func (BasketItemRemoved) EventName() string { return BasketItemRemovedEvent }
+func (BasketItemRemoved) Key() string { return BasketItemRemovedEvent }
 
 type BasketCanceled struct{}
 
@@ -52,15 +52,15 @@ func NewBasketCanceled() *BasketCanceled {
 	return &BasketCanceled{}
 }
 
-func (BasketCanceled) EventName() string { return BasketCanceledEvent }
+func (BasketCanceled) Key() string { return BasketCanceledEvent }
 
 type BasketCheckedOut struct {
 	PaymentID  string
 	CustomerID string
-	Items      []*entity.Item
+	Items      map[string]*entity.Item
 }
 
-func NewBasketCheckedOut(paymentID, customerID string, items []*entity.Item) *BasketCheckedOut {
+func NewBasketCheckedOut(paymentID, customerID string, items map[string]*entity.Item) *BasketCheckedOut {
 	return &BasketCheckedOut{
 		PaymentID:  paymentID,
 		CustomerID: customerID,
@@ -68,4 +68,4 @@ func NewBasketCheckedOut(paymentID, customerID string, items []*entity.Item) *Ba
 	}
 }
 
-func (BasketCheckedOut) EventName() string { return BasketCheckedOutEvent }
+func (BasketCheckedOut) Key() string { return BasketCheckedOutEvent }

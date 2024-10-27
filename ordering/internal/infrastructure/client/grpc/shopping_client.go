@@ -5,7 +5,6 @@ import (
 
 	depotv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/depot/api/depot/v1"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/application/port/out/client"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/domain/aggregate"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/domain/valueobject"
 	"google.golang.org/grpc"
 )
@@ -21,14 +20,14 @@ func NewGrpcShoppingClient(conn *grpc.ClientConn) *GrpcShoppingClient {
 }
 
 // Create implements client.ShoppingClient.
-func (c *GrpcShoppingClient) Create(ctx context.Context, order *aggregate.Order) (string, error) {
+func (c *GrpcShoppingClient) Create(ctx context.Context, orderID string, itemsVO []valueobject.Item) (string, error) {
 	var items []*depotv1.OrderItem
-	for _, item := range order.Items {
+	for _, item := range itemsVO {
 		items = append(items, c.itemFromDomain(item))
 	}
 
 	resp, err := c.client.CreateShoppingList(ctx, &depotv1.CreateShoppingListRequest{
-		OrderId: order.ID,
+		OrderId: orderID,
 		Items:   items,
 	})
 	if err != nil {

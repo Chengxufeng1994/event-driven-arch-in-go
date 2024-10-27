@@ -1,7 +1,7 @@
 package mapper
 
 import (
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/es"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/domain/aggregate"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/infrastructure/persistence/gorm/po"
 )
@@ -22,7 +22,7 @@ func NewStoreMapper() *StoreMapper {
 
 func (m *StoreMapper) ToPersistent(store *aggregate.Store) *po.Store {
 	return &po.Store{
-		ID:            store.ID,
+		ID:            store.ID(),
 		Name:          store.Name,
 		Location:      store.Location,
 		Participating: store.Participating,
@@ -31,7 +31,7 @@ func (m *StoreMapper) ToPersistent(store *aggregate.Store) *po.Store {
 
 func (m *StoreMapper) ToDomain(store *po.Store) *aggregate.Store {
 	return &aggregate.Store{
-		AggregateBase: ddd.NewAggregateBase(store.ID),
+		AggregateBase: es.NewAggregateBase(store.ID, aggregate.StoreAggregate),
 		Name:          store.Name,
 		Location:      store.Location,
 		Participating: store.Participating,

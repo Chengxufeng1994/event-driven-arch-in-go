@@ -42,11 +42,11 @@ func NewGormDB(config *config.Infrastructure, opts ...GormConfigOption) (*gorm.D
 	gormLogger := logger.New(
 		log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer
 		logger.Config{
-			SlowThreshold:             time.Second,   // Slow SQL threshold
-			LogLevel:                  logger.Silent, // Log level
-			IgnoreRecordNotFoundError: true,          // Ignore ErrRecordNotFound error for logger
-			ParameterizedQueries:      true,          // Don't include params in the SQL log
-			Colorful:                  true,          // Disable color
+			SlowThreshold:             time.Second,                         // Slow SQL threshold
+			LogLevel:                  logger.Silent,                       // Log level
+			IgnoreRecordNotFoundError: config.GORM.IgnoreErrRecordNotFound, // Ignore ErrRecordNotFound error for logger
+			ParameterizedQueries:      config.GORM.ParameterizedQueries,    // Don't include params in the SQL log
+			Colorful:                  config.GORM.Colorful,                // Disable color
 		},
 	)
 
@@ -107,6 +107,6 @@ func NewGormDB(config *config.Infrastructure, opts ...GormConfigOption) (*gorm.D
 	})
 
 	return db.Session(&gorm.Session{
-		PrepareStmt: true,
+		PrepareStmt: config.GORM.PrepareStmt,
 	}), err
 }

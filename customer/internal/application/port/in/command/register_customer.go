@@ -25,12 +25,12 @@ func NewRegisterCustomer(id, name, smsNumber string) RegisterCustomer {
 
 type RegisterCustomerHandler struct {
 	customerRepository   repository.CustomerRepository
-	domainEventPublisher ddd.EventPublisher
+	domainEventPublisher ddd.EventPublisher[ddd.AggregateEvent]
 }
 
 func NewRegisterCustomerHandler(
 	customerRepository repository.CustomerRepository,
-	domainEventPublisher ddd.EventPublisher,
+	domainEventPublisher ddd.EventPublisher[ddd.AggregateEvent],
 ) RegisterCustomerHandler {
 	return RegisterCustomerHandler{
 		customerRepository:   customerRepository,
@@ -48,7 +48,7 @@ func (h RegisterCustomerHandler) RegisterCustomer(ctx context.Context, register 
 		return err
 	}
 
-	if err := h.domainEventPublisher.Publish(ctx, customer.GetEvents()...); err != nil {
+	if err := h.domainEventPublisher.Publish(ctx, customer.Events()...); err != nil {
 		return errors.Wrap(err, "could not publish events")
 	}
 

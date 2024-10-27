@@ -10,7 +10,6 @@ const (
 )
 
 type OrderCreated struct {
-	OrderID    string
 	CustomerID string
 	PaymentID  string
 	ShoppingID string
@@ -26,10 +25,9 @@ func NewOrderCreated(customerID, paymentID, shoppingID string, items []valueobje
 	}
 }
 
-func (OrderCreated) EventName() string { return OrderCreatedEvent }
+func (OrderCreated) Key() string { return OrderCreatedEvent }
 
 type OrderCanceled struct {
-	OrderID    string
 	CustomerID string
 }
 
@@ -39,28 +37,25 @@ func NewOrderCanceled(customerID string) *OrderCanceled {
 	}
 }
 
-func (OrderCanceled) EventName() string { return OrderCanceledEvent }
+func (OrderCanceled) Key() string { return OrderCanceledEvent }
 
 type OrderReadied struct {
-	OrderID    string
 	CustomerID string
 	PaymentID  string
 	Total      float64
 }
 
-func NewOrderReadied(orderID, customerID, paymentID string, total float64) *OrderReadied {
+func NewOrderReadied(customerID, paymentID string, total float64) *OrderReadied {
 	return &OrderReadied{
-		OrderID:    orderID,
 		CustomerID: customerID,
 		PaymentID:  paymentID,
 		Total:      total,
 	}
 }
 
-func (OrderReadied) EventName() string { return OrderReadiedEvent }
+func (OrderReadied) Key() string { return OrderReadiedEvent }
 
 type OrderCompleted struct {
-	OrderID   string
 	InvoiceID string
 }
 
@@ -70,4 +65,4 @@ func NewOrderCompleted(invoiceID string) *OrderCompleted {
 	}
 }
 
-func (OrderCompleted) EventName() string { return OrderCompletedEvent }
+func (OrderCompleted) Key() string { return OrderCompletedEvent }

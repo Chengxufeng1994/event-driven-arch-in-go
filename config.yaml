@@ -40,4 +40,8 @@ infrastructure:
     max_idle_conns: 100
     table_prefix: ""
     enable_auto_migrate: true
+    ignore_err_record_not_found: false
+    parameterized_queries: false
+    colorful: true
+    prepare_stmt: true
 

@@ -3,26 +3,26 @@ package valueobject
 type OrderStatus string
 
 const (
-	OrderUnknown   OrderStatus = ""
-	OrderPending   OrderStatus = "pending"
-	OrderInProcess OrderStatus = "in-progress"
-	OrderReady     OrderStatus = "ready"
-	OrderCompleted OrderStatus = "completed"
-	OrderCancelled OrderStatus = "canceled"
+	OrderUnknown     OrderStatus = ""
+	OrderIsPending   OrderStatus = "pending"
+	OrderInProcess   OrderStatus = "in-progress"
+	OrderIsReady     OrderStatus = "ready"
+	OrderIsCompleted OrderStatus = "completed"
+	OrderIsCancelled OrderStatus = "canceled"
 )
 
 func NewOrderStatus(status string) OrderStatus {
 	switch status {
-	case OrderPending.String():
-		return OrderPending
+	case OrderIsPending.String():
+		return OrderIsPending
 	case OrderInProcess.String():
 		return OrderInProcess
-	case OrderReady.String():
-		return OrderReady
-	case OrderCompleted.String():
-		return OrderCompleted
-	case OrderCancelled.String():
-		return OrderCancelled
+	case OrderIsReady.String():
+		return OrderIsReady
+	case OrderIsCompleted.String():
+		return OrderIsCompleted
+	case OrderIsCancelled.String():
+		return OrderIsCancelled
 	default:
 		return OrderUnknown
 	}
@@ -30,7 +30,7 @@ func NewOrderStatus(status string) OrderStatus {
 
 func (s OrderStatus) String() string {
 	switch s {
-	case OrderPending, OrderInProcess, OrderReady, OrderCompleted, OrderCancelled:
+	case OrderIsPending, OrderInProcess, OrderIsReady, OrderIsCompleted, OrderIsCancelled:
 		return string(s)
 	default:
 		return ""
