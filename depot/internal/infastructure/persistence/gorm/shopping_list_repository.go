@@ -28,8 +28,8 @@ func NewGormShoppingListRepository(db *gorm.DB) *GormShoppingListRepository {
 }
 
 // Save implements repository.ShoppingListRepository.
-func (r *GormShoppingListRepository) Save(ctx context.Context, shoppingList *aggregate.ShoppingListAgg) error {
-	shoppingListPO, err := r.shoppingListMapper.ToPersistence(shoppingList)
+func (r *GormShoppingListRepository) Save(ctx context.Context, shoppingList *aggregate.ShoppingList) error {
+	shoppingListPO, err := r.shoppingListMapper.ToPersistent(shoppingList)
 	if err != nil {
 		return errors.Wrap(err, "mapping shopping list")
 	}
@@ -37,8 +37,8 @@ func (r *GormShoppingListRepository) Save(ctx context.Context, shoppingList *agg
 }
 
 // Update implements repository.ShoppingListRepository.
-func (r *GormShoppingListRepository) Update(ctx context.Context, list *aggregate.ShoppingListAgg) error {
-	shoppingListPO, err := r.shoppingListMapper.ToPersistence(list)
+func (r *GormShoppingListRepository) Update(ctx context.Context, list *aggregate.ShoppingList) error {
+	shoppingListPO, err := r.shoppingListMapper.ToPersistent(list)
 	if err != nil {
 		return errors.Wrap(err, "mapping shopping list")
 	}
@@ -46,7 +46,7 @@ func (r *GormShoppingListRepository) Update(ctx context.Context, list *aggregate
 }
 
 // Find implements repository.ShoppingListRepository.
-func (r *GormShoppingListRepository) Find(ctx context.Context, shoppingListID string) (*aggregate.ShoppingListAgg, error) {
+func (r *GormShoppingListRepository) Find(ctx context.Context, shoppingListID string) (*aggregate.ShoppingList, error) {
 	shoppingList, err := r.shoppingListDao.Find(ctx, shoppingListID)
 	if err != nil {
 		return nil, err
@@ -56,7 +56,7 @@ func (r *GormShoppingListRepository) Find(ctx context.Context, shoppingListID st
 }
 
 // FindByOrderID implements repository.ShoppingListRepository.
-func (r *GormShoppingListRepository) FindByOrderID(ctx context.Context, orderID string) (*aggregate.ShoppingListAgg, error) {
+func (r *GormShoppingListRepository) FindByOrderID(ctx context.Context, orderID string) (*aggregate.ShoppingList, error) {
 	shoppingList, err := r.shoppingListDao.FindByOrderID(ctx, orderID)
 	if err != nil {
 		return nil, err

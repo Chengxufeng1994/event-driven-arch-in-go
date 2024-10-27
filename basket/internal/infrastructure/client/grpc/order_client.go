@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/application/port/out/client"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/aggregate"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/entity"
 	orderv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/api/order/v1"
 	"github.com/stackus/errors"
 	"google.golang.org/grpc"
@@ -20,9 +20,9 @@ func NewGrpcOrderClient(conn *grpc.ClientConn) *GrpcOrderClient {
 	return &GrpcOrderClient{client: orderv1.NewOrderingServiceClient(conn)}
 }
 
-func (c *GrpcOrderClient) Save(ctx context.Context, basket *aggregate.BasketAgg) (string, error) {
-	items := make([]*orderv1.Item, 0, len(basket.Items))
-	for _, item := range basket.Items {
+func (c *GrpcOrderClient) Save(ctx context.Context, paymentID, customerID string, basketItems []*entity.Item) (string, error) {
+	items := make([]*orderv1.Item, 0, len(basketItems))
+	for _, item := range basketItems {
 		items = append(items, &orderv1.Item{
 			StoreId:     item.StoreID,
 			ProductId:   item.ProductID,
@@ -35,8 +35,8 @@ func (c *GrpcOrderClient) Save(ctx context.Context, basket *aggregate.BasketAgg)
 
 	resp, err := c.client.CreateOrder(ctx, &orderv1.CreateOrderRequest{
 		Items:      items,
-		CustomerId: basket.CustomerID,
-		PaymentId:  basket.PaymentID,
+		PaymentId:  paymentID,
+		CustomerId: customerID,
 	})
 
 	if err != nil {

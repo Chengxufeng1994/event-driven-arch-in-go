@@ -7,5 +7,5 @@ import (
 )
 
 type OrderRepository interface {
-	Save(ctx context.Context, basket *aggregate.BasketAgg) (string, error)
+	Save(ctx context.Context, basket *aggregate.Basket) (string, error)
 }

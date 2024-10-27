@@ -31,20 +31,6 @@ func (a *Application) StartBasket(ctx context.Context, cmd command.StartBasket) 
 	return a.BasketUseCase.StartBasket(ctx, cmd)
 }
 
-// CancelBasket implements usecase.BasketUseCase.
-func (a *Application) CancelBasket(ctx context.Context, cmd command.CancelBasket) (err error) {
-	a.logger.Info("--> Baskets.CancelBasket")
-	defer func() { a.logger.WithError(err).Info("<-- Baskets.CancelBasket") }()
-	return a.BasketUseCase.CancelBasket(ctx, cmd)
-}
-
-// CheckoutBasket implements usecase.BasketUseCase.
-func (a *Application) CheckoutBasket(ctx context.Context, checkout command.CheckoutBasket) (err error) {
-	a.logger.Info("--> Baskets.CheckoutBasket")
-	defer func() { a.logger.WithError(err).Info("<-- Baskets.CheckBasket") }()
-	return a.BasketUseCase.CheckoutBasket(ctx, checkout)
-}
-
 // AddItem implements usecase.BasketUseCase.
 func (a *Application) AddItem(ctx context.Context, add command.AddItem) (err error) {
 	a.logger.Info("--> Baskets.AddItem")
@@ -59,8 +45,22 @@ func (a *Application) RemoveItem(ctx context.Context, remove command.RemoveItem)
 	return a.BasketUseCase.RemoveItem(ctx, remove)
 }
 
+// CancelBasket implements usecase.BasketUseCase.
+func (a *Application) CancelBasket(ctx context.Context, cmd command.CancelBasket) (err error) {
+	a.logger.Info("--> Baskets.CancelBasket")
+	defer func() { a.logger.WithError(err).Info("<-- Baskets.CancelBasket") }()
+	return a.BasketUseCase.CancelBasket(ctx, cmd)
+}
+
+// CheckoutBasket implements usecase.BasketUseCase.
+func (a *Application) CheckoutBasket(ctx context.Context, checkout command.CheckoutBasket) (err error) {
+	a.logger.Info("--> Baskets.CheckoutBasket")
+	defer func() { a.logger.WithError(err).Info("<-- Baskets.CheckOutBasket") }()
+	return a.BasketUseCase.CheckoutBasket(ctx, checkout)
+}
+
 // GetBasket implements usecase.BasketUseCase.
-func (a *Application) GetBasket(ctx context.Context, query query.GetBasket) (basket *aggregate.BasketAgg, err error) {
+func (a *Application) GetBasket(ctx context.Context, query query.GetBasket) (basket *aggregate.Basket, err error) {
 	a.logger.Info("--> Baskets.GetBasket")
 	defer func() { a.logger.WithError(err).Info("<-- Baskets.GetBasket") }()
 	return a.BasketUseCase.GetBasket(ctx, query)

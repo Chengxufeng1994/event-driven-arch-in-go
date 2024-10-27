@@ -7,6 +7,6 @@ import (
 )
 
 type ShoppingClient interface {
-	Create(ctx context.Context, order *aggregate.OrderAgg) (string, error)
+	Create(ctx context.Context, order *aggregate.Order) (string, error)
 	Cancel(ctx context.Context, shoppingID string) error
 }

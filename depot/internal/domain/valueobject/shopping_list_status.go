@@ -3,26 +3,26 @@ package valueobject
 type ShoppingListStatus string
 
 const (
-	ShoppingListUnknown   ShoppingListStatus = ""
-	ShoppingListAvailable ShoppingListStatus = "available"
-	ShoppingListAssigned  ShoppingListStatus = "assigned"
-	ShoppingListActive    ShoppingListStatus = "active"
-	ShoppingListCompleted ShoppingListStatus = "completed"
-	ShoppingListCancelled ShoppingListStatus = "canceled"
+	ShoppingListUnknown     ShoppingListStatus = ""
+	ShoppingListIsAvailable ShoppingListStatus = "available"
+	ShoppingListIsAssigned  ShoppingListStatus = "assigned"
+	ShoppingListIsActive    ShoppingListStatus = "active"
+	ShoppingListIsCompleted ShoppingListStatus = "completed"
+	ShoppingListIsCancelled ShoppingListStatus = "canceled"
 )
 
 func NewShoppingListStatus(status string) ShoppingListStatus {
 	switch status {
-	case ShoppingListAvailable.String():
-		return ShoppingListAvailable
-	case ShoppingListAssigned.String():
-		return ShoppingListAssigned
-	case ShoppingListActive.String():
-		return ShoppingListActive
-	case ShoppingListCompleted.String():
-		return ShoppingListCompleted
-	case ShoppingListCancelled.String():
-		return ShoppingListCancelled
+	case ShoppingListIsAvailable.String():
+		return ShoppingListIsAvailable
+	case ShoppingListIsAssigned.String():
+		return ShoppingListIsAssigned
+	case ShoppingListIsActive.String():
+		return ShoppingListIsActive
+	case ShoppingListIsCompleted.String():
+		return ShoppingListIsCompleted
+	case ShoppingListIsCancelled.String():
+		return ShoppingListIsCancelled
 	default:
 		return ShoppingListUnknown
 	}
@@ -30,7 +30,7 @@ func NewShoppingListStatus(status string) ShoppingListStatus {
 
 func (s ShoppingListStatus) String() string {
 	switch s {
-	case ShoppingListAvailable, ShoppingListAssigned, ShoppingListActive, ShoppingListCompleted, ShoppingListCancelled:
+	case ShoppingListIsAvailable, ShoppingListIsAssigned, ShoppingListIsActive, ShoppingListIsCompleted, ShoppingListIsCancelled:
 		return string(s)
 	default:
 		return ""

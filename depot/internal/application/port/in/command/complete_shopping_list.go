@@ -5,6 +5,8 @@ import (
 
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/application/port/out/client"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/domain/repository"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
+	"github.com/stackus/errors"
 )
 
 type CompleteShoppingList struct {
@@ -14,30 +16,36 @@ type CompleteShoppingList struct {
 type CompleteShoppingListHandler struct {
 	shoppingListRepository repository.ShoppingListRepository
 	orderClient            client.OrderClient
+	domainEventPublisher   ddd.EventPublisher
 }
 
-func NewCompleteShoppingListHandler(shoppingListRepository repository.ShoppingListRepository, orderClient client.OrderClient) CompleteShoppingListHandler {
+func NewCompleteShoppingListHandler(
+	shoppingListRepository repository.ShoppingListRepository,
+	orderClient client.OrderClient,
+	domainEventPublisher ddd.EventPublisher,
+) CompleteShoppingListHandler {
 	return CompleteShoppingListHandler{
 		shoppingListRepository: shoppingListRepository,
 		orderClient:            orderClient,
+		domainEventPublisher:   domainEventPublisher,
 	}
 }
 
 func (h CompleteShoppingListHandler) CompleteShoppingList(ctx context.Context, cmd CompleteShoppingList) error {
 	list, err := h.shoppingListRepository.Find(ctx, cmd.ID)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "completing shopping list")
 	}
 
 	err = list.Complete()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "completing shopping list")
 	}
 
-	err = h.orderClient.Ready(ctx, list.OrderID)
-	if err != nil {
-		return err
+	if err := h.shoppingListRepository.Update(ctx, list); err != nil {
+		return errors.Wrap(err, "updating shopping list")
 	}
 
-	return h.shoppingListRepository.Update(ctx, list)
+	// publish domain events
+	return h.domainEventPublisher.Publish(ctx, list.GetEvents()...)
 }

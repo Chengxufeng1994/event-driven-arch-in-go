@@ -5,6 +5,7 @@ import (
 
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/application/port/out/client"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/repository"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/stackus/errors"
 )
 
@@ -23,21 +24,28 @@ func NewAddItem(id, productID string, quantity int) AddItem {
 }
 
 type AddItemHandler struct {
-	basketRepository repository.BasketRepository
-	productClient    client.ProductClient
-	storeClient      client.StoreClient
+	basketRepository     repository.BasketRepository
+	productClient        client.ProductClient
+	storeClient          client.StoreClient
+	domainEventPublisher ddd.EventPublisher
 }
 
-func NewAddItemHandler(basketRepository repository.BasketRepository, productClient client.ProductClient, storeClient client.StoreClient) AddItemHandler {
+func NewAddItemHandler(
+	basketRepository repository.BasketRepository,
+	productClient client.ProductClient,
+	storeClient client.StoreClient,
+	domainEventPublisher ddd.EventPublisher,
+) AddItemHandler {
 	return AddItemHandler{
-		basketRepository: basketRepository,
-		productClient:    productClient,
-		storeClient:      storeClient,
+		basketRepository:     basketRepository,
+		productClient:        productClient,
+		storeClient:          storeClient,
+		domainEventPublisher: domainEventPublisher,
 	}
 }
 
 func (h AddItemHandler) AddItem(ctx context.Context, cmd AddItem) error {
-	basketAgg, err := h.basketRepository.Find(ctx, cmd.ID)
+	basket, err := h.basketRepository.Find(ctx, cmd.ID)
 	if err != nil {
 		return errors.Wrap(err, "add item command")
 	}
@@ -52,10 +60,14 @@ func (h AddItemHandler) AddItem(ctx context.Context, cmd AddItem) error {
 		return errors.Wrap(err, "finding store")
 	}
 
-	err = basketAgg.AddItem(store, product, cmd.Quantity)
+	err = basket.AddItem(store, product, cmd.Quantity)
 	if err != nil {
 		return errors.Wrap(err, "adding item to basket")
 	}
 
-	return h.basketRepository.Update(ctx, basketAgg)
+	if err := h.basketRepository.Update(ctx, basket); err != nil {
+		return errors.Wrap(err, "updating basket")
+	}
+
+	return h.domainEventPublisher.Publish(ctx, basket.GetEvents()...)
 }

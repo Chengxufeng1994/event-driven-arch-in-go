@@ -24,7 +24,7 @@ func NewGormStoreRepository(db *gorm.DB) *GormStoreRepository {
 }
 
 // Save implements repository.StoreRepository.
-func (r *GormStoreRepository) Save(ctx context.Context, store *aggregate.StoreAgg) error {
+func (r *GormStoreRepository) Save(ctx context.Context, store *aggregate.Store) error {
 	storePO := r.storeMapper.ToPersistent(store)
 
 	result := r.db.WithContext(ctx).
@@ -40,7 +40,7 @@ func (r *GormStoreRepository) Save(ctx context.Context, store *aggregate.StoreAg
 }
 
 // Update implements repository.StoreRepository.
-func (r *GormStoreRepository) Update(ctx context.Context, store *aggregate.StoreAgg) error {
+func (r *GormStoreRepository) Update(ctx context.Context, store *aggregate.Store) error {
 	storePO := r.storeMapper.ToPersistent(store)
 
 	result := r.db.WithContext(ctx).
@@ -67,7 +67,7 @@ func (r *GormStoreRepository) Delete(ctx context.Context, storeID string) error 
 }
 
 // Find implements repository.StoreRepository.
-func (r *GormStoreRepository) Find(ctx context.Context, storeID string) (*aggregate.StoreAgg, error) {
+func (r *GormStoreRepository) Find(ctx context.Context, storeID string) (*aggregate.Store, error) {
 	var store po.Store
 
 	result := r.db.WithContext(ctx).
@@ -83,7 +83,7 @@ func (r *GormStoreRepository) Find(ctx context.Context, storeID string) (*aggreg
 }
 
 // FindAll implements repository.StoreRepository.
-func (r *GormStoreRepository) FindAll(ctx context.Context) ([]*aggregate.StoreAgg, error) {
+func (r *GormStoreRepository) FindAll(ctx context.Context) ([]*aggregate.Store, error) {
 	var stores []*po.Store
 
 	result := r.db.WithContext(ctx).

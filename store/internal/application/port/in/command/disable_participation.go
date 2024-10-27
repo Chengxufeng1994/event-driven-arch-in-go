@@ -3,7 +3,9 @@ package command
 import (
 	"context"
 
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/domain/repository"
+	"github.com/stackus/errors"
 )
 
 type DisableParticipation struct {
@@ -11,23 +13,37 @@ type DisableParticipation struct {
 }
 
 type DisableParticipationHandler struct {
-	stores repository.StoreRepository
+	storeRepository      repository.StoreRepository
+	domainEventPublisher ddd.EventPublisher
 }
 
-func NewDisableParticipationHandler(stores repository.StoreRepository) DisableParticipationHandler {
-	return DisableParticipationHandler{stores: stores}
+func NewDisableParticipationHandler(
+	stores repository.StoreRepository,
+	domainEventPublisher ddd.EventPublisher,
+) DisableParticipationHandler {
+	return DisableParticipationHandler{
+		storeRepository:      stores,
+		domainEventPublisher: domainEventPublisher,
+	}
 }
 
 func (h DisableParticipationHandler) DisableParticipation(ctx context.Context, cmd DisableParticipation) error {
-	store, err := h.stores.Find(ctx, cmd.ID)
+	store, err := h.storeRepository.Find(ctx, cmd.ID)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "finding store")
 	}
 
-	err = store.DisableParticipation()
-	if err != nil {
-		return err
+	if err := store.DisableParticipation(); err != nil {
+		return errors.Wrap(err, "disabling participation")
 	}
 
-	return h.stores.Update(ctx, store)
+	if err := h.storeRepository.Update(ctx, store); err != nil {
+		return errors.Wrap(err, "updating store")
+	}
+
+	if err := h.domainEventPublisher.Publish(ctx, store.GetEvents()...); err != nil {
+		return errors.Wrap(err, "publishing events")
+	}
+
+	return nil
 }

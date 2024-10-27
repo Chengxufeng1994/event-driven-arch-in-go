@@ -31,7 +31,7 @@ func RegisterServer(_ context.Context, application usecase.OrderUseCase, registr
 func (s *server) CreateOrder(ctx context.Context, request *orderv1.CreateOrderRequest) (*orderv1.CreateOrderResponse, error) {
 	id := uuid.New().String()
 
-	items := make([]*valueobject.Item, 0, len(request.GetItems()))
+	items := make([]valueobject.Item, 0, len(request.GetItems()))
 	for _, item := range request.GetItems() {
 		items = append(items, s.itemToDomainItem(item))
 	}
@@ -79,7 +79,7 @@ func (s *server) GetOrder(ctx context.Context, request *orderv1.GetOrderRequest)
 	return &orderv1.GetOrderResponse{Order: s.orderFromDomain(orderAgg)}, nil
 }
 
-func (s *server) itemToDomainItem(item *orderv1.Item) *valueobject.Item {
+func (s *server) itemToDomainItem(item *orderv1.Item) valueobject.Item {
 	itemVO := valueobject.NewItem(
 		item.GetProductId(),
 		item.GetStoreId(),
@@ -89,10 +89,10 @@ func (s *server) itemToDomainItem(item *orderv1.Item) *valueobject.Item {
 		int(item.GetQuantity()),
 	)
 
-	return &itemVO
+	return itemVO
 }
 
-func (s *server) orderFromDomain(orderAgg *aggregate.OrderAgg) *orderv1.Order {
+func (s *server) orderFromDomain(orderAgg *aggregate.Order) *orderv1.Order {
 	return &orderv1.Order{
 		Id:         orderAgg.ID,
 		CustomerId: orderAgg.CustomerID,
@@ -102,7 +102,7 @@ func (s *server) orderFromDomain(orderAgg *aggregate.OrderAgg) *orderv1.Order {
 	}
 }
 
-func (s *server) itemFromDomain(item *valueobject.Item) *orderv1.Item {
+func (s *server) itemFromDomain(item valueobject.Item) *orderv1.Item {
 	return &orderv1.Item{
 		StoreId:     item.StoreID,
 		ProductId:   item.ProductID,
@@ -113,7 +113,7 @@ func (s *server) itemFromDomain(item *valueobject.Item) *orderv1.Item {
 	}
 }
 
-func (s *server) itemsFromDomainItems(itemsDO []*valueobject.Item) []*orderv1.Item {
+func (s *server) itemsFromDomainItems(itemsDO []valueobject.Item) []*orderv1.Item {
 	items := make([]*orderv1.Item, 0, len(itemsDO))
 
 	for _, item := range itemsDO {

@@ -1,6 +1,9 @@
 package aggregate
 
-import "github.com/stackus/errors"
+import (
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
+	"github.com/stackus/errors"
+)
 
 var (
 	ErrNameCannotBeBlank       = errors.Wrap(errors.ErrBadRequest, "the customer name cannot be blank")
@@ -10,14 +13,14 @@ var (
 	ErrCustomerAlreadyDisabled = errors.Wrap(errors.ErrBadRequest, "the customer is already disabled")
 )
 
-type CustomerAgg struct {
-	ID        string
+type Customer struct {
+	ddd.AggregateBase
 	Name      string
 	SmsNumber string
 	Enabled   bool
 }
 
-func RegisterCustomer(id, name, smsNumber string) (*CustomerAgg, error) {
+func RegisterCustomer(id, name, smsNumber string) (*Customer, error) {
 	if id == "" {
 		return nil, ErrCustomerIDCannotBeBlank
 	}
@@ -30,15 +33,15 @@ func RegisterCustomer(id, name, smsNumber string) (*CustomerAgg, error) {
 		return nil, ErrSmsNumberCannotBeBlank
 	}
 
-	return &CustomerAgg{
-		ID:        id,
-		Name:      name,
-		SmsNumber: smsNumber,
-		Enabled:   true,
+	return &Customer{
+		AggregateBase: ddd.NewAggregateBase(id),
+		Name:          name,
+		SmsNumber:     smsNumber,
+		Enabled:       true,
 	}, nil
 }
 
-func (c *CustomerAgg) Enable() error {
+func (c *Customer) Enable() error {
 	if c.Enabled {
 		return ErrCustomerAlreadyEnabled
 	}
@@ -48,7 +51,7 @@ func (c *CustomerAgg) Enable() error {
 	return nil
 }
 
-func (c *CustomerAgg) Disable() error {
+func (c *Customer) Disable() error {
 	if !c.Enabled {
 		return ErrCustomerAlreadyDisabled
 	}

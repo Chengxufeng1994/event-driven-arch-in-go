@@ -17,6 +17,6 @@ func NewGetParticipatingStoresHandler(participatingStores repository.Participati
 	return GetParticipatingStoresHandler{participatingStores: participatingStores}
 }
 
-func (h GetParticipatingStoresHandler) GetParticipatingStores(ctx context.Context, _ GetParticipatingStores) ([]*aggregate.StoreAgg, error) {
+func (h GetParticipatingStoresHandler) GetParticipatingStores(ctx context.Context, _ GetParticipatingStores) ([]*aggregate.Store, error) {
 	return h.participatingStores.FindAll(ctx)
 }

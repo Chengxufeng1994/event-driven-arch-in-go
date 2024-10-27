@@ -7,5 +7,5 @@ import (
 )
 
 type ParticipatingStoreRepository interface {
-	FindAll(ctx context.Context) ([]*aggregate.StoreAgg, error)
+	FindAll(ctx context.Context) ([]*aggregate.Store, error)
 }

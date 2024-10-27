@@ -48,7 +48,7 @@ func (a *Application) CancelShoppingList(ctx context.Context, cmd command.Cancel
 	return a.ShoppingListUseCase.CancelShoppingList(ctx, cmd)
 }
 
-func (a *Application) GetShoppingList(ctx context.Context, query query.GetShoppingList) (*aggregate.ShoppingListAgg, error) {
+func (a *Application) GetShoppingList(ctx context.Context, query query.GetShoppingList) (*aggregate.ShoppingList, error) {
 	a.logger.Info("--> Depot.GetShoppingList")
 	defer func() { a.logger.Info("<-- Depot.GetShoppingList") }()
 	return a.ShoppingListUseCase.GetShoppingList(ctx, query)

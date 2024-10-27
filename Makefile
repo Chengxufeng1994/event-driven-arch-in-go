@@ -17,7 +17,6 @@ generate:
 	@go generate ./...
 	@echo done
 
-
 .PHONY: lint
 lint:
 	@echo code lint
@@ -32,3 +31,9 @@ test:
 check-outdated:
 	@echo check outdated
 	@go list -u -m -json all | go run github.com/psampaz/go-mod-outdated@latest -update -direct
+
+docker-compose-up:
+	@docker compose up -d --remove-orphans
+
+docker-compose-down:
+	@docker compose down -v

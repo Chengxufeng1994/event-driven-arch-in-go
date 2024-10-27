@@ -3,7 +3,7 @@ package command
 import (
 	"context"
 
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/application/port/out/client"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/domain/repository"
 	"github.com/stackus/errors"
 )
@@ -13,20 +13,17 @@ type ReadyOrder struct {
 }
 
 type ReadyOrderHandler struct {
-	orderRepository repository.OrderRepository
-	invoiceClient   client.InvoiceClient
-	notification    client.NotificationClient
+	orderRepository      repository.OrderRepository
+	domainEventPublisher ddd.EventPublisher
 }
 
 func NewReadyOrderHandler(
 	orderRepository repository.OrderRepository,
-	invoiceClient client.InvoiceClient,
-	notification client.NotificationClient,
+	domainEventPublisher ddd.EventPublisher,
 ) ReadyOrderHandler {
 	return ReadyOrderHandler{
-		orderRepository: orderRepository,
-		invoiceClient:   invoiceClient,
-		notification:    notification,
+		orderRepository:      orderRepository,
+		domainEventPublisher: domainEventPublisher,
 	}
 }
 
@@ -41,12 +38,13 @@ func (h ReadyOrderHandler) ReadyOrder(ctx context.Context, cmd ReadyOrder) error
 	}
 
 	if err := h.orderRepository.Update(ctx, orderAgg); err != nil {
-		return errors.Wrap(err, "ready order command")
+		return errors.Wrap(err, "order update")
 	}
 
-	if err := h.notification.NotifyOrderReady(ctx, orderAgg.ID, orderAgg.CustomerID); err != nil {
-		return errors.Wrap(err, "order notification")
+	// publish domain events
+	if err := h.domainEventPublisher.Publish(ctx, orderAgg.GetEvents()...); err != nil {
+		return errors.Wrap(err, "publish domain events")
 	}
 
-	return h.orderRepository.Update(ctx, orderAgg)
+	return nil
 }

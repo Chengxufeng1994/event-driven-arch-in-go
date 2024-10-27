@@ -6,6 +6,7 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/application/port/out/client"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/application/usecase"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/domain/repository"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 )
 
 type (
@@ -28,13 +29,19 @@ type (
 
 var _ usecase.ShoppingListUseCase = (*ShoppingListApplication)(nil)
 
-func NewShoppingListApplication(shoppingListRepository repository.ShoppingListRepository, storeClient client.StoreClient, productClient client.ProductClient, orderClient client.OrderClient) *ShoppingListApplication {
+func NewShoppingListApplication(
+	shoppingListRepository repository.ShoppingListRepository,
+	storeClient client.StoreClient,
+	productClient client.ProductClient,
+	orderClient client.OrderClient,
+	domainEventDispatcher ddd.EventDispatcherIntf,
+) *ShoppingListApplication {
 	return &ShoppingListApplication{
 		appCommands: appCommands{
-			CreateShoppingListHandler:   command.NewCreateShoppingListHandler(shoppingListRepository, storeClient, productClient),
-			CancelShoppingListHandler:   command.NewCancelShoppingListHandler(shoppingListRepository),
-			AssignShoppingListHandler:   command.NewAssignShoppingListHandler(shoppingListRepository),
-			CompleteShoppingListHandler: command.NewCompleteShoppingListHandler(shoppingListRepository, orderClient),
+			CreateShoppingListHandler:   command.NewCreateShoppingListHandler(shoppingListRepository, storeClient, productClient, domainEventDispatcher),
+			AssignShoppingListHandler:   command.NewAssignShoppingListHandler(shoppingListRepository, domainEventDispatcher),
+			CancelShoppingListHandler:   command.NewCancelShoppingListHandler(shoppingListRepository, domainEventDispatcher),
+			CompleteShoppingListHandler: command.NewCompleteShoppingListHandler(shoppingListRepository, orderClient, domainEventDispatcher),
 		},
 		appQueries: appQueries{
 			GetShoppingListHandler: query.NewGetShoppingListHandler(shoppingListRepository),

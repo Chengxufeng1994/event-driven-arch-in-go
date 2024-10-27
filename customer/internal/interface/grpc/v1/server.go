@@ -56,7 +56,7 @@ func (s server) DisableCustomer(ctx context.Context, request *customerv1.Disable
 	return &customerv1.DisableCustomerResponse{}, err
 }
 
-func (s server) customerFromDomain(customer *aggregate.CustomerAgg) *customerv1.Customer {
+func (s server) customerFromDomain(customer *aggregate.Customer) *customerv1.Customer {
 	return &customerv1.Customer{
 		Id:        customer.ID,
 		Name:      customer.Name,

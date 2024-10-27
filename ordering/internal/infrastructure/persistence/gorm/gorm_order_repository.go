@@ -26,7 +26,7 @@ func NewGormOrderRepository(db *gorm.DB) *GormOrderRepository {
 	}
 }
 
-func (r *GormOrderRepository) Save(ctx context.Context, order *aggregate.OrderAgg) error {
+func (r *GormOrderRepository) Save(ctx context.Context, order *aggregate.Order) error {
 	orderPO, err := r.mapper.ToPersistence(order)
 	if err != nil {
 		return errors.Wrap(err, "mapping order")
@@ -45,7 +45,7 @@ func (r *GormOrderRepository) Save(ctx context.Context, order *aggregate.OrderAg
 	return errors.Wrap(result.Error, "inserting order")
 }
 
-func (r *GormOrderRepository) Update(ctx context.Context, order *aggregate.OrderAgg) error {
+func (r *GormOrderRepository) Update(ctx context.Context, order *aggregate.Order) error {
 	orderPO, err := r.mapper.ToPersistence(order)
 	if err != nil {
 		return errors.Wrap(err, "mapping order")
@@ -67,7 +67,7 @@ func (r *GormOrderRepository) Update(ctx context.Context, order *aggregate.Order
 	return errors.Wrap(result.Error, "updating order")
 }
 
-func (r *GormOrderRepository) Find(ctx context.Context, orderID string) (*aggregate.OrderAgg, error) {
+func (r *GormOrderRepository) Find(ctx context.Context, orderID string) (*aggregate.Order, error) {
 	var order *po.Order
 
 	result := r.db.WithContext(ctx).

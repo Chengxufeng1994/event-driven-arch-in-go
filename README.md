@@ -8,3 +8,4 @@
 * [Github - Domain Driven Design with Golang](https://github.com/PacktPublishing/Domain-Driven-Design-with-GoLang)
 * [Github - Microservices with Go](https://github.com/PacktPublishing/Microservices-with-Go/tree/main)
 * [Github - golang modular monolith EDA](https://github.com/a-aslani/golang_monolith_event_driven_architecture?tab=readme-ov-file)
+* [Github - ftgo-go](https://github.com/stackus/ftgogo?tab=readme-ov-file)

@@ -92,7 +92,7 @@ func (s server) GetBasket(ctx context.Context, request *basketv1.GetBasketReques
 	}, nil
 }
 
-func (s server) basketFromDomain(basket *aggregate.BasketAgg) *basketv1.Basket {
+func (s server) basketFromDomain(basket *aggregate.Basket) *basketv1.Basket {
 	protoBasket := &basketv1.Basket{
 		Id: basket.ID,
 	}

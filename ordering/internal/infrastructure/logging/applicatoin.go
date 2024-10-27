@@ -53,7 +53,7 @@ func (a *Application) CompleteOrder(ctx context.Context, cmd command.CompleteOrd
 }
 
 // GetOrder implements usecase.OrderUseCase.
-func (a *Application) GetOrder(ctx context.Context, query query.GetOrder) (order *aggregate.OrderAgg, err error) {
+func (a *Application) GetOrder(ctx context.Context, query query.GetOrder) (order *aggregate.Order, err error) {
 	a.logger.Info("--> Ordering.GetOrder")
 	defer func() { a.logger.WithError(err).Info("<-- Ordering.GetOrder") }()
 	return a.OrderUseCase.GetOrder(ctx, query)

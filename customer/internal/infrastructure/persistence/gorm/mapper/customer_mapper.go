@@ -3,12 +3,13 @@ package mapper
 import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/customer/internal/domain/aggregate"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/customer/internal/infrastructure/persistence/gorm/po"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 )
 
 type CustomerMapperIntf interface {
-	ToPersistent(customer *aggregate.CustomerAgg) *po.Customer
-	ToDomain(customer *po.Customer) *aggregate.CustomerAgg
-	ToDomainList(customers []*po.Customer) []*aggregate.CustomerAgg
+	ToPersistent(customer *aggregate.Customer) *po.Customer
+	ToDomain(customer *po.Customer) *aggregate.Customer
+	ToDomainList(customers []*po.Customer) []*aggregate.Customer
 }
 
 type CustomerMapper struct{}
@@ -19,7 +20,7 @@ func NewCustomerMapper() *CustomerMapper {
 	return &CustomerMapper{}
 }
 
-func (c *CustomerMapper) ToPersistent(customer *aggregate.CustomerAgg) *po.Customer {
+func (c *CustomerMapper) ToPersistent(customer *aggregate.Customer) *po.Customer {
 	return &po.Customer{
 		ID:        customer.ID,
 		Name:      customer.Name,
@@ -28,17 +29,17 @@ func (c *CustomerMapper) ToPersistent(customer *aggregate.CustomerAgg) *po.Custo
 	}
 }
 
-func (c *CustomerMapper) ToDomain(customer *po.Customer) *aggregate.CustomerAgg {
-	return &aggregate.CustomerAgg{
-		ID:        customer.ID,
-		Name:      customer.Name,
-		SmsNumber: customer.SmsNumber,
-		Enabled:   customer.Enabled,
+func (c *CustomerMapper) ToDomain(customer *po.Customer) *aggregate.Customer {
+	return &aggregate.Customer{
+		AggregateBase: ddd.NewAggregateBase(customer.ID),
+		Name:          customer.Name,
+		SmsNumber:     customer.SmsNumber,
+		Enabled:       customer.Enabled,
 	}
 }
 
-func (c *CustomerMapper) ToDomainList(customers []*po.Customer) []*aggregate.CustomerAgg {
-	rlt := make([]*aggregate.CustomerAgg, 0, len(customers))
+func (c *CustomerMapper) ToDomainList(customers []*po.Customer) []*aggregate.Customer {
+	rlt := make([]*aggregate.Customer, 0, len(customers))
 	for i := 0; i < len(customers); i++ {
 		rlt = append(rlt, c.ToDomain(customers[i]))
 	}

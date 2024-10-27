@@ -7,9 +7,9 @@ import (
 )
 
 type Queries interface {
-	GetStore(ctx context.Context, query GetStore) (*aggregate.StoreAgg, error)
-	GetStores(ctx context.Context, query GetStores) ([]*aggregate.StoreAgg, error)
-	GetParticipatingStores(ctx context.Context, query GetParticipatingStores) ([]*aggregate.StoreAgg, error)
-	GetCatalog(ctx context.Context, query GetCatalog) ([]*aggregate.ProductAgg, error)
-	GetProduct(ctx context.Context, query GetProduct) (*aggregate.ProductAgg, error)
+	GetStore(ctx context.Context, query GetStore) (*aggregate.Store, error)
+	GetStores(ctx context.Context, query GetStores) ([]*aggregate.Store, error)
+	GetParticipatingStores(ctx context.Context, query GetParticipatingStores) ([]*aggregate.Store, error)
+	GetCatalog(ctx context.Context, query GetCatalog) ([]*aggregate.Product, error)
+	GetProduct(ctx context.Context, query GetProduct) (*aggregate.Product, error)
 }

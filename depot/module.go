@@ -10,7 +10,9 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/infastructure/logging"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/infastructure/persistence/gorm"
 	grpcv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/interfaces/grpc/v1"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/interfaces/handler"
 	restv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/interfaces/http/rest/v1"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/monolith"
 )
 
@@ -31,20 +33,29 @@ func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 		return err
 	}
 
+	domainEventDispatcher := ddd.NewEventDispatcher()
 	grpcOrderClient := infragrpc.NewGrpcOrderClient(conn)
 	grpcStoreClient := infragrpc.NewGrpcStoreClient(conn)
 	grpcProductClient := infragrpc.NewGrpcProductClient(conn)
 
-	application := logging.NewLogApplicationAccess(
+	logApplication := logging.NewLogApplicationAccess(
 		application.NewShoppingListApplication(
 			shoppingListRepository,
 			grpcStoreClient,
 			grpcProductClient,
-			grpcOrderClient),
+			grpcOrderClient,
+			domainEventDispatcher,
+		),
 		mono.Logger(),
 	)
 
-	if err := grpcv1.RegisterServer(ctx, application, mono.RPC().GRPCServer()); err != nil {
+	logDomainEventHandler := logging.NewLogDomainEventHandlerAccess(
+		application.NewShoppingListDomainEventHandler(grpcOrderClient),
+		mono.Logger())
+
+	handler.RegisterDomainEventHandlers(ctx, logDomainEventHandler, domainEventDispatcher)
+
+	if err := grpcv1.RegisterServer(ctx, logApplication, mono.RPC().GRPCServer()); err != nil {
 		return err
 	}
 

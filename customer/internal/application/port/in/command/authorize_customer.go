@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/customer/internal/domain/repository"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/stackus/errors"
 )
 
@@ -18,14 +19,17 @@ func NewAuthorizeCustomer(id string) AuthorizeCustomer {
 }
 
 type AuthorizeCustomerHandler struct {
-	customerRepository repository.CustomerRepository
+	customerRepository   repository.CustomerRepository
+	domainEventPublisher ddd.EventPublisher
 }
 
 func NewAuthorizeCustomerHandler(
 	customerRepository repository.CustomerRepository,
+	domainEventPublisher ddd.EventPublisher,
 ) AuthorizeCustomerHandler {
 	return AuthorizeCustomerHandler{
-		customerRepository: customerRepository,
+		customerRepository:   customerRepository,
+		domainEventPublisher: domainEventPublisher,
 	}
 }
 
@@ -37,6 +41,10 @@ func (h AuthorizeCustomerHandler) AuthorizeCustomer(ctx context.Context, authori
 
 	if !customer.Enabled {
 		return errors.Wrap(errors.ErrUnauthorized, "customer is not authorized")
+	}
+
+	if err := h.domainEventPublisher.Publish(ctx, customer.GetEvents()...); err != nil {
+		return errors.Wrap(err, "could not publish events")
 	}
 
 	return nil

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/monolith"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/docs"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/application"
@@ -11,6 +12,7 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/infrastructure/logging"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/infrastructure/persistence/gorm"
 	grpcv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/interface/grpc/v1"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/interface/handler"
 	v1 "github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/interface/http/rest/v1"
 )
 
@@ -26,6 +28,7 @@ func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 	endpoint := fmt.Sprintf("%s:%d", mono.Config().Server.GPPC.Host, mono.Config().Server.GPPC.Port)
 	db := mono.Database()
 
+	domainEventDispatcher := ddd.NewEventDispatcher()
 	orderRepository := gorm.NewGormOrderRepository(db)
 	conn, err := grpc.Dial(ctx, endpoint)
 	if err != nil {
@@ -37,18 +40,29 @@ func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 	paymentClient := grpc.NewGrpcPaymentClient(conn)
 	shoppingClient := grpc.NewGrpcShoppingClient(conn)
 
-	application := logging.NewLogApplicationAccess(
+	logApplication := logging.NewLogApplicationAccess(
 		application.NewOrderApplication(
 			orderRepository,
 			customerClient,
-			invoiceClient,
-			notificationClient,
 			paymentClient,
-			shoppingClient),
+			shoppingClient,
+			domainEventDispatcher,
+		),
 		mono.Logger(),
 	)
 
-	if err := grpcv1.RegisterServer(ctx, application, mono.RPC().GRPCServer()); err != nil {
+	invoiceDomainEventHandler := logging.NewLogInvoiceDomainEventHandlerAccess(
+		application.NewInvoiceDomainEventHandler(invoiceClient),
+		mono.Logger(),
+	)
+	notificationDomainEventHandler := logging.NewLogNotificationDomainEventHandlerAccess(
+		application.NewNotificationDomainEventHandler(notificationClient),
+		mono.Logger())
+
+	handler.RegisterInvoiceDomainEventHandlers(invoiceDomainEventHandler, domainEventDispatcher)
+	handler.RegisterNotificationDomainEventHandlers(notificationDomainEventHandler, domainEventDispatcher)
+
+	if err := grpcv1.RegisterServer(ctx, logApplication, mono.RPC().GRPCServer()); err != nil {
 		return err
 	}
 

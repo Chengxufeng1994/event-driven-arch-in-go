@@ -17,6 +17,6 @@ func NewGetStoresHandler(stores repository.StoreRepository) GetStoresHandler {
 	return GetStoresHandler{stores: stores}
 }
 
-func (h GetStoresHandler) GetStores(ctx context.Context, _ GetStores) ([]*aggregate.StoreAgg, error) {
+func (h GetStoresHandler) GetStores(ctx context.Context, _ GetStores) ([]*aggregate.Store, error) {
 	return h.stores.FindAll(ctx)
 }

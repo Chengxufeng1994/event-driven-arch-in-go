@@ -24,7 +24,7 @@ func NewGormParticipatingStoreRepository(db *gorm.DB) *GormParticipatingStoreRep
 	}
 }
 
-func (r *GormParticipatingStoreRepository) FindAll(ctx context.Context) ([]*aggregate.StoreAgg, error) {
+func (r *GormParticipatingStoreRepository) FindAll(ctx context.Context) ([]*aggregate.Store, error) {
 	var stores []*po.Store
 	result := r.db.WithContext(ctx).
 		Model(&po.Store{}).

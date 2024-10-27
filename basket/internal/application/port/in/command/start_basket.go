@@ -2,10 +2,11 @@ package command
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/aggregate"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/repository"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
+	"github.com/stackus/errors"
 )
 
 type StartBasket struct {
@@ -21,21 +22,29 @@ func NewStartBasket(id, customerID string) StartBasket {
 }
 
 type StartBasketHandler struct {
-	basketRepository repository.BasketRepository
+	basketRepository     repository.BasketRepository
+	domainEventPublisher ddd.EventPublisher
 }
 
-func NewStartBasketHandler(basketRepository repository.BasketRepository) StartBasketHandler {
+func NewStartBasketHandler(basketRepository repository.BasketRepository, domainEventPublisher ddd.EventPublisher) StartBasketHandler {
 	return StartBasketHandler{
-		basketRepository: basketRepository,
+		basketRepository:     basketRepository,
+		domainEventPublisher: domainEventPublisher,
 	}
 }
 
 func (h StartBasketHandler) StartBasket(ctx context.Context, cmd StartBasket) error {
-	fmt.Println("123")
-	basketAgg, err := aggregate.StartBasket(cmd.ID, cmd.CustomerID)
+	// create basket
+	basket, err := aggregate.StartBasket(cmd.ID, cmd.CustomerID)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "start basket command")
 	}
 
-	return h.basketRepository.Save(ctx, basketAgg)
+	// save basket
+	if err := h.basketRepository.Save(ctx, basket); err != nil {
+		return errors.Wrap(err, "start basket command")
+	}
+
+	// publish domain events
+	return h.domainEventPublisher.Publish(ctx, basket.GetEvents()...)
 }

@@ -8,13 +8,14 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/entity"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/valueobject"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/infrastructure/persistence/gorm/po"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/stackus/errors"
 )
 
 type BasketMapperIntf interface {
-	ToPersistent(basket *aggregate.BasketAgg) (*po.Basket, error)
-	ToDomain(basket *po.Basket) (*aggregate.BasketAgg, error)
-	ToDomainList(baskets []*po.Basket) ([]*aggregate.BasketAgg, error)
+	ToPersistent(basket *aggregate.Basket) (*po.Basket, error)
+	ToDomain(basket *po.Basket) (*aggregate.Basket, error)
+	ToDomainList(baskets []*po.Basket) ([]*aggregate.Basket, error)
 }
 
 type BasketMapper struct{}
@@ -25,7 +26,7 @@ func NewBasketMapper() *BasketMapper {
 	return &BasketMapper{}
 }
 
-func (b *BasketMapper) ToPersistent(basket *aggregate.BasketAgg) (*po.Basket, error) {
+func (b *BasketMapper) ToPersistent(basket *aggregate.Basket) (*po.Basket, error) {
 	byt, err := json.Marshal(basket.Items)
 	if err != nil {
 		return nil, errors.ErrInternalServerError.Err(err)
@@ -40,7 +41,7 @@ func (b *BasketMapper) ToPersistent(basket *aggregate.BasketAgg) (*po.Basket, er
 	}, nil
 }
 
-func (b *BasketMapper) ToDomain(basket *po.Basket) (*aggregate.BasketAgg, error) {
+func (b *BasketMapper) ToDomain(basket *po.Basket) (*aggregate.Basket, error) {
 	var items []*entity.Item
 	err := json.Unmarshal(basket.Items, &items)
 	if err != nil {
@@ -52,17 +53,17 @@ func (b *BasketMapper) ToDomain(basket *po.Basket) (*aggregate.BasketAgg, error)
 		return nil, errors.ErrInternalServerError.Err(err)
 	}
 
-	return &aggregate.BasketAgg{
-		ID:         basket.ID,
-		CustomerID: basket.CustomerID,
-		PaymentID:  basket.PaymentID,
-		Items:      items,
-		Status:     status,
+	return &aggregate.Basket{
+		AggregateBase: ddd.NewAggregateBase(basket.ID),
+		CustomerID:    basket.CustomerID,
+		PaymentID:     basket.PaymentID,
+		Items:         items,
+		Status:        status,
 	}, nil
 }
 
-func (b *BasketMapper) ToDomainList(baskets []*po.Basket) ([]*aggregate.BasketAgg, error) {
-	rlt := make([]*aggregate.BasketAgg, 0, len(baskets))
+func (b *BasketMapper) ToDomainList(baskets []*po.Basket) ([]*aggregate.Basket, error) {
+	rlt := make([]*aggregate.Basket, 0, len(baskets))
 
 	for _, basket := range baskets {
 		basketDO, err := b.ToDomain(basket)

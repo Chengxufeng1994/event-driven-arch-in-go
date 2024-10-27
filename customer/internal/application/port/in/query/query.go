@@ -7,5 +7,5 @@ import (
 )
 
 type Queries interface {
-	GetCustomer(ctx context.Context, query GetCustomer) (*aggregate.CustomerAgg, error)
+	GetCustomer(ctx context.Context, query GetCustomer) (*aggregate.Customer, error)
 }

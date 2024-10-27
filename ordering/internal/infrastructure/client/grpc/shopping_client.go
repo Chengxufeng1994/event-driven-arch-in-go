@@ -21,7 +21,7 @@ func NewGrpcShoppingClient(conn *grpc.ClientConn) *GrpcShoppingClient {
 }
 
 // Create implements client.ShoppingClient.
-func (c *GrpcShoppingClient) Create(ctx context.Context, order *aggregate.OrderAgg) (string, error) {
+func (c *GrpcShoppingClient) Create(ctx context.Context, order *aggregate.Order) (string, error) {
 	var items []*depotv1.OrderItem
 	for _, item := range order.Items {
 		items = append(items, c.itemFromDomain(item))
@@ -47,7 +47,7 @@ func (c *GrpcShoppingClient) Cancel(ctx context.Context, shoppingID string) erro
 	return err
 }
 
-func (c *GrpcShoppingClient) itemFromDomain(item *valueobject.Item) *depotv1.OrderItem {
+func (c *GrpcShoppingClient) itemFromDomain(item valueobject.Item) *depotv1.OrderItem {
 	return &depotv1.OrderItem{
 		ProductId: item.ProductID,
 		StoreId:   item.StoreID,

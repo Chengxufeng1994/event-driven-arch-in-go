@@ -30,7 +30,7 @@ func NewApp() *monolith.MonolithApplication {
 		return nil
 	}
 	viper.WatchConfig()
-	viper.OnConfigChange(func(in fsnotify.Event) {
+	viper.OnConfigChange(func(_ fsnotify.Event) {
 		logger.Info("reloading config")
 		if err := viper.Unmarshal(&cfg); err != nil {
 			logger.Errorf("failed to unmarshal config: %v", err)

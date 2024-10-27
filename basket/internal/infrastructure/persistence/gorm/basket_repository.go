@@ -26,7 +26,7 @@ func NewGormBasketRepository(db *gorm.DB) *GormBasketRepository {
 	}
 }
 
-func (r *GormBasketRepository) Save(ctx context.Context, basket *aggregate.BasketAgg) error {
+func (r *GormBasketRepository) Save(ctx context.Context, basket *aggregate.Basket) error {
 	basketPO, err := r.basketMapper.ToPersistent(basket)
 	if err != nil {
 		return errors.Wrap(err, "mapping basket")
@@ -45,7 +45,7 @@ func (r *GormBasketRepository) Save(ctx context.Context, basket *aggregate.Baske
 	return errors.Wrap(result.Error, "inserting basket")
 }
 
-func (r *GormBasketRepository) Update(ctx context.Context, basket *aggregate.BasketAgg) error {
+func (r *GormBasketRepository) Update(ctx context.Context, basket *aggregate.Basket) error {
 	basketPO, err := r.basketMapper.ToPersistent(basket)
 	if err != nil {
 		return errors.Wrap(err, "mapping basket")
@@ -68,7 +68,7 @@ func (r *GormBasketRepository) Update(ctx context.Context, basket *aggregate.Bas
 	return nil
 }
 
-func (r *GormBasketRepository) Find(ctx context.Context, basketID string) (*aggregate.BasketAgg, error) {
+func (r *GormBasketRepository) Find(ctx context.Context, basketID string) (*aggregate.Basket, error) {
 	var basket *po.Basket
 	result := r.db.WithContext(ctx).
 		Where("id = ?", basketID).

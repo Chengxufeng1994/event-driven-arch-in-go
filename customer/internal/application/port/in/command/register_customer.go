@@ -5,6 +5,8 @@ import (
 
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/customer/internal/domain/aggregate"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/customer/internal/domain/repository"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
+	"github.com/stackus/errors"
 )
 
 type RegisterCustomer struct {
@@ -22,14 +24,17 @@ func NewRegisterCustomer(id, name, smsNumber string) RegisterCustomer {
 }
 
 type RegisterCustomerHandler struct {
-	customerRepository repository.CustomerRepository
+	customerRepository   repository.CustomerRepository
+	domainEventPublisher ddd.EventPublisher
 }
 
 func NewRegisterCustomerHandler(
 	customerRepository repository.CustomerRepository,
+	domainEventPublisher ddd.EventPublisher,
 ) RegisterCustomerHandler {
 	return RegisterCustomerHandler{
-		customerRepository: customerRepository,
+		customerRepository:   customerRepository,
+		domainEventPublisher: domainEventPublisher,
 	}
 }
 
@@ -39,5 +44,13 @@ func (h RegisterCustomerHandler) RegisterCustomer(ctx context.Context, register 
 		return err
 	}
 
-	return h.customerRepository.Save(ctx, customer)
+	if err := h.customerRepository.Save(ctx, customer); err != nil {
+		return err
+	}
+
+	if err := h.domainEventPublisher.Publish(ctx, customer.GetEvents()...); err != nil {
+		return errors.Wrap(err, "could not publish events")
+	}
+
+	return nil
 }

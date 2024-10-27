@@ -169,7 +169,7 @@ func (s *handler) RemoveProduct(ctx context.Context, request *storev1.RemoveProd
 	return &storev1.RemoveProductResponse{}, err
 }
 
-func (s *handler) storeFromDomain(store *aggregate.StoreAgg) *storev1.Store {
+func (s *handler) storeFromDomain(store *aggregate.Store) *storev1.Store {
 	return &storev1.Store{
 		Id:            store.ID,
 		Name:          store.Name,
@@ -178,7 +178,7 @@ func (s *handler) storeFromDomain(store *aggregate.StoreAgg) *storev1.Store {
 	}
 }
 
-func (s *handler) productFromDomain(product *aggregate.ProductAgg) *storev1.Product {
+func (s *handler) productFromDomain(product *aggregate.Product) *storev1.Product {
 	return &storev1.Product{
 		Id:          product.ID,
 		StoreId:     product.StoreID,

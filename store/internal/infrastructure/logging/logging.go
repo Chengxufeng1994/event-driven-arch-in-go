@@ -54,31 +54,31 @@ func (a Application) RemoveProduct(ctx context.Context, cmd command.RemoveProduc
 	return a.StoreUseCase.RemoveProduct(ctx, cmd)
 }
 
-func (a Application) GetStore(ctx context.Context, query query.GetStore) (store *aggregate.StoreAgg, err error) {
+func (a Application) GetStore(ctx context.Context, query query.GetStore) (store *aggregate.Store, err error) {
 	a.logger.Info("--> Stores.GetStore")
 	defer func() { a.logger.WithError(err).Info("<-- Stores.GetStore") }()
 	return a.StoreUseCase.GetStore(ctx, query)
 }
 
-func (a Application) GetStores(ctx context.Context, query query.GetStores) (store []*aggregate.StoreAgg, err error) {
+func (a Application) GetStores(ctx context.Context, query query.GetStores) (store []*aggregate.Store, err error) {
 	a.logger.Info("--> Stores.GetStores")
 	defer func() { a.logger.WithError(err).Info("<-- Stores.GetStores") }()
 	return a.StoreUseCase.GetStores(ctx, query)
 }
 
-func (a Application) GetParticipatingStores(ctx context.Context, query query.GetParticipatingStores) (store []*aggregate.StoreAgg, err error) {
+func (a Application) GetParticipatingStores(ctx context.Context, query query.GetParticipatingStores) (store []*aggregate.Store, err error) {
 	a.logger.Info("--> Stores.GetParticipatingStores")
 	defer func() { a.logger.WithError(err).Info("<-- Stores.GetParticipatingStores") }()
 	return a.StoreUseCase.GetParticipatingStores(ctx, query)
 }
 
-func (a Application) GetCatalog(ctx context.Context, query query.GetCatalog) (products []*aggregate.ProductAgg, err error) {
+func (a Application) GetCatalog(ctx context.Context, query query.GetCatalog) (products []*aggregate.Product, err error) {
 	a.logger.Info("--> Stores.GetCatalog")
 	defer func() { a.logger.WithError(err).Info("<-- Stores.GetCatalog") }()
 	return a.StoreUseCase.GetCatalog(ctx, query)
 }
 
-func (a Application) GetProduct(ctx context.Context, query query.GetProduct) (product *aggregate.ProductAgg, err error) {
+func (a Application) GetProduct(ctx context.Context, query query.GetProduct) (product *aggregate.Product, err error) {
 	a.logger.Info("--> Stores.GetProduct")
 	defer func() { a.logger.WithError(err).Info("<-- Stores.GetProduct") }()
 	return a.StoreUseCase.GetProduct(ctx, query)

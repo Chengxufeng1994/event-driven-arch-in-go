@@ -19,6 +19,6 @@ func NewGetShoppingListHandler(shoppingListRepository repository.ShoppingListRep
 	return GetShoppingListHandler{shoppingListRepository: shoppingListRepository}
 }
 
-func (h GetShoppingListHandler) GetShoppingList(ctx context.Context, query GetShoppingList) (*aggregate.ShoppingListAgg, error) {
+func (h GetShoppingListHandler) GetShoppingList(ctx context.Context, query GetShoppingList) (*aggregate.ShoppingList, error) {
 	return h.shoppingListRepository.Find(ctx, query.ID)
 }

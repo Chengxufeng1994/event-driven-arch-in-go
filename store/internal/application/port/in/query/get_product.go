@@ -19,6 +19,6 @@ func NewGetProductHandler(products repository.ProductRepository) GetProductHandl
 	return GetProductHandler{products: products}
 }
 
-func (h GetProductHandler) GetProduct(ctx context.Context, query GetProduct) (*aggregate.ProductAgg, error) {
-	return h.products.FindProduct(ctx, query.ID)
+func (h GetProductHandler) GetProduct(ctx context.Context, query GetProduct) (*aggregate.Product, error) {
+	return h.products.Find(ctx, query.ID)
 }

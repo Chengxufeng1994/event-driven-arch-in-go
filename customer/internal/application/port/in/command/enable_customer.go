@@ -4,6 +4,8 @@ import (
 	"context"
 
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/customer/internal/domain/repository"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
+	"github.com/stackus/errors"
 )
 
 type EnableCustomer struct {
@@ -17,12 +19,17 @@ func NewEnableCustomer(id string) EnableCustomer {
 }
 
 type EnableCustomerHandler struct {
-	customerRepository repository.CustomerRepository
+	customerRepository   repository.CustomerRepository
+	domainEventPublisher ddd.EventPublisher
 }
 
-func NewEnableCustomerHandler(customerRepository repository.CustomerRepository) EnableCustomerHandler {
+func NewEnableCustomerHandler(
+	customerRepository repository.CustomerRepository,
+	domainEventPublisher ddd.EventPublisher,
+) EnableCustomerHandler {
 	return EnableCustomerHandler{
-		customerRepository: customerRepository,
+		customerRepository:   customerRepository,
+		domainEventPublisher: domainEventPublisher,
 	}
 }
 
@@ -37,5 +44,13 @@ func (h EnableCustomerHandler) EnableCustomer(ctx context.Context, enable Enable
 		return err
 	}
 
-	return h.customerRepository.Update(ctx, customer)
+	if err := h.customerRepository.Update(ctx, customer); err != nil {
+		return err
+	}
+
+	if err := h.domainEventPublisher.Publish(ctx, customer.GetEvents()...); err != nil {
+		return errors.Wrap(err, "could not publish events")
+	}
+
+	return nil
 }

@@ -7,7 +7,7 @@ import (
 )
 
 type CustomerRepository interface {
-	Save(ctx context.Context, customer *aggregate.CustomerAgg) error
-	Find(ctx context.Context, customerID string) (*aggregate.CustomerAgg, error)
-	Update(ctx context.Context, customer *aggregate.CustomerAgg) error
+	Save(ctx context.Context, customer *aggregate.Customer) error
+	Find(ctx context.Context, customerID string) (*aggregate.Customer, error)
+	Update(ctx context.Context, customer *aggregate.Customer) error
 }

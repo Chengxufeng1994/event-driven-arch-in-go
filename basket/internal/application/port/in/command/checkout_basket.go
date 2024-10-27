@@ -5,6 +5,7 @@ import (
 
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/application/port/out/client"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/repository"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/stackus/errors"
 )
 
@@ -21,32 +22,34 @@ func NewCheckoutBasket(id, paymentID string) CheckoutBasket {
 }
 
 type CheckoutBasketHandler struct {
-	basketRepository repository.BasketRepository
-	orderClient      client.OrderClient
+	basketRepository     repository.BasketRepository
+	orderClient          client.OrderClient
+	domainEventPublisher ddd.EventPublisher
 }
 
-func NewCheckoutBasketHandler(basketRepository repository.BasketRepository, orderClient client.OrderClient) CheckoutBasketHandler {
+func NewCheckoutBasketHandler(basketRepository repository.BasketRepository, orderClient client.OrderClient, domainEventPublisher ddd.EventPublisher) CheckoutBasketHandler {
 	return CheckoutBasketHandler{
-		basketRepository: basketRepository,
-		orderClient:      orderClient,
+		basketRepository:     basketRepository,
+		orderClient:          orderClient,
+		domainEventPublisher: domainEventPublisher,
 	}
 }
 
 func (h CheckoutBasketHandler) CheckoutBasket(ctx context.Context, cmd CheckoutBasket) error {
-	basketAgg, err := h.basketRepository.Find(ctx, cmd.ID)
+	basket, err := h.basketRepository.Find(ctx, cmd.ID)
 	if err != nil {
 		return err
 	}
 
-	if err := basketAgg.Checkout(cmd.PaymentID); err != nil {
+	if err := basket.Checkout(cmd.PaymentID); err != nil {
 		return errors.Wrap(err, "checkout basket")
 	}
 
-	// submit the basket to the order module
-	_, err = h.orderClient.Save(ctx, basketAgg)
-	if err != nil {
-		return errors.Wrap(err, "baskets basket")
+	// update the basket
+	if err := h.basketRepository.Update(ctx, basket); err != nil {
+		return errors.Wrap(err, "updating basket")
 	}
 
-	return errors.Wrap(h.basketRepository.Update(ctx, basketAgg), "basket checkout")
+	// publish domain events
+	return h.domainEventPublisher.Publish(ctx, basket.GetEvents()...)
 }

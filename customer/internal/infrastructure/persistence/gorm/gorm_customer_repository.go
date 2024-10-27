@@ -26,7 +26,7 @@ func NewGormCustomerRepository(db *gorm.DB) *GormCustomerRepository {
 	}
 }
 
-func (r *GormCustomerRepository) Save(ctx context.Context, customer *aggregate.CustomerAgg) error {
+func (r *GormCustomerRepository) Save(ctx context.Context, customer *aggregate.Customer) error {
 	customerPO := r.mapper.ToPersistent(customer)
 	result := r.db.WithContext(ctx).
 		Model(&po.Customer{}).
@@ -45,7 +45,7 @@ func (r *GormCustomerRepository) Save(ctx context.Context, customer *aggregate.C
 	return nil
 }
 
-func (r *GormCustomerRepository) Update(ctx context.Context, customer *aggregate.CustomerAgg) error {
+func (r *GormCustomerRepository) Update(ctx context.Context, customer *aggregate.Customer) error {
 	customerPO := r.mapper.ToPersistent(customer)
 	result := r.db.WithContext(ctx).
 		Model(&po.Customer{}).
@@ -64,7 +64,7 @@ func (r *GormCustomerRepository) Update(ctx context.Context, customer *aggregate
 	return nil
 }
 
-func (r *GormCustomerRepository) Find(ctx context.Context, customerID string) (*aggregate.CustomerAgg, error) {
+func (r *GormCustomerRepository) Find(ctx context.Context, customerID string) (*aggregate.Customer, error) {
 	var customerPO *po.Customer
 	result := r.db.WithContext(ctx).
 		Model(&po.Customer{}).

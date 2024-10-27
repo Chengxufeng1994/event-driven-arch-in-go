@@ -26,7 +26,7 @@ func NewGormProductRepository(db *gorm.DB) *GormProductRepository {
 	}
 }
 
-func (r *GormProductRepository) AddProduct(ctx context.Context, product *aggregate.ProductAgg) error {
+func (r *GormProductRepository) Save(ctx context.Context, product *aggregate.Product) error {
 	productPO := r.productMapper.ToPersistent(product)
 
 	result := r.db.WithContext(ctx).
@@ -41,7 +41,7 @@ func (r *GormProductRepository) AddProduct(ctx context.Context, product *aggrega
 	return errors.Wrap(result.Error, "inserting product")
 }
 
-func (r *GormProductRepository) RemoveProduct(ctx context.Context, prodcutID string) error {
+func (r *GormProductRepository) Delete(ctx context.Context, prodcutID string) error {
 	result := r.db.WithContext(ctx).
 		Unscoped().
 		Where("id = ?", prodcutID).
@@ -50,7 +50,7 @@ func (r *GormProductRepository) RemoveProduct(ctx context.Context, prodcutID str
 	return errors.Wrap(result.Error, "deleting product")
 }
 
-func (r *GormProductRepository) FindProduct(ctx context.Context, productID string) (*aggregate.ProductAgg, error) {
+func (r *GormProductRepository) Find(ctx context.Context, productID string) (*aggregate.Product, error) {
 	var product po.Product
 
 	result := r.db.WithContext(ctx).
@@ -63,7 +63,7 @@ func (r *GormProductRepository) FindProduct(ctx context.Context, productID strin
 	return r.productMapper.ToDomain(&product), nil
 }
 
-func (r *GormProductRepository) GetCatalog(ctx context.Context, storeID string) ([]*aggregate.ProductAgg, error) {
+func (r *GormProductRepository) FindCatalog(ctx context.Context, storeID string) ([]*aggregate.Product, error) {
 	var products []*po.Product
 
 	result := r.db.WithContext(ctx).

@@ -7,5 +7,5 @@ import (
 )
 
 type Queries interface {
-	GetBasket(ctx context.Context, query GetBasket) (*aggregate.BasketAgg, error)
+	GetBasket(ctx context.Context, query GetBasket) (*aggregate.Basket, error)
 }

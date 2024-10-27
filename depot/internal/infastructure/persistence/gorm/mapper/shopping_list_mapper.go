@@ -7,12 +7,13 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/domain/entity"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/domain/valueobject"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/infastructure/persistence/gorm/po"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/stackus/errors"
 )
 
 type ShoppingListMapperIntf interface {
-	ToPersistence(*aggregate.ShoppingListAgg) (*po.ShoppingList, error)
-	ToDomain(*po.ShoppingList) (*aggregate.ShoppingListAgg, error)
+	ToPersistent(*aggregate.ShoppingList) (*po.ShoppingList, error)
+	ToDomain(*po.ShoppingList) (*aggregate.ShoppingList, error)
 }
 
 type ShoppingListMapper struct{}
@@ -23,7 +24,7 @@ func NewShoppingListMapper() ShoppingListMapperIntf {
 	return &ShoppingListMapper{}
 }
 
-func (m *ShoppingListMapper) ToPersistence(shoppingList *aggregate.ShoppingListAgg) (*po.ShoppingList, error) {
+func (m *ShoppingListMapper) ToPersistent(shoppingList *aggregate.ShoppingList) (*po.ShoppingList, error) {
 	byt, err := json.Marshal(shoppingList.Stops)
 	if err != nil {
 		return nil, errors.Wrap(err, "json marshal")
@@ -38,15 +39,15 @@ func (m *ShoppingListMapper) ToPersistence(shoppingList *aggregate.ShoppingListA
 	}, nil
 }
 
-func (m *ShoppingListMapper) ToDomain(shoppingList *po.ShoppingList) (*aggregate.ShoppingListAgg, error) {
+func (m *ShoppingListMapper) ToDomain(shoppingList *po.ShoppingList) (*aggregate.ShoppingList, error) {
 	stops := entity.NewStops()
 	err := json.Unmarshal(shoppingList.Stops, &stops)
 	if err != nil {
 		return nil, errors.Wrap(err, "json unmarshal")
 	}
 
-	return &aggregate.ShoppingListAgg{
-		ID:            shoppingList.ID,
+	return &aggregate.ShoppingList{
+		AggregateBase: ddd.NewAggregateBase(shoppingList.ID),
 		OrderID:       shoppingList.OrderID,
 		AssignedBotID: shoppingList.AssignedBotID,
 		Stops:         stops,
@@ -56,16 +57,16 @@ func (m *ShoppingListMapper) ToDomain(shoppingList *po.ShoppingList) (*aggregate
 
 func (m *ShoppingListMapper) statusToDomain(status string) valueobject.ShoppingListStatus {
 	switch status {
-	case valueobject.ShoppingListAvailable.String():
-		return valueobject.ShoppingListAvailable
-	case valueobject.ShoppingListAssigned.String():
-		return valueobject.ShoppingListAssigned
-	case valueobject.ShoppingListActive.String():
-		return valueobject.ShoppingListActive
-	case valueobject.ShoppingListCompleted.String():
-		return valueobject.ShoppingListCompleted
-	case valueobject.ShoppingListCancelled.String():
-		return valueobject.ShoppingListCancelled
+	case valueobject.ShoppingListIsAvailable.String():
+		return valueobject.ShoppingListIsAvailable
+	case valueobject.ShoppingListIsAssigned.String():
+		return valueobject.ShoppingListIsAssigned
+	case valueobject.ShoppingListIsActive.String():
+		return valueobject.ShoppingListIsActive
+	case valueobject.ShoppingListIsCompleted.String():
+		return valueobject.ShoppingListIsCompleted
+	case valueobject.ShoppingListIsCancelled.String():
+		return valueobject.ShoppingListIsCancelled
 	default:
 		return valueobject.ShoppingListUnknown
 	}

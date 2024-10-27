@@ -7,5 +7,5 @@ import (
 )
 
 type Queries interface {
-	GetShoppingList(ctx context.Context, query GetShoppingList) (*aggregate.ShoppingListAgg, error)
+	GetShoppingList(ctx context.Context, query GetShoppingList) (*aggregate.ShoppingList, error)
 }

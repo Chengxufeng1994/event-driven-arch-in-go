@@ -9,6 +9,7 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/domain/aggregate"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/domain/repository"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/domain/valueobject"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 )
 
 type CreateShoppingList struct {
@@ -18,20 +19,23 @@ type CreateShoppingList struct {
 }
 
 type CreateShoppingListHandler struct {
-	shoppingRepository repository.ShoppingListRepository
-	storeClient        client.StoreClient
-	productClient      client.ProductClient
+	shoppingRepository   repository.ShoppingListRepository
+	storeClient          client.StoreClient
+	productClient        client.ProductClient
+	domainEventPublisher ddd.EventPublisher
 }
 
 func NewCreateShoppingListHandler(
 	shoppingRepository repository.ShoppingListRepository,
 	storeClient client.StoreClient,
 	productClient client.ProductClient,
+	domainEventPublisher ddd.EventPublisher,
 ) CreateShoppingListHandler {
 	return CreateShoppingListHandler{
-		shoppingRepository: shoppingRepository,
-		storeClient:        storeClient,
-		productClient:      productClient,
+		shoppingRepository:   shoppingRepository,
+		storeClient:          storeClient,
+		productClient:        productClient,
+		domainEventPublisher: domainEventPublisher,
 	}
 }
 
@@ -40,19 +44,24 @@ func (h CreateShoppingListHandler) CreateShoppingList(ctx context.Context, cmd C
 	for _, item := range cmd.Items {
 		store, err := h.storeClient.Find(ctx, item.StoreID)
 		if err != nil {
-			return errors.Wrap(err, "building shopping list")
+			return errors.Wrap(err, "creating shopping list")
 		}
 
 		product, err := h.productClient.Find(ctx, item.ProductID)
 		if err != nil {
-			return errors.Wrap(err, "building shopping list")
+			return errors.Wrap(err, "finding product")
 		}
 
 		err = shoppingList.AddItem(store, product, item.Quantity)
 		if err != nil {
-			return errors.Wrap(err, "building shopping list")
+			return errors.Wrap(err, "adding item to shopping list")
 		}
 	}
 
-	return h.shoppingRepository.Save(ctx, shoppingList)
+	if err := h.shoppingRepository.Save(ctx, shoppingList); err != nil {
+		return errors.Wrap(err, "saving shopping list")
+	}
+
+	// publish domain events
+	return h.domainEventPublisher.Publish(ctx, shoppingList.GetEvents()...)
 }

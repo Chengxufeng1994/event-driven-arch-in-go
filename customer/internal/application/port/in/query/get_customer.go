@@ -27,6 +27,6 @@ func NewGetCustomerHandler(customerRepository repository.CustomerRepository) Get
 	}
 }
 
-func (h GetCustomerHandler) GetCustomer(ctx context.Context, query GetCustomer) (*aggregate.CustomerAgg, error) {
+func (h GetCustomerHandler) GetCustomer(ctx context.Context, query GetCustomer) (*aggregate.Customer, error) {
 	return h.customerRepository.Find(ctx, query.ID)
 }

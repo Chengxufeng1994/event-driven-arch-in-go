@@ -7,5 +7,5 @@ import (
 )
 
 type Queries interface {
-	GetOrder(ctx context.Context, query GetOrder) (*aggregate.OrderAgg, error)
+	GetOrder(ctx context.Context, query GetOrder) (*aggregate.Order, error)
 }

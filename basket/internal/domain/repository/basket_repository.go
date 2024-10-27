@@ -7,7 +7,7 @@ import (
 )
 
 type BasketRepository interface {
-	Save(ctx context.Context, basket *aggregate.BasketAgg) error
-	Update(ctx context.Context, basket *aggregate.BasketAgg) error
-	Find(ctx context.Context, basketID string) (*aggregate.BasketAgg, error)
+	Save(ctx context.Context, basket *aggregate.Basket) error
+	Update(ctx context.Context, basket *aggregate.Basket) error
+	Find(ctx context.Context, basketID string) (*aggregate.Basket, error)
 }

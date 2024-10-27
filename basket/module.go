@@ -10,7 +10,9 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/infrastructure/logging"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/infrastructure/persistence/gorm"
 	grpcv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/interface/grpc/v1"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/interface/handler"
 	restv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/interface/http/rest/v1"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/monolith"
 )
 
@@ -23,23 +25,37 @@ func NewModule() *Module {
 }
 
 func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
-	db := mono.Database()
 	endpoint := fmt.Sprintf("%s:%d", mono.Config().Server.GPPC.Host, mono.Config().Server.GPPC.Port)
-
+	db := mono.Database()
 	conn, err := infragrpc.Dial(ctx, endpoint)
 	if err != nil {
 		return err
 	}
+
+	domainEventDispatcher := ddd.NewEventDispatcher()
 	basketRepository := gorm.NewGormBasketRepository(db)
 	grpcOrderClient := infragrpc.NewGrpcOrderClient(conn)
 	grpcProductClient := infragrpc.NewGrpcProductClient(conn)
 	grpcStoreClient := infragrpc.NewGrpcStoreClient(conn)
 
-	application := logging.NewLogApplicationAccess(
-		application.NewBasketApplication(basketRepository, grpcOrderClient, grpcProductClient, grpcStoreClient),
+	logApplication := logging.NewLogApplicationAccess(
+		application.NewBasketApplication(
+			basketRepository,
+			grpcOrderClient,
+			grpcProductClient,
+			grpcStoreClient,
+			domainEventDispatcher,
+		),
 		mono.Logger())
 
-	if err := grpcv1.RegisterServer(ctx, application, mono.RPC().GRPCServer()); err != nil {
+	logDomainEventHandlers := logging.NewLogDomainEventHandlerAccess(
+		application.NewBasketDomainEventHandler(grpcOrderClient),
+		mono.Logger(),
+	)
+
+	handler.RegisterDomainEventHandlers(ctx, logDomainEventHandlers, domainEventDispatcher)
+
+	if err := grpcv1.RegisterServer(ctx, logApplication, mono.RPC().GRPCServer()); err != nil {
 		return err
 	}
 
@@ -47,11 +63,7 @@ func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 		return err
 	}
 
-	if err := docs.RegisterSwagger(mono.Gin()); err != nil {
-		return err
-	}
-
-	return nil
+	return docs.RegisterSwagger(mono.Gin())
 }
 
 func (m *Module) Name() string {

@@ -19,6 +19,6 @@ func NewGetCatalogHandler(products repository.ProductRepository) GetCatalogHandl
 	return GetCatalogHandler{products: products}
 }
 
-func (h GetCatalogHandler) GetCatalog(ctx context.Context, query GetCatalog) ([]*aggregate.ProductAgg, error) {
-	return h.products.GetCatalog(ctx, query.StoreID)
+func (h GetCatalogHandler) GetCatalog(ctx context.Context, query GetCatalog) ([]*aggregate.Product, error) {
+	return h.products.FindCatalog(ctx, query.StoreID)
 }

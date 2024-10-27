@@ -1,6 +1,8 @@
 package aggregate
 
 import (
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/domain/event"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/domain/valueobject"
 	"github.com/stackus/errors"
 )
@@ -12,17 +14,17 @@ var (
 	ErrPaymentIDCannotBeBlank  = errors.Wrap(errors.ErrBadRequest, "the payment id cannot be blank")
 )
 
-type OrderAgg struct {
-	ID         string
+type Order struct {
+	ddd.AggregateBase
 	CustomerID string
 	PaymentID  string
 	InvoiceID  string
 	ShoppingID string
-	Items      []*valueobject.Item
+	Items      []valueobject.Item
 	Status     valueobject.OrderStatus
 }
 
-func CreateOrder(id, customerID, paymentID string, items []*valueobject.Item) (*OrderAgg, error) {
+func CreateOrder(id, customerID, paymentID string, items []valueobject.Item) (*Order, error) {
 	if len(items) == 0 {
 		return nil, ErrOrderHasNoItems
 	}
@@ -35,36 +37,42 @@ func CreateOrder(id, customerID, paymentID string, items []*valueobject.Item) (*
 		return nil, ErrPaymentIDCannotBeBlank
 	}
 
-	order := &OrderAgg{
-		ID:         id,
-		CustomerID: customerID,
-		PaymentID:  paymentID,
-		Items:      items,
-		Status:     valueobject.OrderPending,
+	order := &Order{
+		AggregateBase: ddd.NewAggregateBase(id),
+		CustomerID:    customerID,
+		PaymentID:     paymentID,
+		Items:         items,
+		Status:        valueobject.OrderPending,
 	}
+
+	order.AddEvent(event.NewOrderCreated(customerID, paymentID, id, items))
 
 	return order, nil
 }
 
-func (o *OrderAgg) Cancel() error {
+func (o *Order) Cancel() error {
 	if o.Status != valueobject.OrderPending {
 		return ErrOrderCannotBeCancelled
 	}
 
 	o.Status = valueobject.OrderCancelled
 
+	o.AddEvent(event.NewOrderCanceled(o.CustomerID))
+
 	return nil
 }
 
-func (o *OrderAgg) Ready() error {
+func (o *Order) Ready() error {
 	// validate status
 
 	o.Status = valueobject.OrderReady
 
+	o.AddEvent(event.NewOrderReadied(o.ID, o.CustomerID, o.PaymentID, o.GetTotal()))
+
 	return nil
 }
 
-func (o *OrderAgg) Complete(invoiceID string) error {
+func (o *Order) Complete(invoiceID string) error {
 	// validate invoice exists
 
 	// validate status
@@ -72,10 +80,12 @@ func (o *OrderAgg) Complete(invoiceID string) error {
 	o.InvoiceID = invoiceID
 	o.Status = valueobject.OrderCompleted
 
+	o.AddEvent(event.NewOrderCompleted(invoiceID))
+
 	return nil
 }
 
-func (o *OrderAgg) GetTotal() float64 {
+func (o *Order) GetTotal() float64 {
 	var total float64
 
 	for _, item := range o.Items {

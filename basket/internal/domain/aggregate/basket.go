@@ -4,7 +4,9 @@ import (
 	"sort"
 
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/entity"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/event"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/valueobject"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/stackus/errors"
 )
 
@@ -18,15 +20,15 @@ var (
 	ErrCustomerIDCannotBeBlank  = errors.Wrap(errors.ErrBadRequest, "the customer id cannot be blank")
 )
 
-type BasketAgg struct {
-	ID         string
+type Basket struct {
+	ddd.AggregateBase
 	CustomerID string
 	PaymentID  string
 	Items      []*entity.Item
 	Status     valueobject.BasketStatus
 }
 
-func StartBasket(id, customerID string) (*BasketAgg, error) {
+func StartBasket(id, customerID string) (*Basket, error) {
 	if id == "" {
 		return nil, ErrBasketIDCannotBeBlank
 	}
@@ -35,25 +37,27 @@ func StartBasket(id, customerID string) (*BasketAgg, error) {
 		return nil, ErrCustomerIDCannotBeBlank
 	}
 
-	basket := &BasketAgg{
-		ID:         id,
-		CustomerID: customerID,
-		Status:     valueobject.BasketOpen,
-		Items:      []*entity.Item{},
+	basket := &Basket{
+		AggregateBase: ddd.NewAggregateBase(id),
+		CustomerID:    customerID,
+		Status:        valueobject.BasketOpen,
+		Items:         []*entity.Item{},
 	}
+
+	basket.AddEvent(event.NewBasketStarted(customerID))
 
 	return basket, nil
 }
 
-func (b *BasketAgg) IsCancellable() bool {
+func (b *Basket) IsCancellable() bool {
 	return b.Status == valueobject.BasketOpen
 }
 
-func (b *BasketAgg) IsOpen() bool {
+func (b *Basket) IsOpen() bool {
 	return b.Status == valueobject.BasketOpen
 }
 
-func (b *BasketAgg) Cancel() error {
+func (b *Basket) Cancel() error {
 	if !b.IsCancellable() {
 		return ErrBasketCannotBeCancelled
 	}
@@ -61,10 +65,12 @@ func (b *BasketAgg) Cancel() error {
 	b.Status = valueobject.BasketCancelled
 	b.Items = []*entity.Item{}
 
+	b.AddEvent(event.NewBasketCanceled())
+
 	return nil
 }
 
-func (b *BasketAgg) Checkout(paymentID string) error {
+func (b *Basket) Checkout(paymentID string) error {
 	if !b.IsOpen() {
 		return ErrBasketCannotBeModified
 	}
@@ -80,10 +86,12 @@ func (b *BasketAgg) Checkout(paymentID string) error {
 	b.PaymentID = paymentID
 	b.Status = valueobject.BasketCheckedOut
 
+	b.AddEvent(event.NewBasketCheckedOut(paymentID, b.CustomerID, b.Items))
+
 	return nil
 }
 
-func (b *BasketAgg) AddItem(store valueobject.Store, product valueobject.Product, quantity int) error {
+func (b *Basket) AddItem(store valueobject.Store, product valueobject.Product, quantity int) error {
 	if !b.IsOpen() {
 		return ErrBasketCannotBeModified
 	}
@@ -92,23 +100,24 @@ func (b *BasketAgg) AddItem(store valueobject.Store, product valueobject.Product
 		return ErrQuantityCannotBeNegative
 	}
 
-	for i, item := range b.Items {
-		if item.ProductID == product.ID && item.StoreID == product.StoreID {
-			b.Items[i].Quantity += quantity
-			return nil
-		}
+	item := entity.NewItem(store.ID, product.ID, store.Name, product.Name, product.Price, quantity)
+	if i, exists := b.hasProduct(product); exists {
+		b.Items[i].Quantity += quantity
+	} else {
+		b.Items = append(b.Items, item)
+
+		sort.Slice(b.Items, func(i, j int) bool {
+			return b.Items[i].StoreName <= b.Items[j].StoreName && b.Items[i].ProductName < b.Items[j].ProductName
+		})
+
 	}
 
-	b.Items = append(b.Items, entity.NewItem(store.ID, product.ID, store.Name, product.Name, product.Price, quantity))
-
-	sort.Slice(b.Items, func(i, j int) bool {
-		return b.Items[i].StoreName <= b.Items[j].StoreName && b.Items[i].ProductName < b.Items[j].ProductName
-	})
+	b.AddEvent(event.NewBasketItemAdded(item))
 
 	return nil
 }
 
-func (b *BasketAgg) RemoveItem(product valueobject.Product, quantity int) error {
+func (b *Basket) RemoveItem(product valueobject.Product, quantity int) error {
 	if !b.IsOpen() {
 		return ErrBasketCannotBeModified
 	}
@@ -117,16 +126,25 @@ func (b *BasketAgg) RemoveItem(product valueobject.Product, quantity int) error 
 		return ErrQuantityCannotBeNegative
 	}
 
-	for i, item := range b.Items {
-		if item.ProductID == product.ID && item.StoreID == product.StoreID {
-			b.Items[i].Quantity -= quantity
+	if i, exists := b.hasProduct(product); exists {
+		b.Items[i].Quantity -= quantity
 
-			if b.Items[i].Quantity < 1 {
-				b.Items = append(b.Items[:i], b.Items[i+1:]...)
-			}
-			return nil
+		if b.Items[i].Quantity < 1 {
+			b.Items = append(b.Items[:i], b.Items[i+1:]...)
 		}
+
+		b.AddEvent(event.NewBasketItemRemoved(product.ID, quantity))
 	}
 
 	return nil
+}
+
+func (b *Basket) hasProduct(product valueobject.Product) (int, bool) {
+	for i, item := range b.Items {
+		if item.ProductID == product.ID && item.StoreID == product.StoreID {
+			return i, true
+		}
+	}
+
+	return 0, false
 }

@@ -7,8 +7,8 @@ import (
 )
 
 type ShoppingListRepository interface {
-	Save(ctx context.Context, list *aggregate.ShoppingListAgg) error
-	Update(ctx context.Context, list *aggregate.ShoppingListAgg) error
-	Find(ctx context.Context, shoppingListID string) (*aggregate.ShoppingListAgg, error)
-	FindByOrderID(ctx context.Context, orderID string) (*aggregate.ShoppingListAgg, error)
+	Save(ctx context.Context, list *aggregate.ShoppingList) error
+	Update(ctx context.Context, list *aggregate.ShoppingList) error
+	Find(ctx context.Context, shoppingListID string) (*aggregate.ShoppingList, error)
+	FindByOrderID(ctx context.Context, orderID string) (*aggregate.ShoppingList, error)
 }
