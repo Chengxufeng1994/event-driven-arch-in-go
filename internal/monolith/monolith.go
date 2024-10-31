@@ -14,6 +14,7 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/waiter"
 	"github.com/fatih/color"
 	"github.com/gin-gonic/gin"
+	"github.com/nats-io/nats.go"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"gorm.io/gorm"
@@ -27,6 +28,7 @@ type Monolith interface {
 	Database() *gorm.DB
 	Gin() *gin.Engine
 	RPC() *server.RpcServer
+	JetStream() nats.JetStreamContext
 	Run() error
 }
 
@@ -53,7 +55,6 @@ func WithModules(modules ...Module) Option {
 		app.modules = modules
 	}
 }
-
 func WithDatabase(gormDB *gorm.DB) Option {
 	return func(app *MonolithApplication) {
 		app.gormDB = gormDB
@@ -72,6 +73,18 @@ func WithGrpcServer(grpcServer *server.RpcServer) Option {
 	}
 }
 
+func WithNatsConn(nc *nats.Conn) Option {
+	return func(app *MonolithApplication) {
+		app.nc = nc
+	}
+}
+
+func WithJetStreamContext(js nats.JetStreamContext) Option {
+	return func(app *MonolithApplication) {
+		app.js = js
+	}
+}
+
 type MonolithApplication struct {
 	name              string
 	basename          string
@@ -81,6 +94,8 @@ type MonolithApplication struct {
 	gin               *gin.Engine
 	grpcServer        *server.RpcServer
 	genericHttpServer *server.GenericHttpServer
+	nc                *nats.Conn
+	js                nats.JetStreamContext
 	modules           []Module
 	waiter            waiter.Waiter
 	runFunc           RunFunc
@@ -135,6 +150,10 @@ func (app *MonolithApplication) Gin() *gin.Engine {
 
 func (app *MonolithApplication) RPC() *server.RpcServer {
 	return app.grpcServer
+}
+
+func (app *MonolithApplication) JetStream() nats.JetStreamContext {
+	return app.js
 }
 
 // FIXME:
@@ -204,6 +223,7 @@ func (app *MonolithApplication) waitForRpc(ctx context.Context) error {
 func (app *MonolithApplication) Run() error {
 	app.logger.Info("started mallbots application")
 	defer app.logger.Info("stopped mallbots application")
+	defer app.nc.Close()
 	app.printWorkingDir()
 
 	if err := app.PrepareRunModules(); err != nil {

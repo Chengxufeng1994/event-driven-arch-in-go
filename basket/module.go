@@ -13,7 +13,9 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/infrastructure/logging"
 	grpcv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/interface/grpc/v1"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/interface/handler"
-	restv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/interface/http/rest/v1"
+	restv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/interface/rest/v1"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/am"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/broker/nats"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/es"
 	evenstoregorm "github.com/Chengxufeng1994/event-driven-arch-in-go/internal/eventstore/gorm"
@@ -21,6 +23,7 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/registry"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/registry/serdes"
 	snapshotstoregorm "github.com/Chengxufeng1994/event-driven-arch-in-go/internal/snapshotstore/gorm"
+	storev1 "github.com/Chengxufeng1994/event-driven-arch-in-go/store/api/store/v1"
 )
 
 type Module struct{}
@@ -40,7 +43,10 @@ func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 	if err := registrations(reg); err != nil {
 		return err
 	}
-
+	if err = storev1.Registrations(reg); err != nil {
+		return err
+	}
+	eventStream := am.NewEventStream(reg, nats.NewStream(mono.Config().Infrastructure.Nats.Stream, mono.JetStream()))
 	domainEventDispatcher := ddd.NewEventDispatcher[ddd.AggregateEvent]()
 	aggregateStore := es.AggregateStoreWithMiddleware(
 		evenstoregorm.NewGormEventStore("baskets.events", mono.Database(), reg),
@@ -57,9 +63,19 @@ func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 	logApplication := logging.NewLogApplicationAccess(
 		application.NewBasketApplication(basketRepository, grpcOrderClient, grpcProductClient, grpcStoreClient),
 		mono.Logger())
-	logDomainEventHandlers := logging.NewLogDomainEventHandlerAccess(
+	orderHandler := logging.NewLogDomainEventHandlerAccess(
 		application.NewOrderDomainEventHandler(grpcOrderClient),
 		"Order",
+		mono.Logger(),
+	)
+	storeHandler := logging.NewLogDomainEventHandlerAccess(
+		application.NewStoreIntegrationEventHandler(mono.Logger()),
+		"Store",
+		mono.Logger(),
+	)
+	productHandler := logging.NewLogDomainEventHandlerAccess(
+		application.NewProductIntegrationEventHandler(mono.Logger()),
+		"Product",
 		mono.Logger(),
 	)
 
@@ -76,7 +92,13 @@ func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 		return err
 	}
 
-	handler.RegisterOrderDomainEventHandlers(logDomainEventHandlers, domainEventDispatcher)
+	handler.RegisterOrderDomainEventHandlers(orderHandler, domainEventDispatcher)
+	if err = handler.RegisterStoreIntegrationEventHandlers(storeHandler, eventStream); err != nil {
+		return err
+	}
+	if err = handler.RegisterProductIntegrationEventHandlers(productHandler, eventStream); err != nil {
+		return err
+	}
 
 	return nil
 }

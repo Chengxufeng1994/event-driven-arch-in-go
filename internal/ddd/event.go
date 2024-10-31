@@ -46,7 +46,7 @@ func newEventBase(name string, payload EventPayload, options ...EventOption) eve
 	return evt
 }
 
-func (e eventBase) EventName() string      { return e.name }
-func (e *eventBase) Payload() EventPayload { return e.payload }
-func (e eventBase) Metadata() Metadata     { return e.metadata }
-func (e *eventBase) OccurredAt() time.Time { return e.occurredAt }
+func (e eventBase) EventName() string     { return e.name }
+func (e eventBase) Payload() EventPayload { return e.payload }
+func (e eventBase) Metadata() Metadata    { return e.metadata }
+func (e eventBase) OccurredAt() time.Time { return e.occurredAt }

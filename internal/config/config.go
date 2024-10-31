@@ -60,6 +60,7 @@ type GPPC struct {
 
 type Infrastructure struct {
 	GORM *GORM `mapstructure:"gorm"`
+	Nats *Nats `mapstructure:"nats"`
 }
 
 type GORM struct {
@@ -89,6 +90,11 @@ type GORM struct {
 	Colorful bool `mapstructure:"colorful"`
 	//  Whether to enable prepare statement
 	PrepareStmt bool `mapstructure:"prepare_stmt"`
+}
+
+type Nats struct {
+	URL    string `mapstructure:"url"`
+	Stream string `mapstructure:"stream"`
 }
 
 const (

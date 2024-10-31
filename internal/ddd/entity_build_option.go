@@ -14,7 +14,7 @@ type NameSetter interface {
 	setName(string)
 }
 
-func WithID(id string) registry.BuildOption {
+func SetID(id string) registry.BuildOption {
 	return func(v interface{}) error {
 		if e, ok := v.(IDSetter); ok {
 			e.setID(id)
@@ -25,7 +25,7 @@ func WithID(id string) registry.BuildOption {
 	}
 }
 
-func WithName(name string) registry.BuildOption {
+func SetName(name string) registry.BuildOption {
 	return func(v interface{}) error {
 		if e, ok := v.(NameSetter); ok {
 			e.setName(name)

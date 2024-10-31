@@ -13,7 +13,7 @@ type (
 	EventHandlerFunc[T Event] func(ctx context.Context, event T) error
 
 	EventSubscriber[T Event] interface {
-		Subscribe(event string, eventHandler EventHandler[T])
+		Subscribe(eventHandler EventHandler[T], events ...string)
 	}
 
 	EventPublisher[T Event] interface {
@@ -23,38 +23,56 @@ type (
 		EventSubscriber[T]
 		EventPublisher[T]
 	}
-)
 
-type EventDispatcherBase[T Event] struct {
-	handlers map[string][]EventHandler[T]
-	mu       sync.Mutex
-}
+	eventHandler[T Event] struct {
+		h       EventHandler[T]
+		filters map[string]struct{}
+	}
+
+	EventDispatcherBase[T Event] struct {
+		// handlers map[string][]EventHandler[T]
+		handlers []eventHandler[T]
+		mu       sync.Mutex
+	}
+)
 
 var _ EventDispatcher[Event] = (*EventDispatcherBase[Event])(nil)
 
 func NewEventDispatcher[T Event]() *EventDispatcherBase[T] {
 	return &EventDispatcherBase[T]{
-		handlers: make(map[string][]EventHandler[T]),
+		handlers: make([]eventHandler[T], 0),
 		mu:       sync.Mutex{},
 	}
 }
 
 // Subscribe implements EventDispatcherIntf.
-func (e *EventDispatcherBase[T]) Subscribe(name string, eventHandler EventHandler[T]) {
+func (e *EventDispatcherBase[T]) Subscribe(handler EventHandler[T], events ...string) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	if _, ok := e.handlers[name]; !ok {
-		e.handlers[name] = make([]EventHandler[T], 0)
+	var filters map[string]struct{}
+	if len(events) > 0 {
+		filters = make(map[string]struct{})
+		for _, event := range events {
+			filters[event] = struct{}{}
+		}
 	}
 
-	e.handlers[name] = append(e.handlers[name], eventHandler)
+	e.handlers = append(e.handlers, eventHandler[T]{
+		h:       handler,
+		filters: filters,
+	})
 }
 
 // Publish implements EventDispatcherIntf.
 func (e *EventDispatcherBase[T]) Publish(ctx context.Context, events ...T) error {
 	for _, event := range events {
-		for _, handler := range e.handlers[event.EventName()] {
-			err := handler.HandleEvent(ctx, event)
+		for _, handler := range e.handlers {
+			if handler.filters != nil {
+				if _, exists := handler.filters[event.EventName()]; !exists {
+					continue
+				}
+			}
+			err := handler.h.HandleEvent(ctx, event)
 			if err != nil {
 				return err
 			}

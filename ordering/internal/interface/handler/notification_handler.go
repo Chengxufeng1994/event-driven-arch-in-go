@@ -6,7 +6,8 @@ import (
 )
 
 func RegisterNotificationHandler(handlers ddd.EventHandler[ddd.AggregateEvent], subscriber ddd.EventSubscriber[ddd.AggregateEvent]) {
-	subscriber.Subscribe(domainevent.OrderCreatedEvent, handlers)
-	subscriber.Subscribe(domainevent.OrderCanceledEvent, handlers)
-	subscriber.Subscribe(domainevent.OrderReadiedEvent, handlers)
+	subscriber.Subscribe(handlers,
+		domainevent.OrderCreatedEvent,
+		domainevent.OrderCanceledEvent,
+		domainevent.OrderReadiedEvent)
 }

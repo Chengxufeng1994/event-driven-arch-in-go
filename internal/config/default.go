@@ -45,4 +45,7 @@ func setDefaults() {
 	viper.SetDefault("infrastructure.gorm.colorful", true)
 	viper.SetDefault("infrastructure.gorm.prepare_stmt", true)
 	viper.SetDefault("infrastructure.gorm.dry_run", true)
+
+	viper.SetDefault("infrastructure.nats.url", "nats://localhost:4222")
+	viper.SetDefault("infrastructure.nats.stream", "mallbots")
 }

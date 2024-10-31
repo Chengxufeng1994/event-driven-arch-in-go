@@ -45,3 +45,6 @@ infrastructure:
     colorful: true
     prepare_stmt: true
 
+  nats:
+    url: "nats://localhost:4222"
+    stream: "mallbots"

@@ -2,8 +2,14 @@
 
 ## TODO
 
+* [ ] integration event put it into pkg/event
+* [ ] support broker 'Kafka'
+* [ ] support event store 'EventStoreDB'
+
 ## Reference
 
+* [Pointer Receiver 不能使用 value Type 賦值給 interface value](https://mileslin.github.io/2020/08/Golang/為什麼-Pointer-Receiver-不能使用-Value-Type-賦值給-Interface-Value/)
+* [nats.io](https://docs.nats.io)
 * [event driven architecture in golan](https://www.packtpub.com/en-us/product/event-driven-architecture-in-golang-9781803238012)
 * [Medium - the real clean architecture](https://medium.com/clean-android-dev/the-real-clean-architecture-in-android-part-1-s-o-l-i-d-6a661b103451)
 * [Github - IDDD Samples](https://github.com/VaughnVernon/IDDD_Samples/tree/master)

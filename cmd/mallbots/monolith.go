@@ -6,6 +6,7 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/config"
 	pkggorm "github.com/Chengxufeng1994/event-driven-arch-in-go/internal/gorm"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/jetstream"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/logger"
 	logging "github.com/Chengxufeng1994/event-driven-arch-in-go/internal/logger"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/monolith"
@@ -18,6 +19,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/requestid"
 	"github.com/gin-gonic/gin"
+	"github.com/nats-io/nats.go"
 	"github.com/spf13/viper"
 )
 
@@ -47,6 +49,16 @@ func NewApp() *monolith.MonolithApplication {
 
 	grpcServer := initGrpcServer(logger, cfg.Server)
 
+	nc, err := nats.Connect(cfg.Infrastructure.Nats.URL)
+	if err != nil {
+		logger.Errorf("failed to connect to nats: %v", err)
+		return nil
+	}
+	js, err := jetstream.NewJetStream(cfg.Infrastructure, nc)
+	if err != nil {
+		return nil
+	}
+
 	basketModule := basket.NewModule()
 	customerModule := customer.NewModule()
 	depotModule := depot.NewModule()
@@ -63,6 +75,8 @@ func NewApp() *monolith.MonolithApplication {
 		monolith.WithDatabase(gormDB),
 		monolith.WithGinEngine(ginEngine),
 		monolith.WithGrpcServer(grpcServer),
+		monolith.WithNatsConn(nc),
+		monolith.WithJetStreamContext(js),
 		monolith.WithModules(
 			basketModule,
 			customerModule,

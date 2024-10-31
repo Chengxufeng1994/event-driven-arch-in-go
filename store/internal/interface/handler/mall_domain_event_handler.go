@@ -6,8 +6,9 @@ import (
 )
 
 func RegisterMallHandler(mallHandlers ddd.EventHandler[ddd.AggregateEvent], domainSubscriber ddd.EventSubscriber[ddd.AggregateEvent]) {
-	domainSubscriber.Subscribe(event.StoreCreatedEvent, mallHandlers)
-	domainSubscriber.Subscribe(event.StoreParticipationEnabledEvent, mallHandlers)
-	domainSubscriber.Subscribe(event.StoreParticipationDisabledEvent, mallHandlers)
-	domainSubscriber.Subscribe(event.StoreRebrandedEvent, mallHandlers)
+	domainSubscriber.Subscribe(mallHandlers,
+		event.StoreCreatedEvent,
+		event.StoreParticipationEnabledEvent,
+		event.StoreParticipationDisabledEvent,
+		event.StoreRebrandedEvent)
 }

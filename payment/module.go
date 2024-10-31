@@ -11,7 +11,7 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/payment/internal/infrastructure/logging"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/payment/internal/infrastructure/persistence/gorm"
 	v1 "github.com/Chengxufeng1994/event-driven-arch-in-go/payment/internal/interface/grpc/v1"
-	restv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/payment/internal/interface/http/rest/v1"
+	restv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/payment/internal/interface/rest/v1"
 )
 
 type Module struct{}

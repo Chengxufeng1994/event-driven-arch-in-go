@@ -11,7 +11,7 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/infastructure/persistence/gorm"
 	grpcv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/interfaces/grpc/v1"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/interfaces/handler"
-	restv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/interfaces/http/rest/v1"
+	restv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/interfaces/rest/v1"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/monolith"
 )

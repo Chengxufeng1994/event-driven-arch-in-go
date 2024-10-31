@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/am"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/broker/nats"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/es"
 	evenstoregorm "github.com/Chengxufeng1994/event-driven-arch-in-go/internal/eventstore/gorm"
@@ -11,6 +13,7 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/registry"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/registry/serdes"
 	snapshotstoregorm "github.com/Chengxufeng1994/event-driven-arch-in-go/internal/snapshotstore/gorm"
+	storev1 "github.com/Chengxufeng1994/event-driven-arch-in-go/store/api/store/v1"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/docs"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/application"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/domain/aggregate"
@@ -19,7 +22,7 @@ import (
 	persistencegorm "github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/infrastructure/persistence/gorm"
 	v1 "github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/interface/grpc/v1"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/interface/handler"
-	restv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/interface/http/rest/v1"
+	restv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/interface/rest/v1"
 )
 
 type Module struct{}
@@ -31,13 +34,17 @@ func NewModule() *Module {
 }
 
 func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
-	endpoint := fmt.Sprintf("%s:%d", mono.Config().Server.GPPC.Host, mono.Config().Server.GPPC.Port)
 	// setup Driven adapters
 	// serialize, deserialize register
+	endpoint := fmt.Sprintf("%s:%d", mono.Config().Server.GPPC.Host, mono.Config().Server.GPPC.Port)
 	reg := registry.New()
 	if err := registrations(reg); err != nil {
 		return err
 	}
+	if err := storev1.Registrations(reg); err != nil {
+		return err
+	}
+	eventStream := am.NewEventStream(reg, nats.NewStream(mono.Config().Infrastructure.Nats.Stream, mono.JetStream()))
 	domainEventDispatcher := ddd.NewEventDispatcher[ddd.AggregateEvent]()
 	aggregateStore := es.AggregateStoreWithMiddleware(
 		evenstoregorm.NewGormEventStore("stores.events", mono.Database(), reg),
@@ -71,6 +78,13 @@ func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 		mono.Logger(),
 	)
 
+	storeHandler := logging.NewLogHandlerAccess(
+		application.NewStoreIntegrationEventHandler(eventStream),
+		"Store",
+		mono.Logger(),
+	)
+
+	// setup Driver adapters
 	if err := v1.RegisterServer(app, mono.RPC().GRPCServer()); err != nil {
 		return err
 	}
@@ -85,6 +99,7 @@ func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 
 	handler.RegisterCatalogHandler(catalogHandler, domainEventDispatcher)
 	handler.RegisterMallHandler(mallHandler, domainEventDispatcher)
+	handler.RegisterStoreIntegrationHandler(storeHandler, domainEventDispatcher)
 
 	return nil
 }

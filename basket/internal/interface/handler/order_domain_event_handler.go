@@ -6,5 +6,5 @@ import (
 )
 
 func RegisterOrderDomainEventHandlers(orderHandler ddd.EventHandler[ddd.AggregateEvent], domainSubscriber ddd.EventSubscriber[ddd.AggregateEvent]) {
-	domainSubscriber.Subscribe(domainevent.BasketCheckedOutEvent, orderHandler)
+	domainSubscriber.Subscribe(orderHandler, domainevent.BasketCheckedOutEvent)
 }

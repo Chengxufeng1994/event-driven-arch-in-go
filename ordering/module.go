@@ -19,7 +19,7 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/infrastructure/logging"
 	grpcv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/interface/grpc/v1"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/interface/handler"
-	v1 "github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/interface/http/rest/v1"
+	v1 "github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/interface/rest/v1"
 )
 
 type Module struct{}
