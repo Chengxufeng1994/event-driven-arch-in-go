@@ -97,6 +97,10 @@ func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 		return err
 	}
 
+	if err := storev1.RegisterAsyncAPI(mono.Gin()); err != nil {
+		return err
+	}
+
 	handler.RegisterCatalogHandler(catalogHandler, domainEventDispatcher)
 	handler.RegisterMallHandler(mallHandler, domainEventDispatcher)
 	handler.RegisterStoreIntegrationHandler(storeHandler, domainEventDispatcher)

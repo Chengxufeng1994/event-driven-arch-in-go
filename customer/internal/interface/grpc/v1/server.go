@@ -30,6 +30,11 @@ func (s server) RegisterCustomer(ctx context.Context, request *customerv1.Regist
 	return &customerv1.RegisterCustomerResponse{Id: id}, err
 }
 
+func (s server) ChangeSmsNumber(ctx context.Context, request *customerv1.ChangeSmsNumberRequest) (*customerv1.ChangeSmsNumberResponse, error) {
+	err := s.app.ChangeSmsNumber(ctx, command.NewChangeSmsNumber(request.GetId(), request.GetSmsNumber()))
+	return &customerv1.ChangeSmsNumberResponse{}, err
+}
+
 func (s server) AuthorizeCustomer(ctx context.Context, request *customerv1.AuthorizeCustomerRequest) (*customerv1.AuthorizeCustomerResponse, error) {
 	err := s.app.AuthorizeCustomer(ctx, command.NewAuthorizeCustomer(request.GetId()))
 	return &customerv1.AuthorizeCustomerResponse{}, err

@@ -12,8 +12,12 @@ import (
 	grpcv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/interfaces/grpc/v1"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/interfaces/handler"
 	restv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/interfaces/rest/v1"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/am"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/broker/nats"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/monolith"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/registry"
+	storev1 "github.com/Chengxufeng1994/event-driven-arch-in-go/store/api/store/v1"
 )
 
 type Module struct{}
@@ -29,11 +33,19 @@ func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 	if err != nil {
 		return err
 	}
+	reg := registry.New()
+	if err = storev1.Registrations(reg); err != nil {
+		return err
+	}
+
+	eventStream := am.NewEventStream(reg, nats.NewStream(mono.Config().Infrastructure.Nats.Stream, mono.JetStream()))
 	domainEventDispatcher := ddd.NewEventDispatcher[ddd.AggregateEvent]()
 	shoppingListRepository := gorm.NewGormShoppingListRepository(mono.Database())
 	grpcOrderClient := infragrpc.NewGrpcOrderClient(conn)
 	grpcStoreClient := infragrpc.NewGrpcStoreClient(conn)
 	grpcProductClient := infragrpc.NewGrpcProductClient(conn)
+	storeCacheRepository := gorm.NewGormStoreCacheRepository(mono.Database(), grpcStoreClient)
+	productCacheRepository := gorm.NewGormProductCacheRepository(mono.Database(), grpcProductClient)
 
 	// setup application
 	logApplication := logging.NewLogApplicationAccess(
@@ -46,9 +58,17 @@ func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 		),
 		mono.Logger(),
 	)
-	logDomainEventHandler := logging.NewLogDomainEventHandlerAccess[ddd.AggregateEvent](
+	orderHandler := logging.NewLogDomainEventHandlerAccess[ddd.AggregateEvent](
 		application.NewShoppingListDomainEventHandler(grpcOrderClient),
 		"Order",
+		mono.Logger())
+	storeHandler := logging.NewLogDomainEventHandlerAccess[ddd.Event](
+		application.NewStoreIntegrationEventHandler(storeCacheRepository),
+		"Store",
+		mono.Logger())
+	productHandler := logging.NewLogDomainEventHandlerAccess[ddd.Event](
+		application.NewProductIntegrationEventHandler(productCacheRepository),
+		"Store",
 		mono.Logger())
 
 	// setup Driver adapters
@@ -64,7 +84,13 @@ func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 		return err
 	}
 
-	handler.RegisterOrderDomainEventHandlers(logDomainEventHandler, domainEventDispatcher)
+	handler.RegisterOrderDomainEventHandlers(orderHandler, domainEventDispatcher)
+	if err := handler.RegisterStoreIntegrationEventHandlers(storeHandler, eventStream); err != nil {
+		return err
+	}
+	if err := handler.RegisterProductIntegrationEventHandlers(productHandler, eventStream); err != nil {
+		return err
+	}
 
 	return nil
 }

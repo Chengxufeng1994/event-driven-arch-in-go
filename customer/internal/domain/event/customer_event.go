@@ -2,55 +2,60 @@ package event
 
 const (
 	CustomerRegisteredEvent = "customers.CustomerRegistered"
+	CustomerSmsChangedEvent = "customers.CustomerSmsChanged"
 	CustomerAuthorizedEvent = "customers.CustomerAuthorized"
 	CustomerEnabledEvent    = "customers.CustomerEnabled"
 	CustomerDisabledEvent   = "customers.CustomerDisabled"
 )
 
 type CustomerRegistered struct {
-	CustomerID string
-	Name       string
-	SmsNumber  string
-	Enabled    bool
+	Name      string
+	SmsNumber string
+	Enabled   bool
 }
 
-func NewCustomerRegistered(customerID, name, smsNumber string, enabled bool) *CustomerRegistered {
+func NewCustomerRegistered(name, smsNumber string, enabled bool) *CustomerRegistered {
 	return &CustomerRegistered{
-		CustomerID: customerID,
-		Name:       name,
-		SmsNumber:  smsNumber,
-		Enabled:    enabled,
+		Name:      name,
+		SmsNumber: smsNumber,
+		Enabled:   enabled,
 	}
 }
 
-func (CustomerRegistered) EventName() string { return CustomerRegisteredEvent }
+func (CustomerRegistered) Key() string { return CustomerRegisteredEvent }
 
-type CustomerAuthorized struct {
-	CustomerID string
+type CustomerSmsChanged struct {
+	SmsNumber string
 }
 
-func NewCustomerAuthorized(customerID string) *CustomerAuthorized {
-	return &CustomerAuthorized{CustomerID: customerID}
+func NewCustomerSmsChanged(smsNumber string) *CustomerSmsChanged {
+	return &CustomerSmsChanged{
+		SmsNumber: smsNumber,
+	}
 }
 
-func (CustomerAuthorized) EventName() string { return CustomerAuthorizedEvent }
+func (CustomerSmsChanged) Key() string { return CustomerSmsChangedEvent }
 
-type CustomerEnabled struct {
-	CustomerID string
+type CustomerAuthorized struct{}
+
+func NewCustomerAuthorized() *CustomerAuthorized {
+	return &CustomerAuthorized{}
 }
 
-func NewCustomerEnabled(customerID string) *CustomerEnabled {
-	return &CustomerEnabled{CustomerID: customerID}
+func (CustomerAuthorized) Key() string { return CustomerAuthorizedEvent }
+
+type CustomerEnabled struct{}
+
+func NewCustomerEnabled() *CustomerEnabled {
+	return &CustomerEnabled{}
 }
 
-func (CustomerEnabled) EventName() string { return CustomerEnabledEvent }
+func (CustomerEnabled) Key() string { return CustomerEnabledEvent }
 
-type CustomerDisabled struct {
-	CustomerID string
+type CustomerDisabled struct{}
+
+func NewCustomerDisabled() *CustomerDisabled {
+	return &CustomerDisabled{}
 }
 
-func NewCustomerDisabled(customerID string) *CustomerDisabled {
-	return &CustomerDisabled{CustomerID: customerID}
-}
-
-func (CustomerDisabled) EventName() string { return CustomerDisabledEvent }
+func (CustomerDisabled) Key() string { return CustomerDisabledEvent }

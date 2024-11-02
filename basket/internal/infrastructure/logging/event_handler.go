@@ -15,7 +15,7 @@ type EventHandler[T ddd.Event] struct {
 
 var _ ddd.EventHandler[ddd.Event] = (*EventHandler[ddd.Event])(nil)
 
-func NewLogDomainEventHandlerAccess[T ddd.Event](domainEventHandler ddd.EventHandler[T], label string, logger logger.Logger) *EventHandler[T] {
+func NewLogEventHandlerAccess[T ddd.Event](domainEventHandler ddd.EventHandler[T], label string, logger logger.Logger) *EventHandler[T] {
 	return &EventHandler[T]{
 		EventHandler: domainEventHandler,
 		label:        label,

@@ -17,17 +17,13 @@ type GrpcStoreClient struct {
 var _ client.StoreClient = (*GrpcStoreClient)(nil)
 
 func NewGrpcStoreClient(conn *grpc.ClientConn) *GrpcStoreClient {
-	client := storev1.NewStoresServiceClient(conn)
-	return &GrpcStoreClient{
-		client: client,
-	}
+	return &GrpcStoreClient{client: storev1.NewStoresServiceClient(conn)}
 }
 
 func (c *GrpcStoreClient) Find(ctx context.Context, storeID string) (valueobject.Store, error) {
 	resp, err := c.client.GetStore(ctx, &storev1.GetStoreRequest{
 		Id: storeID,
 	})
-
 	if err != nil {
 		return valueobject.Store{}, errors.Wrap(err, "requesting store")
 	}
@@ -36,8 +32,5 @@ func (c *GrpcStoreClient) Find(ctx context.Context, storeID string) (valueobject
 }
 
 func (c *GrpcStoreClient) storeToDomain(store *storev1.Store) valueobject.Store {
-	return valueobject.NewStore(
-		store.GetId(),
-		store.GetName(),
-		store.GetLocation())
+	return valueobject.NewStore(store.GetId(), store.GetName())
 }

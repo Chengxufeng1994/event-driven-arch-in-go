@@ -48,19 +48,27 @@ func RegisterCustomer(id, name, smsNumber string) (*Customer, error) {
 	customer.SmsNumber = smsNumber
 	customer.Enabled = true
 
-	customer.AddEvent(event.CustomerRegisteredEvent, event.NewCustomerRegistered(id, name, smsNumber, true))
+	customer.AddEvent(event.CustomerRegisteredEvent, event.NewCustomerRegistered(name, smsNumber, true))
 
 	return customer, nil
 }
 
 func (Customer) Key() string { return CustomerAggregate }
 
+func (c *Customer) ChangeSmsNumber(smsNumber string) error {
+	c.SmsNumber = smsNumber
+
+	c.AddEvent(event.CustomerSmsChangedEvent, event.NewCustomerSmsChanged(smsNumber))
+
+	return nil
+}
+
 func (c *Customer) Authorize( /* TODO authorize what? */ ) error {
 	if !c.Enabled {
 		return ErrCustomerNotAuthorized
 	}
 
-	c.AddEvent(event.CustomerAuthorizedEvent, event.NewCustomerAuthorized(c.ID()))
+	c.AddEvent(event.CustomerAuthorizedEvent, event.NewCustomerAuthorized())
 
 	return nil
 }
@@ -72,7 +80,7 @@ func (c *Customer) Enable() error {
 
 	c.Enabled = true
 
-	c.AddEvent(event.CustomerEnabledEvent, event.NewCustomerEnabled(c.ID()))
+	c.AddEvent(event.CustomerEnabledEvent, event.NewCustomerEnabled())
 
 	return nil
 }
@@ -84,7 +92,7 @@ func (c *Customer) Disable() error {
 
 	c.Enabled = false
 
-	c.AddEvent(event.CustomerEnabledEvent, event.NewCustomerEnabled(c.ID()))
+	c.AddEvent(event.CustomerEnabledEvent, event.NewCustomerEnabled())
 
 	return nil
 }

@@ -3,20 +3,20 @@ package application
 import (
 	"context"
 
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/repository"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/logger"
 	storev1 "github.com/Chengxufeng1994/event-driven-arch-in-go/store/api/store/v1"
 )
 
 type ProductIntegrationEventHandler[T ddd.Event] struct {
-	logger logger.Logger
+	productCacheRepository repository.ProductCacheRepository
 }
 
 var _ ddd.EventHandler[ddd.Event] = (*ProductIntegrationEventHandler[ddd.Event])(nil)
 
-func NewProductIntegrationEventHandler(logger logger.Logger) *ProductIntegrationEventHandler[ddd.Event] {
+func NewProductIntegrationEventHandler(productCacheRepository repository.ProductCacheRepository) *ProductIntegrationEventHandler[ddd.Event] {
 	return &ProductIntegrationEventHandler[ddd.Event]{
-		logger: logger,
+		productCacheRepository: productCacheRepository,
 	}
 }
 
@@ -40,24 +40,20 @@ func (h ProductIntegrationEventHandler[T]) HandleEvent(ctx context.Context, even
 
 func (h ProductIntegrationEventHandler[T]) onProductAdded(ctx context.Context, event ddd.Event) error {
 	payload := event.Payload().(*storev1.ProductAdded)
-	h.logger.Infof(`ID: %s, StoreID: "%s", Name: "%s", Description: "%s", Price: "%d"`, payload.GetId(), payload.GetStoreId(), payload.GetName(), payload.GetDescription(), payload.GetPrice())
-	return nil
+	return h.productCacheRepository.Add(ctx, payload.GetId(), payload.GetStoreId(), payload.GetName(), payload.GetPrice())
 }
 
 func (h ProductIntegrationEventHandler[T]) onProductRebranded(ctx context.Context, event ddd.Event) error {
 	payload := event.Payload().(*storev1.ProductRebranded)
-	h.logger.Infof(`ID: %s, Name: "%s", Description: "%s"`, payload.GetId(), payload.GetName(), payload.GetDescription())
-	return nil
+	return h.productCacheRepository.Rebrand(ctx, payload.GetId(), payload.GetName())
 }
 
 func (h ProductIntegrationEventHandler[T]) onProductPriceChanged(ctx context.Context, event ddd.Event) error {
 	payload := event.Payload().(*storev1.ProductPriceChanged)
-	h.logger.Infof(`ID: %s, Delta: "%d"`, payload.GetId(), payload.GetDelta())
-	return nil
+	return h.productCacheRepository.UpdatePrice(ctx, payload.GetId(), payload.GetDelta())
 }
 
 func (h ProductIntegrationEventHandler[T]) onProductRemoved(ctx context.Context, event ddd.Event) error {
 	payload := event.Payload().(*storev1.ProductRemoved)
-	h.logger.Debugf(`ID: %s`, payload.GetId(), payload.GetId())
-	return nil
+	return h.productCacheRepository.Remove(ctx, payload.GetId())
 }

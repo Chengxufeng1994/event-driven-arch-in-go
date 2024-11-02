@@ -1,15 +1,14 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "Payments API",
-    "version": "1.0.0"
+    "title": "api/payment/v1/events.proto",
+    "version": "version not set"
   },
   "tags": [
     {
       "name": "PaymentsService"
     }
   ],
-  "basePath": "/",
   "consumes": [
     "application/json"
   ],

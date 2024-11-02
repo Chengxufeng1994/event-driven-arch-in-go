@@ -8,12 +8,12 @@ import (
 	storev1 "github.com/Chengxufeng1994/event-driven-arch-in-go/store/api/store/v1"
 )
 
-func RegisterProductIntegrationEventHandlers(handler ddd.EventHandler[ddd.Event], subscriber am.EventSubscriber) error {
-	evtMsgHandler := func(ctx context.Context, msg am.EventMessage) error {
-		return handler.HandleEvent(ctx, msg)
-	}
+func RegisterProductIntegrationEventHandlers(productHandler ddd.EventHandler[ddd.Event], stream am.EventSubscriber) error {
+	evtMsgHandler := am.MessageHandlerFunc[am.EventMessage](func(ctx context.Context, eventMsg am.EventMessage) error {
+		return productHandler.HandleEvent(ctx, eventMsg)
+	})
 
-	return subscriber.Subscribe(storev1.ProductAggregateChannel, evtMsgHandler, am.MessageFilter{
+	return stream.Subscribe(storev1.ProductAggregateChannel, evtMsgHandler, am.MessageFilter{
 		storev1.ProductAddedEvent,
 		storev1.ProductRebrandedEvent,
 		storev1.ProductPriceIncreasedEvent,

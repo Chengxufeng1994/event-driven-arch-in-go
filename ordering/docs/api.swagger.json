@@ -1,15 +1,14 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "Order Processing",
-    "version": "1.0.0"
+    "title": "api/order/v1/events.proto",
+    "version": "version not set"
   },
   "tags": [
     {
       "name": "OrderingService"
     }
   ],
-  "basePath": "/",
   "consumes": [
     "application/json"
   ],
@@ -112,6 +111,31 @@
     }
   },
   "definitions": {
+    "orderv1Item": {
+      "type": "object",
+      "properties": {
+        "storeId": {
+          "type": "string"
+        },
+        "productId": {
+          "type": "string"
+        },
+        "storeName": {
+          "type": "string"
+        },
+        "productName": {
+          "type": "string"
+        },
+        "price": {
+          "type": "number",
+          "format": "double"
+        },
+        "quantity": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
     "protobufAny": {
       "type": "object",
       "properties": {
@@ -153,7 +177,7 @@
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/v1Item"
+            "$ref": "#/definitions/orderv1Item"
           }
         },
         "customerId": {
@@ -180,31 +204,6 @@
         }
       }
     },
-    "v1Item": {
-      "type": "object",
-      "properties": {
-        "storeId": {
-          "type": "string"
-        },
-        "productId": {
-          "type": "string"
-        },
-        "storeName": {
-          "type": "string"
-        },
-        "productName": {
-          "type": "string"
-        },
-        "price": {
-          "type": "number",
-          "format": "double"
-        },
-        "quantity": {
-          "type": "integer",
-          "format": "int32"
-        }
-      }
-    },
     "v1Order": {
       "type": "object",
       "properties": {
@@ -221,7 +220,7 @@
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/v1Item"
+            "$ref": "#/definitions/orderv1Item"
           }
         },
         "status": {

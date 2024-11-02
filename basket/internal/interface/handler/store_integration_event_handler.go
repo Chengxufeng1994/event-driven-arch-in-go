@@ -8,14 +8,13 @@ import (
 	storev1 "github.com/Chengxufeng1994/event-driven-arch-in-go/store/api/store/v1"
 )
 
-func RegisterStoreIntegrationEventHandlers(handler ddd.EventHandler[ddd.Event], subscriber am.EventSubscriber) error {
-	evtMsgHandler := func(ctx context.Context, msg am.EventMessage) error {
-		return handler.HandleEvent(ctx, msg)
-	}
-
-	return subscriber.Subscribe(storev1.StoreAggregateChannel, evtMsgHandler, am.MessageFilter{
-		storev1.StoreCreatedEvent,
-		storev1.StoreParticipatingToggledEvent,
-		storev1.StoreRebrandedEvent,
+func RegisterStoreIntegrationEventHandlers(storeHandler ddd.EventHandler[ddd.Event], stream am.EventSubscriber) error {
+	evtMsgHandler := am.MessageHandlerFunc[am.EventMessage](func(ctx context.Context, eventMsg am.EventMessage) error {
+		return storeHandler.HandleEvent(ctx, eventMsg)
 	})
+
+	return stream.Subscribe(storev1.StoreAggregateChannel, evtMsgHandler, am.MessageFilter{
+		storev1.StoreCreatedEvent,
+		storev1.StoreRebrandedEvent,
+	}, am.GroupName("baskets-stores"))
 }

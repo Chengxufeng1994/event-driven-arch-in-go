@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/am"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/broker/nats"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/es"
 	evenstoregorm "github.com/Chengxufeng1994/event-driven-arch-in-go/internal/eventstore/gorm"
@@ -11,6 +13,7 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/registry"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/registry/serdes"
 	snapshotstoregorm "github.com/Chengxufeng1994/event-driven-arch-in-go/internal/snapshotstore/gorm"
+	orderv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/api/order/v1"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/docs"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/application"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/domain/aggregate"
@@ -37,11 +40,14 @@ func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 	if err := registrations(reg); err != nil {
 		return err
 	}
+	if err := orderv1.Registrations(reg); err != nil {
+		return err
+	}
 	conn, err := grpc.Dial(ctx, endpoint)
 	if err != nil {
 		return err
 	}
-
+	eventStream := am.NewEventStream(reg, nats.NewStream(mono.Config().Infrastructure.Nats.Stream, mono.JetStream()))
 	domainEventDispatcher := ddd.NewEventDispatcher[ddd.AggregateEvent]()
 	aggregateStore := es.AggregateStoreWithMiddleware(
 		evenstoregorm.NewGormEventStore("ordering.events", mono.Database(), reg),
@@ -50,8 +56,6 @@ func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 	)
 	orderRepository := es.NewAggregateRepository[*aggregate.Order](aggregate.OrderAggregate, reg, aggregateStore)
 	customerClient := grpc.NewGrpcCustomerClient(conn)
-	invoiceClient := grpc.NewGrpcInvoiceClient(conn)
-	notificationClient := grpc.NewGrpcNotificationClient(conn)
 	paymentClient := grpc.NewGrpcPaymentClient(conn)
 	shoppingClient := grpc.NewGrpcShoppingClient(conn)
 
@@ -66,13 +70,9 @@ func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 		mono.Logger(),
 	)
 	// setup application handlers
-	notificationDomainEventHandler := logging.NewLogNotificationEventHandlerAccess[ddd.AggregateEvent](
-		application.NewNotificationDomainEventHandler(notificationClient),
-		"Notification",
-		mono.Logger())
-	invoiceDomainEventHandler := logging.NewLogInvoiceEventHandlerAccess[ddd.AggregateEvent](
-		application.NewInvoiceDomainEventHandler(invoiceClient),
-		"Invoice",
+	integrationEventHandler := logging.NewLogDomainEventHandlerAccess(
+		application.NewIntegrationEventHandlers(eventStream),
+		"IntegrationEvents",
 		mono.Logger(),
 	)
 
@@ -89,8 +89,7 @@ func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 		return err
 	}
 
-	handler.RegisterNotificationHandler(notificationDomainEventHandler, domainEventDispatcher)
-	handler.RegisterInvoiceHandler(invoiceDomainEventHandler, domainEventDispatcher)
+	handler.RegisterIntegrationEventHandlers(integrationEventHandler, domainEventDispatcher)
 
 	return nil
 }

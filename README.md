@@ -8,6 +8,8 @@
 
 ## Reference
 
+* [Async API](https://www.asyncapi.com/en)
+* [Gin + go:embed 实现静态资源嵌入](https://www.dbkuaizi.com/archives/377.html)
 * [Pointer Receiver 不能使用 value Type 賦值給 interface value](https://mileslin.github.io/2020/08/Golang/為什麼-Pointer-Receiver-不能使用-Value-Type-賦值給-Interface-Value/)
 * [nats.io](https://docs.nats.io)
 * [event driven architecture in golan](https://www.packtpub.com/en-us/product/event-driven-architecture-in-golang-9781803238012)

@@ -11,6 +11,7 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/event"
 	infragrpc "github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/infrastructure/client/grpc"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/infrastructure/logging"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/infrastructure/persistence/gorm"
 	grpcv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/interface/grpc/v1"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/interface/handler"
 	restv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/interface/rest/v1"
@@ -58,23 +59,25 @@ func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 	grpcOrderClient := infragrpc.NewGrpcOrderClient(conn)
 	grpcProductClient := infragrpc.NewGrpcProductClient(conn)
 	grpcStoreClient := infragrpc.NewGrpcStoreClient(conn)
+	storeRepository := gorm.NewGormStoreCacheRepository(mono.Database(), grpcStoreClient)
+	productRepository := gorm.NewGormProductCacheRepository(mono.Database(), grpcProductClient)
 
 	// setup application
 	logApplication := logging.NewLogApplicationAccess(
 		application.NewBasketApplication(basketRepository, grpcOrderClient, grpcProductClient, grpcStoreClient),
 		mono.Logger())
-	orderHandler := logging.NewLogDomainEventHandlerAccess(
+	orderHandler := logging.NewLogEventHandlerAccess(
 		application.NewOrderDomainEventHandler(grpcOrderClient),
 		"Order",
 		mono.Logger(),
 	)
-	storeHandler := logging.NewLogDomainEventHandlerAccess(
-		application.NewStoreIntegrationEventHandler(mono.Logger()),
+	storeHandler := logging.NewLogEventHandlerAccess(
+		application.NewStoreIntegrationEventHandler(storeRepository),
 		"Store",
 		mono.Logger(),
 	)
-	productHandler := logging.NewLogDomainEventHandlerAccess(
-		application.NewProductIntegrationEventHandler(mono.Logger()),
+	productHandler := logging.NewLogEventHandlerAccess(
+		application.NewProductIntegrationEventHandler(productRepository),
 		"Product",
 		mono.Logger(),
 	)

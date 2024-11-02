@@ -2,7 +2,6 @@ package application
 
 import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/customer/internal/application/port/in/command"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/customer/internal/application/port/in/event"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/customer/internal/application/port/in/query"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/customer/internal/application/usecase"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/customer/internal/domain/repository"
@@ -13,11 +12,11 @@ type (
 	CustomerApplication struct {
 		appCommands
 		appQueries
-		appEvents
 	}
 
 	appCommands struct {
 		command.RegisterCustomerHandler
+		command.ChangeSmsNumberHandler
 		command.AuthorizeCustomerHandler
 		command.EnableCustomerHandler
 		command.DisableCustomerHandler
@@ -25,10 +24,6 @@ type (
 
 	appQueries struct {
 		query.GetCustomerHandler
-	}
-
-	appEvents struct {
-		event.IgnoreUnimplementedDomainEventHandler
 	}
 )
 
@@ -41,15 +36,13 @@ func NewCustomerApplication(
 	return &CustomerApplication{
 		appCommands: appCommands{
 			RegisterCustomerHandler:  command.NewRegisterCustomerHandler(customerRepository, domainEventDispatcher),
+			ChangeSmsNumberHandler:   command.NewChangeSmsNumberHandler(customerRepository, domainEventDispatcher),
 			AuthorizeCustomerHandler: command.NewAuthorizeCustomerHandler(customerRepository, domainEventDispatcher),
 			EnableCustomerHandler:    command.NewEnableCustomerHandler(customerRepository, domainEventDispatcher),
 			DisableCustomerHandler:   command.NewDisableCustomerHandler(customerRepository, domainEventDispatcher),
 		},
 		appQueries: appQueries{
 			GetCustomerHandler: query.NewGetCustomerHandler(customerRepository),
-		},
-		appEvents: appEvents{
-			IgnoreUnimplementedDomainEventHandler: event.NewIgnoreUnimplementedDomainEventHandler(),
 		},
 	}
 }

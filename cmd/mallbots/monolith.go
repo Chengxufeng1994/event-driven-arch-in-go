@@ -14,6 +14,7 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/notification"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/payment"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/search"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/store"
 	"github.com/fsnotify/fsnotify"
 	"github.com/gin-contrib/cors"
@@ -65,6 +66,7 @@ func NewApp() *monolith.MonolithApplication {
 	notificationModule := notification.NewModule()
 	orderModule := ordering.NewModule()
 	paymentModule := payment.NewModule()
+	searchModule := search.NewModule()
 	storeModule := store.NewModule()
 
 	monolithApplication := monolith.NewMonolithApplication(
@@ -84,6 +86,7 @@ func NewApp() *monolith.MonolithApplication {
 			notificationModule,
 			orderModule,
 			paymentModule,
+			searchModule,
 			storeModule),
 	)
 

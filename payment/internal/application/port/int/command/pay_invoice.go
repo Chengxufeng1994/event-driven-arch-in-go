@@ -3,7 +3,8 @@ package command
 import (
 	"context"
 
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/payment/internal/application/port/out/client"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/payment/internal/domain/event"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/payment/internal/domain/repository"
 	"github.com/stackus/errors"
 )
@@ -20,13 +21,13 @@ func NewPayInvoice(id string) PayInvoice {
 
 type PayInvoiceHandler struct {
 	invoiceRepository repository.InvoiceRepository
-	orderClient       client.OrderClient
+	publisher         ddd.EventPublisher[ddd.Event]
 }
 
-func NewPayInvoiceHandler(invoiceRepository repository.InvoiceRepository, orderClient client.OrderClient) PayInvoiceHandler {
+func NewPayInvoiceHandler(invoiceRepository repository.InvoiceRepository, publisher ddd.EventPublisher[ddd.Event]) PayInvoiceHandler {
 	return PayInvoiceHandler{
 		invoiceRepository: invoiceRepository,
-		orderClient:       orderClient,
+		publisher:         publisher,
 	}
 }
 
@@ -42,8 +43,13 @@ func (h PayInvoiceHandler) PayInvoice(ctx context.Context, pay PayInvoice) error
 
 	invoice.Paid()
 
-	if err := h.orderClient.Complete(ctx, invoice.ID, invoice.OrderID); err != nil {
-		return errors.Wrap(err, "pay invoice command")
+	// Before or after the invoice is saved we still risk something failing which
+	// will leave the state change only partially complete
+	if err = h.publisher.Publish(ctx, ddd.NewEventBase(event.InvoicePaidEvent, &event.InvoicePaid{
+		ID:      invoice.ID,
+		OrderID: invoice.OrderID,
+	})); err != nil {
+		return err
 	}
 
 	return errors.Wrap(h.invoiceRepository.Update(ctx, invoice), "pay invoice command")

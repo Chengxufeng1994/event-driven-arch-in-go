@@ -1,6 +1,6 @@
 openapiOptions:
   file:
-    - file: "api/customer/v1/messages.proto"
+    - file: "api/customer/v1/customer.proto"
       option:
         info:
           title: Customers
@@ -13,6 +13,12 @@ openapiOptions:
         tags:
           - Customer
         summary: Create a new customer
+    - method: api.customer.v1.CustomersService.ChangeSmsNumber
+      option:
+        operationId: changeSmsNumber
+        tags:
+          - Customer
+        summary: Change a customers SMS number
     - method: api.customer.v1.CustomersService.GetCustomer
       option:
         operationId: getCustomer

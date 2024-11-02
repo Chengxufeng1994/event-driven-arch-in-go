@@ -29,11 +29,13 @@ func (OrderCreated) Key() string { return OrderCreatedEvent }
 
 type OrderCanceled struct {
 	CustomerID string
+	PaymentID  string
 }
 
-func NewOrderCanceled(customerID string) *OrderCanceled {
+func NewOrderCanceled(customerID, paymentID string) *OrderCanceled {
 	return &OrderCanceled{
 		CustomerID: customerID,
+		PaymentID:  paymentID,
 	}
 }
 
@@ -56,12 +58,14 @@ func NewOrderReadied(customerID, paymentID string, total float64) *OrderReadied 
 func (OrderReadied) Key() string { return OrderReadiedEvent }
 
 type OrderCompleted struct {
-	InvoiceID string
+	CustomerID string
+	InvoiceID  string
 }
 
-func NewOrderCompleted(invoiceID string) *OrderCompleted {
+func NewOrderCompleted(customerID, invoiceID string) *OrderCompleted {
 	return &OrderCompleted{
-		InvoiceID: invoiceID,
+		CustomerID: customerID,
+		InvoiceID:  invoiceID,
 	}
 }
 

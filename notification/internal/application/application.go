@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/notification/internal/application/port/in/command"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/notification/internal/application/port/out/client"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/notification/internal/application/port/out/repository"
 )
 
 type (
@@ -18,15 +18,15 @@ type (
 	}
 
 	NotificationApplication struct {
-		customerClient client.CustomerClient
+		cache repository.CustomerCacheRepository
 	}
 )
 
 var _ NotificationUseCase = (*NotificationApplication)(nil)
 
-func New(customerClient client.CustomerClient) *NotificationApplication {
+func New(cache repository.CustomerCacheRepository) *NotificationApplication {
 	return &NotificationApplication{
-		customerClient: customerClient,
+		cache: cache,
 	}
 }
 

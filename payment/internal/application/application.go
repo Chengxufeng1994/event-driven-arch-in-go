@@ -1,8 +1,8 @@
 package application
 
 import (
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/payment/internal/application/port/int/command"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/payment/internal/application/port/out/client"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/payment/internal/application/usecase"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/payment/internal/domain/repository"
 )
@@ -30,7 +30,7 @@ var _ usecase.PaymentUseCase = (*PaymentApplication)(nil)
 func NewPaymentApplication(
 	invoiceRepository repository.InvoiceRepository,
 	paymentRepository repository.PaymentRepository,
-	orderClient client.OrderClient,
+	domainEventPublisher ddd.EventPublisher[ddd.Event],
 ) *PaymentApplication {
 	return &PaymentApplication{
 		appCommands: appCommands{
@@ -38,7 +38,7 @@ func NewPaymentApplication(
 			ConfirmPaymentHandler:   command.NewConfirmPaymentHandler(paymentRepository),
 			CreateInvoiceHandler:    command.NewCreateInvoiceHandler(invoiceRepository),
 			AdjustInvoiceHandler:    command.NewAdjustInvoiceHandler(invoiceRepository),
-			PayInvoiceHandler:       command.NewPayInvoiceHandler(invoiceRepository, orderClient),
+			PayInvoiceHandler:       command.NewPayInvoiceHandler(invoiceRepository, domainEventPublisher),
 			CancelInvoiceHandler:    command.NewCancelInvoiceHandler(invoiceRepository),
 		},
 		appQueries: appQueries{},

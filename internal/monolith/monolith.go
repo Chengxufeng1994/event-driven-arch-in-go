@@ -220,10 +220,28 @@ func (app *MonolithApplication) waitForRpc(ctx context.Context) error {
 	return eg.Wait()
 }
 
+func (app *MonolithApplication) waitForStream(ctx context.Context) error {
+	closed := make(chan struct{})
+	app.nc.SetClosedHandler(func(*nats.Conn) {
+		close(closed)
+	})
+	group, gCtx := errgroup.WithContext(ctx)
+	group.Go(func() error {
+		fmt.Println("message stream started")
+		defer fmt.Println("message stream stopped")
+		<-closed
+		return nil
+	})
+	group.Go(func() error {
+		<-gCtx.Done()
+		return app.nc.Drain()
+	})
+	return group.Wait()
+}
+
 func (app *MonolithApplication) Run() error {
 	app.logger.Info("started mallbots application")
 	defer app.logger.Info("stopped mallbots application")
-	defer app.nc.Close()
 	app.printWorkingDir()
 
 	if err := app.PrepareRunModules(); err != nil {
@@ -235,7 +253,7 @@ func (app *MonolithApplication) Run() error {
 
 	app.waiter = waiter.New(waiter.CatchSignals())
 
-	app.waiter.Add(app.waitForWeb, app.waitForRpc)
+	app.waiter.Add(app.waitForWeb, app.waitForRpc, app.waitForStream)
 
 	return app.waiter.Wait()
 }

@@ -43,7 +43,7 @@ func (h StoreIntegrationEventHandler[T]) onStoreCreated(ctx context.Context, eve
 	return h.publisher.Publish(ctx, storev1.StoreAggregateChannel,
 		ddd.NewEventBase(storev1.StoreCreatedEvent,
 			&storev1.StoreCreated{
-				Id:       event.ID(),
+				Id:       event.AggregateID(),
 				Name:     payload.Name,
 				Location: payload.Location,
 			}))
@@ -53,7 +53,7 @@ func (h StoreIntegrationEventHandler[T]) onStoreParticipationEnabled(ctx context
 	return h.publisher.Publish(ctx, storev1.StoreAggregateChannel,
 		ddd.NewEventBase(storev1.StoreParticipatingToggledEvent,
 			&storev1.StoreParticipationToggled{
-				Id:            event.ID(),
+				Id:            event.AggregateID(),
 				Participating: true,
 			}),
 	)
@@ -63,7 +63,7 @@ func (h StoreIntegrationEventHandler[T]) onStoreParticipationDisabled(ctx contex
 	return h.publisher.Publish(ctx, storev1.StoreAggregateChannel,
 		ddd.NewEventBase(storev1.StoreParticipatingToggledEvent,
 			&storev1.StoreParticipationToggled{
-				Id:            event.ID(),
+				Id:            event.AggregateID(),
 				Participating: false,
 			}),
 	)
@@ -74,7 +74,7 @@ func (h StoreIntegrationEventHandler[T]) onStoreRebranded(ctx context.Context, e
 	return h.publisher.Publish(ctx, storev1.StoreAggregateChannel,
 		ddd.NewEventBase(storev1.StoreRebrandedEvent,
 			&storev1.StoreRebranded{
-				Id:   event.ID(),
+				Id:   event.AggregateID(),
 				Name: payload.Name,
 			}),
 	)

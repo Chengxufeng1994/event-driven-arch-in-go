@@ -5,6 +5,9 @@ http:
     - selector: api.customer.v1.CustomersService.RegisterCustomer
       post: /api/v1/customers
       body: "*"
+    - selector: api.customer.v1.CustomersService.ChangeSmsNumber
+      put: /api/v1/customers/{id}/change-sms
+      body: "*"
     - selector: api.customer.v1.CustomersService.GetCustomer
       get: /api/v1/customers/{id}
     - selector: api.customer.v1.CustomersService.EnableCustomer

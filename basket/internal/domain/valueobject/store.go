@@ -1,15 +1,13 @@
 package valueobject
 
 type Store struct {
-	ID       string
-	Name     string
-	Location string
+	ID   string
+	Name string
 }
 
-func NewStore(id, name, location string) Store {
+func NewStore(id, name string) Store {
 	return Store{
-		ID:       id,
-		Name:     name,
-		Location: location,
+		ID:   id,
+		Name: name,
 	}
 }

@@ -1,0 +1,21 @@
+openapiOptions:
+  file:
+    - file: "api/search/v1/api.proto"
+      option:
+        info:
+          title: Search
+          version: "1.0.0"
+        basePath: /
+  method:
+    - method: api.search.v1.SearchService.SearchOrders
+      option:
+        operationId: searchOrders
+        tags:
+          - Orders
+        summary: Search for orders
+    - method: api.search.v1.SearchService.GetOrder
+      option:
+        operationId: getOrder
+        tags:
+          - Order
+        summary: Get an order

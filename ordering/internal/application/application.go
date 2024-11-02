@@ -42,9 +42,7 @@ func NewOrderApplication(
 			CompleteOrderHandler: command.NewCompleteOrderHandler(orderRepository),
 		},
 		appQueries: appQueries{
-			GetOrderHandler: query.NewGetOrderHandler(
-				orderRepository,
-			),
+			GetOrderHandler: query.NewGetOrderHandler(orderRepository),
 		},
 	}
 }

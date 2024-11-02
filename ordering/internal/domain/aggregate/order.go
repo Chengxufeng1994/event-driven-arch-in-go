@@ -68,7 +68,7 @@ func (o *Order) Cancel() error {
 		return ErrOrderCannotBeCancelled
 	}
 
-	o.AddEvent(event.OrderCanceledEvent, event.NewOrderCanceled(o.CustomerID))
+	o.AddEvent(event.OrderCanceledEvent, event.NewOrderCanceled(o.CustomerID, o.PaymentID))
 
 	return nil
 }
@@ -86,7 +86,7 @@ func (o *Order) Complete(invoiceID string) error {
 
 	// validate status
 
-	o.AddEvent(event.OrderCompletedEvent, event.NewOrderCompleted(invoiceID))
+	o.AddEvent(event.OrderCompletedEvent, event.NewOrderCompleted(o.CustomerID, invoiceID))
 
 	return nil
 }
