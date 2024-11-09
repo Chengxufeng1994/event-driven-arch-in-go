@@ -6,7 +6,6 @@ import (
 )
 
 // 設計一個 `registry` 接口, 能夠註冊多種類型的序列化或反序列化 serialize, deserialize (serde)
-
 type (
 	Registrable interface {
 		Key() string

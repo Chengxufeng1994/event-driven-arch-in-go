@@ -11,25 +11,25 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-type GenericHttpServer struct {
+type GenericHTTPServer struct {
 	config  *config.Server
 	handler http.Handler
 }
 
 const shutdownTimeout = 5
 
-func NewGenericHttpServer(handler http.Handler, config *config.Server) *GenericHttpServer {
-	return &GenericHttpServer{
+func NewGenericHttpServer(handler http.Handler, config *config.Server) *GenericHTTPServer {
+	return &GenericHTTPServer{
 		config:  config,
 		handler: handler,
 	}
 }
 
-func (s *GenericHttpServer) ListenAndServe(ctx context.Context) error {
+func (s *GenericHTTPServer) ListenAndServe(ctx context.Context) error {
 	return s.listenAndServe(ctx)
 }
 
-func (s *GenericHttpServer) listenAndServe(ctx context.Context) error {
+func (s *GenericHTTPServer) listenAndServe(ctx context.Context) error {
 	addr := fmt.Sprintf("%s:%d", s.config.HTTP.Host, s.config.HTTP.Port)
 	srv := &http.Server{
 		Addr:              addr,

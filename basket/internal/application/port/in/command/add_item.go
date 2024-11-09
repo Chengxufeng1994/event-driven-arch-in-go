@@ -3,7 +3,6 @@ package command
 import (
 	"context"
 
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/application/port/out/client"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/repository"
 	"github.com/stackus/errors"
 )
@@ -23,20 +22,20 @@ func NewAddItem(id, productID string, quantity int) AddItem {
 }
 
 type AddItemHandler struct {
-	basketRepository repository.BasketRepository
-	productClient    client.ProductClient
-	storeClient      client.StoreClient
+	basketRepository  repository.BasketRepository
+	productRepository repository.ProductRepository
+	storeRepository   repository.StoreRepository
 }
 
 func NewAddItemHandler(
 	basketRepository repository.BasketRepository,
-	productClient client.ProductClient,
-	storeClient client.StoreClient,
+	productRepository repository.ProductRepository,
+	storeRepository repository.StoreRepository,
 ) AddItemHandler {
 	return AddItemHandler{
-		basketRepository: basketRepository,
-		productClient:    productClient,
-		storeClient:      storeClient,
+		basketRepository:  basketRepository,
+		productRepository: productRepository,
+		storeRepository:   storeRepository,
 	}
 }
 
@@ -46,12 +45,12 @@ func (h AddItemHandler) AddItem(ctx context.Context, cmd AddItem) error {
 		return errors.Wrap(err, "add item command")
 	}
 
-	product, err := h.productClient.Find(ctx, cmd.ProductID)
+	product, err := h.productRepository.Find(ctx, cmd.ProductID)
 	if err != nil {
 		return errors.Wrap(err, "finding product")
 	}
 
-	store, err := h.storeClient.Find(ctx, product.StoreID)
+	store, err := h.storeRepository.Find(ctx, product.StoreID)
 	if err != nil {
 		return errors.Wrap(err, "finding store")
 	}

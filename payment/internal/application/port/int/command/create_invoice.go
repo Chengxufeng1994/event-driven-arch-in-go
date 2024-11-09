@@ -40,6 +40,6 @@ func (h CreateInvoiceHandler) CreateInvoice(ctx context.Context, create CreateIn
 			create.ID,
 			create.OrderID,
 			create.Amount,
-			valueobject.InvoicePending,
+			valueobject.InvoiceIsPending,
 		))
 }

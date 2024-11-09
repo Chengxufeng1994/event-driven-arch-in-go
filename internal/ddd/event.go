@@ -7,6 +7,10 @@ import (
 )
 
 type (
+	EventOption interface {
+		configureEvent(*event)
+	}
+
 	EventPayload interface{}
 
 	Event interface {
@@ -17,7 +21,7 @@ type (
 		OccurredAt() time.Time
 	}
 
-	eventBase struct {
+	event struct {
 		EntityBase
 		payload    EventPayload
 		metadata   Metadata
@@ -25,14 +29,14 @@ type (
 	}
 )
 
-var _ Event = (*eventBase)(nil)
+var _ Event = (*event)(nil)
 
-func NewEventBase(name string, payload EventPayload, options ...EventOption) eventBase {
-	return newEventBase(name, payload, options...)
+func NewEvent(name string, payload EventPayload, options ...EventOption) event {
+	return newEvent(name, payload, options...)
 }
 
-func newEventBase(name string, payload EventPayload, options ...EventOption) eventBase {
-	evt := eventBase{
+func newEvent(name string, payload EventPayload, options ...EventOption) event {
+	evt := event{
 		EntityBase: NewEntityBase(uuid.New().String(), name),
 		payload:    payload,
 		metadata:   make(Metadata),
@@ -46,7 +50,7 @@ func newEventBase(name string, payload EventPayload, options ...EventOption) eve
 	return evt
 }
 
-func (e eventBase) EventName() string     { return e.name }
-func (e eventBase) Payload() EventPayload { return e.payload }
-func (e eventBase) Metadata() Metadata    { return e.metadata }
-func (e eventBase) OccurredAt() time.Time { return e.occurredAt }
+func (e event) EventName() string     { return e.name }
+func (e event) Payload() EventPayload { return e.payload }
+func (e event) Metadata() Metadata    { return e.metadata }
+func (e event) OccurredAt() time.Time { return e.occurredAt }

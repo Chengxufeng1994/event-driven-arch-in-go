@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	basketv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/basket/api/basket/v1"
+	depotv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/depot/api/depot/v1"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/am"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/broker/nats"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
@@ -16,12 +18,12 @@ import (
 	orderv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/api/order/v1"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/docs"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/application"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/application/handler"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/domain/aggregate"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/domain/event"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/infrastructure/client/grpc"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/infrastructure/logging"
 	grpcv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/interface/grpc/v1"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/interface/handler"
 	v1 "github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/interface/rest/v1"
 )
 
@@ -43,53 +45,63 @@ func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 	if err := orderv1.Registrations(reg); err != nil {
 		return err
 	}
+	if err := basketv1.Registrations(reg); err != nil {
+		return err
+	}
+	if err := depotv1.Registrations(reg); err != nil {
+		return err
+	}
+	stream := nats.NewStream(mono.Config().Infrastructure.Nats.Stream, mono.JetStream(), mono.Logger())
+	eventStream := am.NewEventStream(reg, stream)
+	commandStream := am.NewCommandStream(reg, stream)
 	conn, err := grpc.Dial(ctx, endpoint)
 	if err != nil {
 		return err
 	}
-	eventStream := am.NewEventStream(reg, nats.NewStream(mono.Config().Infrastructure.Nats.Stream, mono.JetStream()))
-	domainEventDispatcher := ddd.NewEventDispatcher[ddd.AggregateEvent]()
 	aggregateStore := es.AggregateStoreWithMiddleware(
 		evenstoregorm.NewGormEventStore("ordering.events", mono.Database(), reg),
-		es.NewEventPublisher(domainEventDispatcher),
 		snapshotstoregorm.NewGormSnapshotStore("ordering.snapshots", mono.Database(), reg),
 	)
+	domainEventDispatcher := ddd.NewEventDispatcher[ddd.Event]()
 	orderRepository := es.NewAggregateRepository[*aggregate.Order](aggregate.OrderAggregate, reg, aggregateStore)
-	customerClient := grpc.NewGrpcCustomerClient(conn)
-	paymentClient := grpc.NewGrpcPaymentClient(conn)
 	shoppingClient := grpc.NewGrpcShoppingClient(conn)
 
 	// setup application
-	logApplication := logging.NewLogApplicationAccess(
-		application.NewOrderApplication(
-			orderRepository,
-			customerClient,
-			paymentClient,
-			shoppingClient,
-		),
+	app := logging.NewLogApplicationAccess(
+		application.NewOrderApplication(orderRepository, shoppingClient, domainEventDispatcher),
 		mono.Logger(),
 	)
 	// setup application handlers
-	integrationEventHandler := logging.NewLogDomainEventHandlerAccess(
-		application.NewIntegrationEventHandlers(eventStream),
-		"IntegrationEvents",
-		mono.Logger(),
+	domainEventHandlers := logging.NewLogEventHandlerAccess[ddd.Event](
+		handler.NewDomainEventHandler(eventStream),
+		"DomainEvents", mono.Logger(),
+	)
+	integrationEventHandlers := logging.NewLogEventHandlerAccess[ddd.Event](
+		handler.NewIntegrationEventHandlers(app),
+		"IntegrationEvents", mono.Logger(),
+	)
+	commandHandlers := logging.NewLogCommandHandlerAccess[ddd.Command](
+		handler.NewCommandHandlers(app),
+		"Commands", mono.Logger(),
 	)
 
 	// setup Driver adapters
-	if err := grpcv1.RegisterServer(ctx, logApplication, mono.RPC().GRPCServer()); err != nil {
+	if err := grpcv1.RegisterServer(ctx, app, mono.RPC().GRPCServer()); err != nil {
 		return err
 	}
-
 	if v1.RegisterGateway(ctx, mono.Gin(), endpoint) != nil {
 		return err
 	}
-
 	if err := docs.RegisterSwagger(mono.Gin()); err != nil {
 		return err
 	}
-
-	handler.RegisterIntegrationEventHandlers(integrationEventHandler, domainEventDispatcher)
+	handler.RegisterDomainEventHandlers(domainEventDispatcher, domainEventHandlers)
+	if err := handler.RegisterIntegrationEventHandler(integrationEventHandlers, eventStream); err != nil {
+		return err
+	}
+	if err := handler.RegisterCommandHandlers(commandStream, commandHandlers); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -99,7 +111,7 @@ func (m *Module) Name() string {
 }
 
 func registrations(reg registry.Registry) (err error) {
-	serde := serdes.NewJsonSerde(reg)
+	serde := serdes.NewJSONSerde(reg)
 
 	// Order
 	if err := serde.Register(aggregate.Order{}, func(v any) error {
@@ -112,6 +124,12 @@ func registrations(reg registry.Registry) (err error) {
 
 	// order events
 	if err := serde.Register(event.OrderCreated{}); err != nil {
+		return err
+	}
+	if err := serde.Register(event.OrderRejected{}); err != nil {
+		return err
+	}
+	if err := serde.Register(event.OrderApproved{}); err != nil {
 		return err
 	}
 	if err := serde.Register(event.OrderReadied{}); err != nil {

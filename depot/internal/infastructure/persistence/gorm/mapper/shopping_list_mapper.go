@@ -51,12 +51,14 @@ func (m *ShoppingListMapper) ToDomain(shoppingList *po.ShoppingList) (*aggregate
 		OrderID:       shoppingList.OrderID,
 		AssignedBotID: shoppingList.AssignedBotID,
 		Stops:         stops,
-		Status:        m.statusToDomain(shoppingList.Status),
+		Status:        valueobject.NewShoppingListStatus(shoppingList.Status),
 	}, nil
 }
 
 func (m *ShoppingListMapper) statusToDomain(status string) valueobject.ShoppingListStatus {
 	switch status {
+	case valueobject.ShoppingListIsPending.String():
+		return valueobject.ShoppingListIsPending
 	case valueobject.ShoppingListIsAvailable.String():
 		return valueobject.ShoppingListIsAvailable
 	case valueobject.ShoppingListIsAssigned.String():
@@ -65,8 +67,8 @@ func (m *ShoppingListMapper) statusToDomain(status string) valueobject.ShoppingL
 		return valueobject.ShoppingListIsActive
 	case valueobject.ShoppingListIsCompleted.String():
 		return valueobject.ShoppingListIsCompleted
-	case valueobject.ShoppingListIsCancelled.String():
-		return valueobject.ShoppingListIsCancelled
+	case valueobject.ShoppingListIsCanceled.String():
+		return valueobject.ShoppingListIsCanceled
 	default:
 		return valueobject.ShoppingListUnknown
 	}

@@ -7,10 +7,10 @@ import (
 	customerv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/customer/api/customer/v1"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/customer/docs"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/customer/internal/application"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/customer/internal/application/handler"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/customer/internal/infrastructure/logging"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/customer/internal/infrastructure/persistence/gorm"
 	grpcv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/customer/internal/interface/grpc/v1"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/customer/internal/interface/handler"
 	restv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/customer/internal/interface/rest/v1"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/am"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/broker/nats"
@@ -32,23 +32,27 @@ func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 	if err := customerv1.Registrations(reg); err != nil {
 		return err
 	}
-	eventStream := am.NewEventStream(reg, nats.NewStream(mono.Config().Infrastructure.Nats.Stream, mono.JetStream()))
+	stream := nats.NewStream(mono.Config().Infrastructure.Nats.Stream, mono.JetStream(), mono.Logger())
+	eventStream := am.NewEventStream(reg, stream)
+	commandStream := am.NewCommandStream(reg, stream)
 	domainEventDispatcher := ddd.NewEventDispatcher[ddd.AggregateEvent]()
-	customerRepository := gorm.NewGormCustomerRepository(mono.Database())
+	customers := gorm.NewGormCustomerRepository(mono.Database())
 
 	// setup application
-	logApplication := logging.NewLogApplicationAccess(
-		application.NewCustomerApplication(customerRepository, domainEventDispatcher),
-		mono.Logger(),
+	app := logging.NewLogApplicationAccess(
+		application.NewCustomerApplication(customers, domainEventDispatcher), mono.Logger(),
 	)
-	customerHandler := logging.NewLogHandlerAccess(
-		application.NewCustomerDomainEventHandler(eventStream),
-		"Customer",
-		mono.Logger(),
+	domainEventHandler := logging.NewLogEventHandlerAccess(
+		handler.NewDomainEventHandler(eventStream),
+		"DomainEvents", mono.Logger(),
+	)
+	commandHandler := logging.NewLogCommandHandlerAccess(
+		handler.NewCommandHandler(app),
+		"Commands", mono.Logger(),
 	)
 
 	// setup Driver adapters
-	if err := grpcv1.RegisterServer(ctx, logApplication, mono.RPC().GRPCServer()); err != nil {
+	if err := grpcv1.RegisterServer(ctx, app, mono.RPC().GRPCServer()); err != nil {
 		return err
 	}
 
@@ -59,8 +63,10 @@ func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 	if err := docs.RegisterSwagger(mono.Gin()); err != nil {
 		return err
 	}
-
-	handler.RegisterCustomerIntegrationHandler(customerHandler, domainEventDispatcher)
+	handler.RegisterDomainEventHandler(domainEventHandler, domainEventDispatcher)
+	if err := handler.RegisterCommandHandlers(commandStream, commandHandler); err != nil {
+		return err
+	}
 
 	return nil
 }

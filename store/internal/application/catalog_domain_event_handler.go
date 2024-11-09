@@ -23,20 +23,15 @@ func (h *CatalogDomainEventHandler[T]) HandleEvent(ctx context.Context, event T)
 	switch event.EventName() {
 	case domainevent.ProductAddedEvent:
 		return h.onProductAdded(ctx, event)
-
 	case domainevent.ProductRebrandedEvent:
 		return h.onProductRebranded(ctx, event)
-
 	case domainevent.ProductPriceIncreasedEvent:
 		return h.onProductPriceIncreased(ctx, event)
-
 	case domainevent.ProductPriceDecreasedEvent:
 		return h.onProductPriceDecreased(ctx, event)
-
 	case domainevent.ProductRemovedEvent:
 		return h.onProductRemoved(ctx, event)
 	}
-
 	return nil
 }
 

@@ -59,6 +59,20 @@ func StartBasket(id, customerID string) (*Basket, error) {
 
 func (Basket) Key() string { return BasketAggregate }
 
+func (b *Basket) Start(customerID string) (ddd.Event, error) {
+	if b.Status != valueobject.BasketUnknown {
+		return nil, ErrBasketCannotBeModified
+	}
+
+	if customerID == "" {
+		return nil, ErrCustomerIDCannotBeBlank
+	}
+
+	b.AddEvent(event.BasketStartedEvent, event.NewBasketStarted(customerID))
+
+	return ddd.NewEvent(event.BasketStartedEvent, b), nil
+}
+
 func (b *Basket) IsCancellable() bool {
 	return b.Status == valueobject.BasketIsOpen
 }
@@ -67,35 +81,35 @@ func (b *Basket) IsOpen() bool {
 	return b.Status == valueobject.BasketIsOpen
 }
 
-func (b *Basket) Cancel() error {
+func (b *Basket) Cancel() (ddd.Event, error) {
 	if !b.IsCancellable() {
-		return ErrBasketCannotBeCancelled
+		return nil, ErrBasketCannotBeCancelled
 	}
 
 	b.AddEvent(event.BasketCanceledEvent, event.NewBasketCanceled())
 
-	return nil
+	return ddd.NewEvent(event.BasketCanceledEvent, b), nil
 }
 
-func (b *Basket) Checkout(paymentID string) error {
+func (b *Basket) Checkout(paymentID string) (ddd.Event, error) {
 	if !b.IsOpen() {
-		return ErrBasketCannotBeModified
+		return nil, ErrBasketCannotBeModified
 	}
 
 	if len(b.Items) == 0 {
-		return ErrBasketHasNoItems
+		return nil, ErrBasketHasNoItems
 	}
 
 	if paymentID == "" {
-		return ErrPaymentIDCannotBeBlank
+		return nil, ErrPaymentIDCannotBeBlank
 	}
 
 	b.AddEvent(event.BasketCheckedOutEvent, event.NewBasketCheckedOut(paymentID, b.CustomerID, b.Items))
 
-	return nil
+	return ddd.NewEvent(event.BasketCheckedOutEvent, b), nil
 }
 
-func (b *Basket) AddItem(store valueobject.Store, product valueobject.Product, quantity int) error {
+func (b *Basket) AddItem(store *valueobject.Store, product *valueobject.Product, quantity int) error {
 	if !b.IsOpen() {
 		return ErrBasketCannotBeModified
 	}
@@ -116,7 +130,7 @@ func (b *Basket) AddItem(store valueobject.Store, product valueobject.Product, q
 	return nil
 }
 
-func (b *Basket) RemoveItem(product valueobject.Product, quantity int) error {
+func (b *Basket) RemoveItem(product *valueobject.Product, quantity int) error {
 	if !b.IsOpen() {
 		return ErrBasketCannotBeModified
 	}
@@ -132,7 +146,7 @@ func (b *Basket) RemoveItem(product valueobject.Product, quantity int) error {
 	return nil
 }
 
-func (b *Basket) hasProduct(product valueobject.Product) bool {
+func (b *Basket) hasProduct(product *valueobject.Product) bool {
 	for _, item := range b.Items {
 		if item.ProductID == product.ID && item.StoreID == product.StoreID {
 			return true

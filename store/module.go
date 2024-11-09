@@ -16,12 +16,12 @@ import (
 	storev1 "github.com/Chengxufeng1994/event-driven-arch-in-go/store/api/store/v1"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/docs"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/application"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/application/handler"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/domain/aggregate"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/domain/event"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/infrastructure/logging"
 	persistencegorm "github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/infrastructure/persistence/gorm"
 	v1 "github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/interface/grpc/v1"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/interface/handler"
 	restv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/interface/rest/v1"
 )
 
@@ -35,8 +35,8 @@ func NewModule() *Module {
 
 func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 	// setup Driven adapters
-	// serialize, deserialize register
 	endpoint := fmt.Sprintf("%s:%d", mono.Config().Server.GPPC.Host, mono.Config().Server.GPPC.Port)
+	// serialize, deserialize register
 	reg := registry.New()
 	if err := registrations(reg); err != nil {
 		return err
@@ -44,7 +44,8 @@ func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 	if err := storev1.Registrations(reg); err != nil {
 		return err
 	}
-	eventStream := am.NewEventStream(reg, nats.NewStream(mono.Config().Infrastructure.Nats.Stream, mono.JetStream()))
+	stream := nats.NewStream(mono.Config().Infrastructure.Nats.Stream, mono.JetStream(), mono.Logger())
+	eventStream := am.NewEventStream(reg, stream)
 	domainEventDispatcher := ddd.NewEventDispatcher[ddd.AggregateEvent]()
 	aggregateStore := es.AggregateStoreWithMiddleware(
 		evenstoregorm.NewGormEventStore("stores.events", mono.Database(), reg),
@@ -58,30 +59,19 @@ func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 
 	// setup application
 	app := logging.NewLogApplicationAccess(
-		application.NewStoreApplication(
-			storeRepository,
-			productRepository,
-			mallRepository,
-			catalogRepository,
-		),
+		application.NewStoreApplication(storeRepository, productRepository, mallRepository, catalogRepository),
 		mono.Logger())
-
 	catalogHandler := logging.NewLogHandlerAccess(
 		application.NewCatalogDomainEventHandler(catalogRepository),
-		"Catalog",
-		mono.Logger(),
+		"Catalog", mono.Logger(),
 	)
-
 	mallHandler := logging.NewLogHandlerAccess(
 		application.NewMallDomainEventHandler(mallRepository),
-		"Mall",
-		mono.Logger(),
+		"Mall", mono.Logger(),
 	)
-
 	storeHandler := logging.NewLogHandlerAccess(
-		application.NewStoreIntegrationEventHandler(eventStream),
-		"Store",
-		mono.Logger(),
+		handler.NewStoreDomainEventHandler(eventStream),
+		"Store", mono.Logger(),
 	)
 
 	// setup Driver adapters
@@ -101,9 +91,9 @@ func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 		return err
 	}
 
-	handler.RegisterCatalogHandler(catalogHandler, domainEventDispatcher)
-	handler.RegisterMallHandler(mallHandler, domainEventDispatcher)
-	handler.RegisterStoreIntegrationHandler(storeHandler, domainEventDispatcher)
+	handler.RegisterCatalogDomainEventHandler(catalogHandler, domainEventDispatcher)
+	handler.RegisterMallDomainEventHandler(mallHandler, domainEventDispatcher)
+	handler.RegisterStoreDomainEventHandler(storeHandler, domainEventDispatcher)
 
 	return nil
 }
@@ -113,7 +103,7 @@ func (m *Module) Name() string {
 }
 
 func registrations(reg registry.Registry) error {
-	serde := serdes.NewJsonSerde(reg)
+	serde := serdes.NewJSONSerde(reg)
 
 	// store
 	if err := serde.Register(aggregate.Store{}, func(v any) error {

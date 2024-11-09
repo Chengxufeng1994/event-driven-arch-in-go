@@ -3,7 +3,6 @@ package command
 import (
 	"context"
 
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/application/port/out/client"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/repository"
 	"github.com/stackus/errors"
 )
@@ -23,19 +22,19 @@ func NewRemoveItem(id, productID string, quantity int) RemoveItem {
 }
 
 type RemoveItemHandler struct {
-	basketRepository repository.BasketRepository
-	productClient    client.ProductClient
+	basketRepository  repository.BasketRepository
+	productRepository repository.ProductRepository
 }
 
-func NewRemoveItemHandler(basketRepository repository.BasketRepository, productClient client.ProductClient) RemoveItemHandler {
+func NewRemoveItemHandler(basketRepository repository.BasketRepository, productRepository repository.ProductRepository) RemoveItemHandler {
 	return RemoveItemHandler{
-		basketRepository: basketRepository,
-		productClient:    productClient,
+		basketRepository:  basketRepository,
+		productRepository: productRepository,
 	}
 }
 
 func (h RemoveItemHandler) RemoveItem(ctx context.Context, cmd RemoveItem) error {
-	product, err := h.productClient.Find(ctx, cmd.ProductID)
+	product, err := h.productRepository.Find(ctx, cmd.ProductID)
 	if err != nil {
 		return errors.Wrap(err, "fetching product")
 	}

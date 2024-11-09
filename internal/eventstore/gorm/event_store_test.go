@@ -70,7 +70,7 @@ func TestGormEventStore(t *testing.T) {
 	)`)
 
 	registry := registry.New()
-	jsonSerde := serdes.NewJsonSerde(registry)
+	jsonSerde := serdes.NewJSONSerde(registry)
 	err = jsonSerde.Register(&testChangeName{})
 	assert.NoError(t, err)
 

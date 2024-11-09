@@ -15,14 +15,15 @@ type EventHandler[T ddd.Event] struct {
 
 var _ ddd.EventHandler[ddd.Event] = (*EventHandler[ddd.Event])(nil)
 
-func NewLogDomainEventHandlerAccess[T ddd.Event](handlers ddd.EventHandler[T], label string, logger logger.Logger) *EventHandler[T] {
+func NewLogEventHandlerAccess[T ddd.Event](domainEventHandler ddd.EventHandler[T], label string, logger logger.Logger) *EventHandler[T] {
 	return &EventHandler[T]{
-		EventHandler: handlers,
+		EventHandler: domainEventHandler,
 		label:        label,
 		logger:       logger,
 	}
 }
 
+// HandleEvent implements ddd.EventHandler.
 func (h *EventHandler[T]) HandleEvent(ctx context.Context, event T) (err error) {
 	h.logger.Infof("--> Ordering.%s.On(%s)", h.label, event.EventName())
 	defer func() { h.logger.WithError(err).Infof("<-- Ordering.%s.On(%s)", h.label, event.EventName()) }()

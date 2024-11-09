@@ -23,13 +23,13 @@ func (invoice *InvoiceAgg) AdjustAmount(amount float64) {
 }
 
 func (invoice *InvoiceAgg) Paid() {
-	invoice.Status = valueobject.InvoicePaid
+	invoice.Status = valueobject.InvoiceIsPaid
 }
 
 func (invoice *InvoiceAgg) Cancel() {
-	invoice.Status = valueobject.InvoiceCanceled
+	invoice.Status = valueobject.InvoiceIsCanceled
 }
 
 func (invoice *InvoiceAgg) IsPending() bool {
-	return invoice.Status == valueobject.InvoicePending
+	return invoice.Status == valueobject.InvoiceIsPending
 }

@@ -26,7 +26,10 @@ func RegisterServer(_ context.Context, app usecase.CustomerUsecase, registrar gr
 
 func (s server) RegisterCustomer(ctx context.Context, request *customerv1.RegisterCustomerRequest) (*customerv1.RegisterCustomerResponse, error) {
 	id := uuid.New().String()
-	err := s.app.RegisterCustomer(ctx, command.NewRegisterCustomer(id, request.GetName(), request.GetSmsNumber()))
+	err := s.app.RegisterCustomer(ctx, command.NewRegisterCustomer(
+		id,
+		request.GetName(),
+		request.GetSmsNumber()))
 	return &customerv1.RegisterCustomerResponse{Id: id}, err
 }
 

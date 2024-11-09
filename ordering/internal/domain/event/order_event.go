@@ -4,6 +4,8 @@ import "github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/dom
 
 const (
 	OrderCreatedEvent   = "ordering.OrderCreated"
+	OrderRejectedEvent  = "ordering.OrderRejected"
+	OrderApprovedEvent  = "ordering.OrderApproved"
 	OrderCanceledEvent  = "ordering.OrderCanceled"
 	OrderReadiedEvent   = "ordering.OrderReadied"
 	OrderCompletedEvent = "ordering.OrderCompleted"
@@ -26,6 +28,26 @@ func NewOrderCreated(customerID, paymentID, shoppingID string, items []valueobje
 }
 
 func (OrderCreated) Key() string { return OrderCreatedEvent }
+
+type OrderRejected struct{}
+
+func NewOrderRejected() *OrderRejected {
+	return &OrderRejected{}
+}
+
+func (OrderRejected) Key() string { return OrderRejectedEvent }
+
+type OrderApproved struct {
+	ShoppingID string
+}
+
+func NewOrderApproved(shoppingID string) *OrderApproved {
+	return &OrderApproved{
+		ShoppingID: shoppingID,
+	}
+}
+
+func (OrderApproved) Key() string { return OrderApprovedEvent }
 
 type OrderCanceled struct {
 	CustomerID string

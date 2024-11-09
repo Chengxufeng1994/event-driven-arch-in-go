@@ -3,7 +3,7 @@ package grpc
 import (
 	"context"
 
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/application/port/out/client"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/repository"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/valueobject"
 	storev1 "github.com/Chengxufeng1994/event-driven-arch-in-go/store/api/store/v1"
 	"github.com/stackus/errors"
@@ -14,7 +14,7 @@ type GrpcProductClient struct {
 	client storev1.StoresServiceClient
 }
 
-var _ client.ProductClient = (*GrpcProductClient)(nil)
+var _ repository.ProductRepository = (*GrpcProductClient)(nil)
 
 func NewGrpcProductClient(conn *grpc.ClientConn) *GrpcProductClient {
 	client := storev1.NewStoresServiceClient(conn)
@@ -23,15 +23,16 @@ func NewGrpcProductClient(conn *grpc.ClientConn) *GrpcProductClient {
 	}
 }
 
-func (c *GrpcProductClient) Find(ctx context.Context, productID string) (valueobject.Product, error) {
+func (c *GrpcProductClient) Find(ctx context.Context, productID string) (*valueobject.Product, error) {
 	resp, err := c.client.GetProduct(ctx, &storev1.GetProductRequest{
 		Id: productID,
 	})
 	if err != nil {
-		return valueobject.Product{}, errors.Wrap(err, "requesting product")
+		return &valueobject.Product{}, errors.Wrap(err, "requesting product")
 	}
 
-	return c.productToDomain(resp.Product), nil
+	product := c.productToDomain(resp.Product)
+	return &product, nil
 }
 
 func (c *GrpcProductClient) productToDomain(product *storev1.Product) valueobject.Product {

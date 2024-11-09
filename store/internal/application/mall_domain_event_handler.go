@@ -24,17 +24,13 @@ func (h *MallDomainEventHandler[T]) HandleEvent(ctx context.Context, event T) er
 	switch event.EventName() {
 	case domainevent.StoreCreatedEvent:
 		return h.onStoreCreated(ctx, event)
-
 	case domainevent.StoreParticipationEnabledEvent:
 		return h.onStoreParticipationEnabled(ctx, event)
-
 	case domainevent.StoreParticipationDisabledEvent:
 		return h.onStoreParticipationDisabled(ctx, event)
-
 	case domainevent.StoreRebrandedEvent:
 		return h.onStoreRebranded(ctx, event)
 	}
-
 	return nil
 }
 

@@ -1,18 +1,24 @@
 linters-settings:
   gofmt:
     simplify: true
+
   gosec:
     excludes:
       - G601
+
   ginkgolinter:
     forbid-focus-container: true
+
   goimports:
     local-prefixes: github.com/chengxufeng1994/event-driven-arch-in-go
+
   misspell:
     locale: US
+
   nolintlint:
     require-explanation: true
     require-specific: true
+
   revive:
     ignore-generated-header: true
     rules:
@@ -48,35 +54,40 @@ linters-settings:
     line-length: 120
 linters:
   enable:
+    - govet        # Go 官方提供的靜態分析工具，檢查潛在錯誤
+    - errcheck     # 檢查未處理的錯誤
+    - gosimple     # 簡化代碼的 linter
+    - unused       # 檢查未使用的代碼 (變數、函數等)
+    - ineffassign  # 檢查無效的變量賦值
+    - typecheck    # 檢查類型錯誤
+    - staticcheck  # 提供多種靜態分析檢查
+    - stylecheck   # 檢查代碼風格
+    - goimports    # 檢查和修復 import 排序
+    - gofmt        # 檢查代碼格式 (與 gofmt 一致)
+    - gofumpt
+    - gosec
+    - misspell     # 檢查拼寫錯誤
+    - unparam      # 檢查無用的函數參數
+    - prealloc     # 優化 slice 預分配
+    - goconst      # 檢查重複的字符串或數值，建議使用常數
+    - gocritic     # 提供多種靜態代碼優化建議
+    - gocyclo      # 檢查函數的循環複雜度
+    - nakedret     # 檢查 naked return 語句
     - asciicheck
-    - errcheck
     - errorlint
     - ginkgolinter
-#    - gocyclo
-    - gofmt
-    - gofumpt
-    - goimports
-    - gosec
-    - gosimple
-    - govet
-    - ineffassign
 #    - lll
     - makezero
-    - misspell
     - nilerr
     - noctx
     - nolintlint
     - predeclared
-    - revive
-    - staticcheck
-    - typecheck
+    # - revive
     - unconvert
-    - unparam
-    - unused
     - wastedassign
-  disable-all: true
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
 run:
-  timeout: 3m
+  timeout: 5m
+  issues-exit-code: 1

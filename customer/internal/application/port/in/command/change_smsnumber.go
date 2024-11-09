@@ -41,7 +41,9 @@ func (h ChangeSmsNumberHandler) ChangeSmsNumber(ctx context.Context, changeSmsNu
 		return err
 	}
 
-	customer.ChangeSmsNumber(changeSmsNumber.SmsNumber)
+	if err := customer.ChangeSmsNumber(changeSmsNumber.SmsNumber); err != nil {
+		return err
+	}
 
 	if err := h.customerRepository.Save(ctx, customer); err != nil {
 		return err

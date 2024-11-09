@@ -16,18 +16,18 @@ type CompleteShoppingList struct {
 type CompleteShoppingListHandler struct {
 	shoppingListRepository repository.ShoppingListRepository
 	orderClient            client.OrderClient
-	domainEventPublisher   ddd.EventPublisher[ddd.AggregateEvent]
+	publisher              ddd.EventPublisher[ddd.AggregateEvent]
 }
 
 func NewCompleteShoppingListHandler(
 	shoppingListRepository repository.ShoppingListRepository,
 	orderClient client.OrderClient,
-	domainEventPublisher ddd.EventPublisher[ddd.AggregateEvent],
+	publisher ddd.EventPublisher[ddd.AggregateEvent],
 ) CompleteShoppingListHandler {
 	return CompleteShoppingListHandler{
 		shoppingListRepository: shoppingListRepository,
 		orderClient:            orderClient,
-		domainEventPublisher:   domainEventPublisher,
+		publisher:              publisher,
 	}
 }
 
@@ -47,5 +47,5 @@ func (h CompleteShoppingListHandler) CompleteShoppingList(ctx context.Context, c
 	}
 
 	// publish domain events
-	return h.domainEventPublisher.Publish(ctx, list.Events()...)
+	return h.publisher.Publish(ctx, list.Events()...)
 }

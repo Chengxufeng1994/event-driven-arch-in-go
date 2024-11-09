@@ -3,28 +3,28 @@ package valueobject
 type InvoiceStatus string
 
 const (
-	InvoiceUnknown  InvoiceStatus = ""
-	InvoicePending  InvoiceStatus = "pending"
-	InvoicePaid     InvoiceStatus = "paid"
-	InvoiceCanceled InvoiceStatus = "canceled"
+	InvoiceIsUnknown  InvoiceStatus = ""
+	InvoiceIsPending  InvoiceStatus = "pending"
+	InvoiceIsPaid     InvoiceStatus = "paid"
+	InvoiceIsCanceled InvoiceStatus = "canceled"
 )
 
 func NewInvoiceStatus(status string) (InvoiceStatus, error) {
 	switch status {
-	case InvoicePending.String():
-		return InvoicePending, nil
-	case InvoicePaid.String():
-		return InvoicePaid, nil
-	case InvoiceCanceled.String():
-		return InvoiceCanceled, nil
+	case InvoiceIsPending.String():
+		return InvoiceIsPending, nil
+	case InvoiceIsPaid.String():
+		return InvoiceIsPaid, nil
+	case InvoiceIsCanceled.String():
+		return InvoiceIsCanceled, nil
 	default:
-		return InvoiceUnknown, nil
+		return InvoiceIsUnknown, nil
 	}
 }
 
 func (s InvoiceStatus) String() string {
 	switch s {
-	case InvoicePending, InvoicePaid, InvoiceCanceled:
+	case InvoiceIsPending, InvoiceIsPaid, InvoiceIsCanceled:
 		return string(s)
 	default:
 		return ""

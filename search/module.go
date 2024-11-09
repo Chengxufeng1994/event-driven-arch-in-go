@@ -13,11 +13,11 @@ import (
 	orderv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/api/order/v1"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/search/docs"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/search/internal/application"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/search/internal/application/handler"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/search/internal/infrastructure/client/grpc"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/search/internal/infrastructure/logging"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/search/internal/infrastructure/persistence/gorm"
 	v1 "github.com/Chengxufeng1994/event-driven-arch-in-go/search/internal/interface/grpc/v1"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/search/internal/interface/handler"
 	restv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/search/internal/interface/rest/v1"
 	storev1 "github.com/Chengxufeng1994/event-driven-arch-in-go/store/api/store/v1"
 )
@@ -33,7 +33,6 @@ func NewModule() *Module {
 func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 	// setup Driven adapters
 	endpoint := fmt.Sprintf("%s:%d", mono.Config().Server.GPPC.Host, mono.Config().Server.GPPC.Port)
-	// serialize, deserialize register
 	reg := registry.New()
 	if err := orderv1.Registrations(reg); err != nil {
 		return err
@@ -44,40 +43,25 @@ func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 	if err := storev1.Registrations(reg); err != nil {
 		return err
 	}
-	eventStream := am.NewEventStream(reg, nats.NewStream(mono.Config().Infrastructure.Nats.Stream, mono.JetStream()))
+	stream := nats.NewStream(mono.Config().Infrastructure.Nats.Stream, mono.JetStream(), mono.Logger())
+	eventStream := am.NewEventStream(reg, stream)
 	conn, err := grpc.Dial(ctx, endpoint)
 	if err != nil {
 		return err
 	}
-	customer := gorm.NewGormCustomerCacheRepository(mono.Database(), grpc.NewCustomerClient(conn))
-	store := gorm.NewGormStoreCacheRepository(mono.Database(), grpc.NewStoreClient(conn))
-	product := gorm.NewGormProductCacheRepository(mono.Database(), grpc.NewProductClient(conn))
-	order := gorm.NewGormOrderRepository(mono.Database())
+	customers := gorm.NewGormCustomerCacheRepository(mono.Database(), grpc.NewCustomerClient(conn))
+	stores := gorm.NewGormStoreCacheRepository(mono.Database(), grpc.NewStoreClient(conn))
+	products := gorm.NewGormProductCacheRepository(mono.Database(), grpc.NewProductClient(conn))
+	orders := gorm.NewGormOrderRepository(mono.Database())
 
 	// setup application
 	app := logging.NewLogApplicationAccess(
-		application.New(order),
+		application.New(orders),
 		mono.Logger(),
 	)
-	orderHandler := logging.NewLogEventHandlerAccess[ddd.Event](
-		application.NewOrderHandlers(order, customer, store, product),
-		"Order",
-		mono.Logger(),
-	)
-	customerHandler := logging.NewLogEventHandlerAccess[ddd.Event](
-		application.NewCustomerHandlers(customer),
-		"Customer",
-		mono.Logger(),
-	)
-	storeHandler := logging.NewLogEventHandlerAccess[ddd.Event](
-		application.NewStoreHandlers(store),
-		"Store",
-		mono.Logger(),
-	)
-	productHandler := logging.NewLogEventHandlerAccess[ddd.Event](
-		application.NewProductHandlers(product),
-		"Product",
-		mono.Logger(),
+	integrationEventHandlers := logging.NewLogEventHandlerAccess[ddd.Event](
+		handler.NewIntegrationEventHandlers(orders, customers, products, stores),
+		"IntegrationEvents", mono.Logger(),
 	)
 
 	// setup Driver adapters
@@ -90,16 +74,7 @@ func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 	if err := docs.RegisterSwagger(mono.Gin()); err != nil {
 		return err
 	}
-	if err := handler.RegisterCustomerHandlers(customerHandler, eventStream); err != nil {
-		return err
-	}
-	if err := handler.RegisterOrderHandlers(orderHandler, eventStream); err != nil {
-		return err
-	}
-	if err := handler.RegisterStoreHandlers(storeHandler, eventStream); err != nil {
-		return err
-	}
-	if err := handler.RegisterProductHandlers(productHandler, eventStream); err != nil {
+	if err := handler.RegisterIntegrationEventHandlers(eventStream, integrationEventHandlers); err != nil {
 		return err
 	}
 

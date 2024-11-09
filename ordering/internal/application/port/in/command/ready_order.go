@@ -3,6 +3,7 @@ package command
 import (
 	"context"
 
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/domain/repository"
 	"github.com/stackus/errors"
 )
@@ -13,13 +14,16 @@ type ReadyOrder struct {
 
 type ReadyOrderHandler struct {
 	orderRepository repository.OrderRepository
+	publisher       ddd.EventPublisher[ddd.Event]
 }
 
 func NewReadyOrderHandler(
 	orderRepository repository.OrderRepository,
+	publisher ddd.EventPublisher[ddd.Event],
 ) ReadyOrderHandler {
 	return ReadyOrderHandler{
 		orderRepository: orderRepository,
+		publisher:       publisher,
 	}
 }
 
@@ -29,7 +33,8 @@ func (h ReadyOrderHandler) ReadyOrder(ctx context.Context, cmd ReadyOrder) error
 		return errors.Wrap(err, "ready order command")
 	}
 
-	if err = orderAgg.Ready(); err != nil {
+	event, err := orderAgg.Ready()
+	if err != nil {
 		return nil
 	}
 
@@ -37,5 +42,5 @@ func (h ReadyOrderHandler) ReadyOrder(ctx context.Context, cmd ReadyOrder) error
 		return errors.Wrap(err, "order update")
 	}
 
-	return nil
+	return h.publisher.Publish(ctx, event)
 }

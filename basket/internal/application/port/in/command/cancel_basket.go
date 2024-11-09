@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/repository"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/stackus/errors"
 )
 
@@ -19,10 +20,11 @@ func NewCancelBasket(id string) CancelBasket {
 
 type CancelBasketHandler struct {
 	basketRepository repository.BasketRepository
+	publisher        ddd.EventPublisher[ddd.Event]
 }
 
-func NewCancelBasketHandler(basketRepository repository.BasketRepository) CancelBasketHandler {
-	return CancelBasketHandler{basketRepository: basketRepository}
+func NewCancelBasketHandler(basketRepository repository.BasketRepository, publisher ddd.EventPublisher[ddd.Event]) CancelBasketHandler {
+	return CancelBasketHandler{basketRepository: basketRepository, publisher: publisher}
 }
 
 func (h CancelBasketHandler) CancelBasket(ctx context.Context, cmd CancelBasket) error {
@@ -33,7 +35,8 @@ func (h CancelBasketHandler) CancelBasket(ctx context.Context, cmd CancelBasket)
 	}
 
 	// cancel the basket
-	if err := basketAgg.Cancel(); err != nil {
+	event, err := basketAgg.Cancel()
+	if err != nil {
 		return errors.Wrap(err, "canceling the basket")
 	}
 
@@ -42,5 +45,5 @@ func (h CancelBasketHandler) CancelBasket(ctx context.Context, cmd CancelBasket)
 		return errors.Wrap(err, "saving basket")
 	}
 
-	return nil
+	return h.publisher.Publish(ctx, event)
 }

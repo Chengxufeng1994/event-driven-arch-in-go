@@ -6,6 +6,7 @@ import (
 
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/registry"
+
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -17,14 +18,19 @@ type (
 		ddd.Event
 	}
 
+	IncomingEventMessage interface {
+		IncomingMessage
+		ddd.Event
+	}
+
 	EventPublisher  = MessagePublisher[ddd.Event]
-	EventSubscriber = MessageSubscriber[EventMessage]
-	EventStream     = MessageStream[ddd.Event, EventMessage]
+	EventSubscriber = MessageSubscriber[IncomingEventMessage]
+	EventStream     = MessageStream[ddd.Event, IncomingEventMessage]
 
 	// EventStreamBase
 	eventStream struct {
 		reg    registry.Registry
-		stream MessageStream[RawMessage, RawMessage]
+		stream RawMessageStream
 	}
 
 	// EventMessageBase
@@ -34,14 +40,15 @@ type (
 		payload    ddd.EventPayload
 		metadata   ddd.Metadata
 		occurredAt time.Time
-		msg        RawMessage
+		msg        IncomingMessage
 	}
 )
 
-var _ EventStream = (*eventStream)(nil)
 var _ EventMessage = (*eventMessage)(nil)
 
-func NewEventStream(reg registry.Registry, stream MessageStream[RawMessage, RawMessage]) EventStream {
+var _ EventStream = (*eventStream)(nil)
+
+func NewEventStream(reg registry.Registry, stream RawMessageStream) EventStream {
 	return &eventStream{
 		reg:    reg,
 		stream: stream,
@@ -55,7 +62,8 @@ func (es *eventStream) Publish(ctx context.Context, topicName string, event ddd.
 		return err
 	}
 
-	payload, err := es.reg.Serialize(event.EventName(), event.Payload())
+	payload, err := es.reg.Serialize(
+		event.EventName(), event.Payload())
 	if err != nil {
 		return err
 	}
@@ -69,19 +77,16 @@ func (es *eventStream) Publish(ctx context.Context, topicName string, event ddd.
 		return err
 	}
 
-	return es.stream.Publish(
-		ctx,
-		topicName,
-		rawMessage{
-			id:   event.ID(),
-			name: event.EventName(),
-			data: data,
-		},
+	return es.stream.Publish(ctx, topicName, rawMessage{
+		id:   event.ID(),
+		name: event.EventName(),
+		data: data,
+	},
 	)
 }
 
 // Subscribe implements MessageStream.
-func (es *eventStream) Subscribe(topicName string, handler MessageHandlerFunc[EventMessage], options ...SubscriberOption) error {
+func (es *eventStream) Subscribe(topicName string, handler MessageHandler[IncomingEventMessage], options ...SubscriberOption) error {
 	cfg := NewSubscriberConfig(options)
 
 	var filters map[string]struct{}
@@ -92,7 +97,7 @@ func (es *eventStream) Subscribe(topicName string, handler MessageHandlerFunc[Ev
 		}
 	}
 
-	fn := MessageHandlerFunc[RawMessage](func(ctx context.Context, msg RawMessage) error {
+	fn := MessageHandlerFunc[IncomingRawMessage](func(ctx context.Context, msg IncomingRawMessage) error {
 		var eventData EventMessageData
 
 		if filters != nil {
@@ -107,19 +112,22 @@ func (es *eventStream) Subscribe(topicName string, handler MessageHandlerFunc[Ev
 		}
 
 		eventName := msg.MessageName()
+
 		payload, err := es.reg.Deserialize(eventName, eventData.GetPayload())
 		if err != nil {
 			return err
 		}
 
-		return handler(ctx, &eventMessage{
+		eventMsg := eventMessage{
 			id:         msg.ID(),
 			name:       eventName,
 			payload:    payload,
 			metadata:   eventData.GetMetadata().AsMap(),
 			occurredAt: eventData.GetOccurredAt().AsTime(),
 			msg:        msg,
-		})
+		}
+
+		return handler.HandleMessage(ctx, eventMsg)
 	})
 
 	return es.stream.Subscribe(topicName, fn, options...)

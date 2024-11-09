@@ -22,7 +22,7 @@ type (
 	}
 
 	aggregateEventBase struct {
-		eventBase
+		event
 	}
 )
 
@@ -30,7 +30,7 @@ var _ AggregateEvent = (*aggregateEventBase)(nil)
 
 func NewAggregateEventBase(name string, payload EventPayload, options ...EventOption) *aggregateEventBase {
 	return &aggregateEventBase{
-		eventBase: newEventBase(name, payload, options...),
+		event: newEvent(name, payload, options...),
 	}
 }
 

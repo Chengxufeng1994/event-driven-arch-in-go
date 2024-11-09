@@ -54,13 +54,13 @@ func (m *InvoiceMapper) ToDomain(invoice *po.Invoice) (*aggregate.InvoiceAgg, er
 
 func (m *InvoiceMapper) statusFromDomain(status string) (valueobject.InvoiceStatus, error) {
 	switch status {
-	case valueobject.InvoicePending.String():
-		return valueobject.InvoicePending, nil
-	case valueobject.InvoicePaid.String():
-		return valueobject.InvoicePaid, nil
-	case valueobject.InvoiceCanceled.String():
-		return valueobject.InvoiceCanceled, nil
+	case valueobject.InvoiceIsPending.String():
+		return valueobject.InvoiceIsPending, nil
+	case valueobject.InvoiceIsPaid.String():
+		return valueobject.InvoiceIsPaid, nil
+	case valueobject.InvoiceIsCanceled.String():
+		return valueobject.InvoiceIsCanceled, nil
 	default:
-		return valueobject.InvoiceUnknown, fmt.Errorf("unknown invoice status: %s", status)
+		return valueobject.InvoiceIsUnknown, fmt.Errorf("unknown invoice status: %s", status)
 	}
 }

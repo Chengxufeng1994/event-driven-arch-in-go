@@ -80,7 +80,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/DepotServiceCancelShoppingListBody"
+              "$ref": "#/definitions/v1DepotServiceCancelShoppingListBody"
             }
           }
         ],
@@ -177,9 +177,6 @@
         }
       }
     },
-    "DepotServiceCancelShoppingListBody": {
-      "type": "object"
-    },
     "DepotServiceCompleteShoppingListBody": {
       "type": "object"
     },
@@ -242,6 +239,9 @@
           "type": "string"
         }
       }
+    },
+    "v1DepotServiceCancelShoppingListBody": {
+      "type": "object"
     },
     "v1OrderItem": {
       "type": "object",

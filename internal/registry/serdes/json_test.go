@@ -18,7 +18,7 @@ func (p *Person) Key() string {
 func TestJsonSerde(t *testing.T) {
 	registry := registry.New()
 
-	jsonSerde := NewJsonSerde(registry)
+	jsonSerde := NewJSONSerde(registry)
 	_ = jsonSerde.Register(&Person{})
 
 	person := &Person{Name: "Chengxufeng"}

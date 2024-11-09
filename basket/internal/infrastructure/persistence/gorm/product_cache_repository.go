@@ -3,7 +3,6 @@ package gorm
 import (
 	"context"
 
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/application/port/out/client"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/repository"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/valueobject"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/infrastructure/persistence/gorm/po"
@@ -16,12 +15,12 @@ import (
 
 type GormProductCacheRepository struct {
 	db       *gorm.DB
-	fallback client.ProductClient
+	fallback repository.ProductRepository
 }
 
 var _ repository.ProductCacheRepository = (*GormProductCacheRepository)(nil)
 
-func NewGormProductCacheRepository(db *gorm.DB, fallback client.ProductClient) *GormProductCacheRepository {
+func NewGormProductCacheRepository(db *gorm.DB, fallback repository.ProductRepository) *GormProductCacheRepository {
 	return &GormProductCacheRepository{
 		db:       db,
 		fallback: fallback,
@@ -97,7 +96,7 @@ func (r *GormProductCacheRepository) Find(ctx context.Context, productID string)
 	var productPO po.ProductCache
 
 	result := r.db.WithContext(ctx).
-		Model(&po.StoreCache{}).
+		Model(&po.ProductCache{}).
 		Where("id = ?", productID).
 		First(&productPO)
 
@@ -112,7 +111,7 @@ func (r *GormProductCacheRepository) Find(ctx context.Context, productID string)
 		}
 
 		// attempt to add it to the cache
-		return &product, r.Add(ctx, product.ID, product.StoreID, product.Name, product.Price)
+		return product, r.Add(ctx, product.ID, product.StoreID, product.Name, product.Price)
 	}
 
 	price, _ := productPO.Price.Float64()

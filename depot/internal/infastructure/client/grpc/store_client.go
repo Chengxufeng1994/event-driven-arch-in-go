@@ -32,7 +32,7 @@ func (c *StoreClient) Find(ctx context.Context, storeID string) (valueobject.Sto
 func (c *StoreClient) storeToDomain(store *storev1.Store) valueobject.Store {
 	return valueobject.Store{
 		ID:       store.GetId(),
-		Name:     store.GetLocation(),
+		Name:     store.GetName(),
 		Location: store.GetLocation(),
 	}
 }

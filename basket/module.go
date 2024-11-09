@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	basketv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/basket/api/basket/v1"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/docs"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/application"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/application/handler"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/aggregate"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/entity"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/event"
@@ -13,7 +15,6 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/infrastructure/logging"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/infrastructure/persistence/gorm"
 	grpcv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/interface/grpc/v1"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/interface/handler"
 	restv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/interface/rest/v1"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/am"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/broker/nats"
@@ -36,74 +37,57 @@ func NewModule() *Module { return &Module{} }
 func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 	// setup Driven adapters
 	endpoint := fmt.Sprintf("%s:%d", mono.Config().Server.GPPC.Host, mono.Config().Server.GPPC.Port)
-	conn, err := infragrpc.Dial(ctx, endpoint)
-	if err != nil {
-		return err
-	}
 	reg := registry.New()
 	if err := registrations(reg); err != nil {
 		return err
 	}
-	if err = storev1.Registrations(reg); err != nil {
+	if err := basketv1.Registrations(reg); err != nil {
 		return err
 	}
-	eventStream := am.NewEventStream(reg, nats.NewStream(mono.Config().Infrastructure.Nats.Stream, mono.JetStream()))
-	domainEventDispatcher := ddd.NewEventDispatcher[ddd.AggregateEvent]()
+	if err := storev1.Registrations(reg); err != nil {
+		return err
+	}
+	stream := nats.NewStream(mono.Config().Infrastructure.Nats.Stream, mono.JetStream(), mono.Logger())
+	eventStream := am.NewEventStream(reg, stream)
+	conn, err := infragrpc.Dial(ctx, endpoint)
+	if err != nil {
+		return err
+	}
+	domainEventDispatcher := ddd.NewEventDispatcher[ddd.Event]()
 	aggregateStore := es.AggregateStoreWithMiddleware(
 		evenstoregorm.NewGormEventStore("baskets.events", mono.Database(), reg),
-		es.NewEventPublisher(domainEventDispatcher),
 		snapshotstoregorm.NewGormSnapshotStore("baskets.snapshots", mono.Database(), reg),
 	)
-
 	basketRepository := es.NewAggregateRepository[*aggregate.Basket](aggregate.BasketAggregate, reg, aggregateStore)
-	grpcOrderClient := infragrpc.NewGrpcOrderClient(conn)
-	grpcProductClient := infragrpc.NewGrpcProductClient(conn)
-	grpcStoreClient := infragrpc.NewGrpcStoreClient(conn)
-	storeRepository := gorm.NewGormStoreCacheRepository(mono.Database(), grpcStoreClient)
-	productRepository := gorm.NewGormProductCacheRepository(mono.Database(), grpcProductClient)
+	storeRepository := gorm.NewGormStoreCacheRepository(mono.Database(), infragrpc.NewGrpcStoreClient(conn))
+	productRepository := gorm.NewGormProductCacheRepository(mono.Database(), infragrpc.NewGrpcProductClient(conn))
 
 	// setup application
-	logApplication := logging.NewLogApplicationAccess(
-		application.NewBasketApplication(basketRepository, grpcOrderClient, grpcProductClient, grpcStoreClient),
+	app := logging.NewLogApplicationAccess(
+		application.NewBasketApplication(basketRepository, productRepository, storeRepository, domainEventDispatcher),
 		mono.Logger())
-	orderHandler := logging.NewLogEventHandlerAccess(
-		application.NewOrderDomainEventHandler(grpcOrderClient),
-		"Order",
-		mono.Logger(),
+	domainEventHandler := logging.NewLogEventHandlerAccess[ddd.Event](
+		handler.NewDomainEventHandler(eventStream),
+		"DomainEvents", mono.Logger(),
 	)
-	storeHandler := logging.NewLogEventHandlerAccess(
-		application.NewStoreIntegrationEventHandler(storeRepository),
-		"Store",
-		mono.Logger(),
-	)
-	productHandler := logging.NewLogEventHandlerAccess(
-		application.NewProductIntegrationEventHandler(productRepository),
-		"Product",
-		mono.Logger(),
+	integrationEventHandler := logging.NewLogEventHandlerAccess[ddd.Event](
+		handler.NewIntegrationEventHandler(storeRepository, productRepository),
+		"IntegrationEvents", mono.Logger(),
 	)
 
 	// setup Driver adapters
-	if err := grpcv1.RegisterServer(ctx, logApplication, mono.RPC().GRPCServer()); err != nil {
+	if err := grpcv1.RegisterServer(ctx, app, mono.RPC().GRPCServer()); err != nil {
 		return err
 	}
-
 	if err := restv1.RegisterGateway(ctx, mono.Gin(), endpoint); err != nil {
 		return err
 	}
-
 	if err := docs.RegisterSwagger(mono.Gin()); err != nil {
 		return err
 	}
 
-	handler.RegisterOrderDomainEventHandlers(orderHandler, domainEventDispatcher)
-	if err = handler.RegisterStoreIntegrationEventHandlers(storeHandler, eventStream); err != nil {
-		return err
-	}
-	if err = handler.RegisterProductIntegrationEventHandlers(productHandler, eventStream); err != nil {
-		return err
-	}
-
-	return nil
+	handler.RegisterDomainEventHandlers(domainEventDispatcher, domainEventHandler)
+	return handler.RegisterIntegrationEventHandlers(eventStream, integrationEventHandler)
 }
 
 func (m *Module) Name() string {
@@ -111,7 +95,7 @@ func (m *Module) Name() string {
 }
 
 func registrations(reg registry.Registry) error {
-	serde := serdes.NewJsonSerde(reg)
+	serde := serdes.NewJSONSerde(reg)
 	// Basket
 	if err := serde.Register(&aggregate.Basket{}, func(v interface{}) error {
 		basket := v.(*aggregate.Basket)

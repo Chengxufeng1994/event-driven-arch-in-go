@@ -14,17 +14,17 @@ type AssignShoppingList struct {
 }
 
 type AssignShoppingListHandler struct {
-	shoppingRepository   repository.ShoppingListRepository
-	domainEventPublisher ddd.EventPublisher[ddd.AggregateEvent]
+	shoppingRepository repository.ShoppingListRepository
+	publisher          ddd.EventPublisher[ddd.AggregateEvent]
 }
 
 func NewAssignShoppingListHandler(
 	shoppingRepository repository.ShoppingListRepository,
-	domainEventPublisher ddd.EventPublisher[ddd.AggregateEvent],
+	publisher ddd.EventPublisher[ddd.AggregateEvent],
 ) AssignShoppingListHandler {
 	return AssignShoppingListHandler{
-		shoppingRepository:   shoppingRepository,
-		domainEventPublisher: domainEventPublisher,
+		shoppingRepository: shoppingRepository,
+		publisher:          publisher,
 	}
 }
 
@@ -44,5 +44,5 @@ func (h AssignShoppingListHandler) AssignShoppingList(ctx context.Context, cmd A
 	}
 
 	// publish domain events
-	return h.domainEventPublisher.Publish(ctx, list.Events()...)
+	return h.publisher.Publish(ctx, list.Events()...)
 }

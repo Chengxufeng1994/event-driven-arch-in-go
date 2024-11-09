@@ -2,13 +2,13 @@ package main
 
 import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/cosec"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/customer"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/config"
 	pkggorm "github.com/Chengxufeng1994/event-driven-arch-in-go/internal/gorm"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/jetstream"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/logger"
-	logging "github.com/Chengxufeng1994/event-driven-arch-in-go/internal/logger"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/monolith"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/server"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/notification"
@@ -25,34 +25,34 @@ import (
 )
 
 func NewApp() *monolith.MonolithApplication {
-	logger := logging.ContextUnavailable()
+	log := logger.ContextUnavailable()
 
 	cfg, err := config.LoadConfig("")
 	if err != nil {
-		logger.Errorf("failed to load config: %v", err)
+		log.Errorf("failed to load config: %v", err)
 		return nil
 	}
 	viper.WatchConfig()
 	viper.OnConfigChange(func(_ fsnotify.Event) {
-		logger.Info("reloading config")
+		log.Info("reloading config")
 		if err := viper.Unmarshal(&cfg); err != nil {
-			logger.Errorf("failed to unmarshal config: %v", err)
+			log.Errorf("failed to unmarshal config: %v", err)
 		}
 	})
 
 	gormDB, err := pkggorm.NewGormDB(cfg.Infrastructure)
 	if err != nil {
-		logger.Errorf("failed to connect to database: %v", err)
+		log.Errorf("failed to connect to database: %v", err)
 		return nil
 	}
 
 	ginEngine := initGinEngine()
 
-	grpcServer := initGrpcServer(logger, cfg.Server)
+	grpcServer := initGrpcServer(log, cfg.Server)
 
 	nc, err := nats.Connect(cfg.Infrastructure.Nats.URL)
 	if err != nil {
-		logger.Errorf("failed to connect to nats: %v", err)
+		log.Errorf("failed to connect to nats: %v", err)
 		return nil
 	}
 	js, err := jetstream.NewJetStream(cfg.Infrastructure, nc)
@@ -68,12 +68,13 @@ func NewApp() *monolith.MonolithApplication {
 	paymentModule := payment.NewModule()
 	searchModule := search.NewModule()
 	storeModule := store.NewModule()
+	cosecModule := cosec.NewModule()
 
 	monolithApplication := monolith.NewMonolithApplication(
 		"MALL BOTS",
 		"mallbots-monolith-application",
 		cfg,
-		logger,
+		log,
 		monolith.WithDatabase(gormDB),
 		monolith.WithGinEngine(ginEngine),
 		monolith.WithGrpcServer(grpcServer),
@@ -87,7 +88,9 @@ func NewApp() *monolith.MonolithApplication {
 			orderModule,
 			paymentModule,
 			searchModule,
-			storeModule),
+			storeModule,
+			cosecModule,
+		),
 	)
 
 	return monolithApplication
@@ -102,6 +105,6 @@ func initGinEngine() *gin.Engine {
 	return router
 }
 
-func initGrpcServer(logger logger.Logger, cfg *config.Server) *server.RpcServer {
+func initGrpcServer(logger logger.Logger, cfg *config.Server) *server.RPCServer {
 	return server.NewGrpcServer(logger, cfg)
 }

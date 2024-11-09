@@ -1,4 +1,4 @@
-FROM golang:1.17-alpine AS builder
+FROM golang:1.23-alpine AS builder
 
 WORKDIR /mallbots
 
@@ -14,7 +14,7 @@ COPY .. ./
 # Build the binary.
 RUN go build -v -o monolith ./cmd/mallbots
 
-FROM alpine:latest AS runtime
+FROM alpine:3.20 AS runtime
 
 COPY --from=builder /mallbots/docker/wait-for .
 RUN chmod +x /wait-for

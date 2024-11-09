@@ -1,4 +1,26 @@
 services:
+  monolith:
+    container_name: monolith
+    build:
+      context: .
+      dockerfile: build/docker/Dockerfile.debug
+    environment:
+      - EDA_INFRASTRUCTURE_GORM_DSN=host=postgres user=postgres password=postgres dbname=mallbots port=5432 sslmode=disable TimeZone=Asia/Taipei
+      - EDA_INFRASTRUCTURE_NATS_URL=nats://nats:4222
+    ports:
+      - 8080:8080
+      - 8081:8081
+      - 2345:2345
+    depends_on:
+      - nats
+      - postgres
+    profiles:
+      - debug
+    command: ["/wait-for", "postgres:5432", "--", "/dlv", "exec", "--listen=:2345", "--headless=true", "--continue", "--api-version=2", "--accept-multiclient", "/mallbots/monolith"]
+    networks:
+      eda_network:
+        ipv4_address: 10.5.0.10
+
   postgres:
     container_name: postgres
     image: postgres:12-alpine

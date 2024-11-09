@@ -34,7 +34,7 @@ func NewPaymentApplication(
 ) *PaymentApplication {
 	return &PaymentApplication{
 		appCommands: appCommands{
-			AuthorizePaymentHandler: command.NewAuthorizePaymentCommandHandler(paymentRepository),
+			AuthorizePaymentHandler: command.NewAuthorizePaymentHandler(paymentRepository),
 			ConfirmPaymentHandler:   command.NewConfirmPaymentHandler(paymentRepository),
 			CreateInvoiceHandler:    command.NewCreateInvoiceHandler(invoiceRepository),
 			AdjustInvoiceHandler:    command.NewAdjustInvoiceHandler(invoiceRepository),

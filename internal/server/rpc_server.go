@@ -15,7 +15,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-type RpcServer struct {
+type RPCServer struct {
 	config     *config.Server
 	grpcServer *grpc.Server
 }
@@ -81,7 +81,7 @@ func interceptorLogger(logger logger.Logger) logging.Logger {
 	})
 }
 
-func NewGrpcServer(logger logger.Logger, config *config.Server) *RpcServer {
+func NewGrpcServer(logger logger.Logger, config *config.Server) *RPCServer {
 
 	opts := []logging.Option{
 		logging.WithLogOnEvents(logging.StartCall, logging.FinishCall),
@@ -101,12 +101,12 @@ func NewGrpcServer(logger logger.Logger, config *config.Server) *RpcServer {
 
 	reflection.Register(grpcServer)
 
-	return &RpcServer{
+	return &RPCServer{
 		config:     config,
 		grpcServer: grpcServer,
 	}
 }
 
-func (s *RpcServer) GRPCServer() *grpc.Server {
+func (s *RPCServer) GRPCServer() *grpc.Server {
 	return s.grpcServer
 }

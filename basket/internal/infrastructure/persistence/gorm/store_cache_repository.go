@@ -3,7 +3,6 @@ package gorm
 import (
 	"context"
 
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/application/port/out/client"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/repository"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/valueobject"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/infrastructure/persistence/gorm/po"
@@ -15,12 +14,12 @@ import (
 
 type GormStoreCacheRepository struct {
 	db       *gorm.DB
-	fallback client.StoreClient
+	fallback repository.StoreRepository
 }
 
 var _ repository.StoreCacheRepository = (*GormStoreCacheRepository)(nil)
 
-func NewGormStoreCacheRepository(db *gorm.DB, fallback client.StoreClient) *GormStoreCacheRepository {
+func NewGormStoreCacheRepository(db *gorm.DB, fallback repository.StoreRepository) *GormStoreCacheRepository {
 	return &GormStoreCacheRepository{
 		db:       db,
 		fallback: fallback,
@@ -82,7 +81,7 @@ func (r *GormStoreCacheRepository) Find(ctx context.Context, storeID string) (*v
 		}
 
 		// attempt to add it to the cache
-		return &store, r.Add(ctx, store.ID, store.Name)
+		return store, r.Add(ctx, store.ID, store.Name)
 	}
 
 	store := valueobject.NewStore(storePO.ID, storePO.Name)

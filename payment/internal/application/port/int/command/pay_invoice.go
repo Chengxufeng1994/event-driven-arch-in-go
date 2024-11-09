@@ -45,7 +45,7 @@ func (h PayInvoiceHandler) PayInvoice(ctx context.Context, pay PayInvoice) error
 
 	// Before or after the invoice is saved we still risk something failing which
 	// will leave the state change only partially complete
-	if err = h.publisher.Publish(ctx, ddd.NewEventBase(event.InvoicePaidEvent, &event.InvoicePaid{
+	if err = h.publisher.Publish(ctx, ddd.NewEvent(event.InvoicePaidEvent, &event.InvoicePaid{
 		ID:      invoice.ID,
 		OrderID: invoice.OrderID,
 	})); err != nil {

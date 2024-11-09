@@ -14,8 +14,20 @@ func (m Metadata) Del(key string) {
 	delete(m, key)
 }
 
-func (m Metadata) configureEvent(e *eventBase) {
+func (m Metadata) configureEvent(e *event) {
 	for key, value := range m {
 		e.metadata[key] = value
+	}
+}
+
+func (m Metadata) configureCommand(c *command) {
+	for key, value := range m {
+		c.metadata[key] = value
+	}
+}
+
+func (m Metadata) configureReply(r *reply) {
+	for key, value := range m {
+		r.metadata[key] = value
 	}
 }

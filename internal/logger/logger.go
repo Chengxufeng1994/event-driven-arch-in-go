@@ -188,6 +188,7 @@ func SetOutputFormat(format string, opts ...OutputFormatOptionFunc) {
 		if noColor != "" && noColor != "0" {
 			disableColors = true
 		}
+
 		formatter = &logrus.TextFormatter{
 			FullTimestamp:          true,
 			DisableLevelTruncation: true,
@@ -386,7 +387,7 @@ func (lf logrusCallerFormatter) Format(e *logrus.Entry) ([]byte, error) {
 func ContextUnavailable() Logger {
 	// wrap formatter with our own formatter that overrides caller
 	formatterInitOnce.Do(func() {
-		defaultLogger.SetReportCaller(true)
+		// defaultLogger.SetReportCaller(true)
 		defaultLogger.SetNoLock()
 		defaultLogger.Formatter = logrusCallerFormatter{defaultLogger.Formatter}
 	})

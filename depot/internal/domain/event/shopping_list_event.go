@@ -5,6 +5,7 @@ import "github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/domain
 const (
 	ShoppingListCreatedEvent   = "depot.ShoppingListCreated"
 	ShoppingListCanceledEvent  = "depot.ShoppingListCanceled"
+	ShoppingListInitiatedEvent = "depot.ShoppingListInitiated"
 	ShoppingListAssignedEvent  = "depot.ShoppingListAssigned"
 	ShoppingListCompletedEvent = "depot.ShoppingListCompleted"
 )
@@ -36,6 +37,16 @@ func NewShoppingListCanceled(shoppingListID string) *ShoppingListCanceled {
 }
 
 func (ShoppingListCanceled) Key() string { return ShoppingListCanceledEvent }
+
+type ShoppingListInitiated struct {
+	ShoppingListID string
+}
+
+func NewShoppingListInitiated(shoppingListID string) *ShoppingListInitiated {
+	return &ShoppingListInitiated{
+		ShoppingListID: shoppingListID,
+	}
+}
 
 type ShoppingListAssigned struct {
 	ShoppingListID string

@@ -15,7 +15,7 @@ type EventHandler[T ddd.Event] struct {
 
 var _ ddd.EventHandler[ddd.Event] = (*EventHandler[ddd.Event])(nil)
 
-func NewLogHandlerAccess[T ddd.Event](handler ddd.EventHandler[T], label string, logger logger.Logger) *EventHandler[T] {
+func NewLogEventHandlerAccess[T ddd.Event](handler ddd.EventHandler[T], label string, logger logger.Logger) *EventHandler[T] {
 	return &EventHandler[T]{
 		EventHandler: handler,
 		label:        label,
@@ -24,7 +24,7 @@ func NewLogHandlerAccess[T ddd.Event](handler ddd.EventHandler[T], label string,
 }
 
 func (h *EventHandler[T]) HandleEvent(ctx context.Context, event T) (err error) {
-	h.logger.Infof("--> Stores.%s.On(%s)", h.label, event.EventName())
-	defer func() { h.logger.WithError(err).Infof("<-- Stores.%s.On(%s)", h.label, event.EventName()) }()
+	h.logger.Infof("--> Customers.%s.On(%s)", h.label, event.EventName())
+	defer func() { h.logger.WithError(err).Infof("<-- Customers.%s.On(%s)", h.label, event.EventName()) }()
 	return h.EventHandler.HandleEvent(ctx, event)
 }

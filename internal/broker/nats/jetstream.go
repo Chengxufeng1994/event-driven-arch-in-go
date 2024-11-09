@@ -2,11 +2,13 @@ package nats
 
 import (
 	"context"
+	sync "sync"
 
 	"github.com/nats-io/nats.go"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/am"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/logger"
 )
 
 const (
@@ -16,14 +18,17 @@ const (
 type Stream struct {
 	streamName string
 	js         nats.JetStreamContext
+	mu         sync.Mutex
+	logger     logger.Logger
 }
 
-var _ am.MessageStream[am.RawMessage, am.RawMessage] = (*Stream)(nil)
+var _ am.RawMessageStream = (*Stream)(nil)
 
-func NewStream(streamName string, js nats.JetStreamContext) *Stream {
+func NewStream(streamName string, js nats.JetStreamContext, logger logger.Logger) *Stream {
 	return &Stream{
 		streamName: streamName,
 		js:         js,
+		logger:     logger,
 	}
 }
 
@@ -58,15 +63,17 @@ func (s *Stream) Publish(ctx context.Context, topicName string, rawMsg am.RawMes
 			case <-future.Ok(): // publish acknowledged
 				return
 			case <-future.Err(): // error ignored; try again
-				// TODO add some variable delay between tries
+				// TODO: add some variable delay between tries
 				tries = tries - 1
 				if tries <= 0 {
-					// TODO do more than give up
+					// TODO: do more than give up
+					s.logger.Errorf("unable to publish message after %d tries", maxRetries)
 					return
 				}
 				future, err = s.js.PublishMsgAsync(future.Msg())
 				if err != nil {
-					// TODO do more than give up
+					// TODO: do more than give up
+					s.logger.WithError(err).Error("failed to publish message")
 					return
 				}
 			}
@@ -77,8 +84,11 @@ func (s *Stream) Publish(ctx context.Context, topicName string, rawMsg am.RawMes
 }
 
 // Subscribe implements am.MessageStream.
-func (s *Stream) Subscribe(topicName string, handler am.MessageHandlerFunc[am.RawMessage], options ...am.SubscriberOption) error {
+func (s *Stream) Subscribe(topicName string, handler am.RawMessageHandler, options ...am.SubscriberOption) error {
 	var err error
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	subCfg := am.NewSubscriberConfig(options)
 
@@ -86,7 +96,9 @@ func (s *Stream) Subscribe(topicName string, handler am.MessageHandlerFunc[am.Ra
 		nats.MaxDeliver(subCfg.MaxRedeliver()),
 	}
 	cfg := &nats.ConsumerConfig{
-		MaxDeliver: subCfg.MaxRedeliver(),
+		MaxDeliver:     subCfg.MaxRedeliver(),
+		DeliverSubject: topicName,
+		FilterSubject:  topicName,
 	}
 
 	if groupName := subCfg.GroupName(); groupName != "" {
@@ -115,15 +127,15 @@ func (s *Stream) Subscribe(topicName string, handler am.MessageHandlerFunc[am.Ra
 	}
 
 	if groupName := subCfg.GroupName(); groupName == "" {
-		_, err = s.js.Subscribe(topicName, s.handleMsg(subCfg, handler), opts...)
+		_, _ = s.js.Subscribe(topicName, s.handleMsg(subCfg, handler), opts...)
 	} else {
-		_, err = s.js.QueueSubscribe(topicName, groupName, s.handleMsg(subCfg, handler), opts...)
+		_, _ = s.js.QueueSubscribe(topicName, groupName, s.handleMsg(subCfg, handler), opts...)
 	}
 
 	return nil
 }
 
-func (s *Stream) handleMsg(cfg am.SubscriberConfig, handler am.MessageHandler[am.RawMessage]) func(*nats.Msg) {
+func (s *Stream) handleMsg(cfg am.SubscriberConfig, handler am.RawMessageHandler) func(*nats.Msg) {
 	return func(natsMsg *nats.Msg) {
 		var err error
 
@@ -131,6 +143,7 @@ func (s *Stream) handleMsg(cfg am.SubscriberConfig, handler am.MessageHandler[am
 		err = proto.Unmarshal(natsMsg.Data, m)
 		if err != nil {
 			// TODO Nak? ... logging?
+			s.logger.WithError(err).Warn("failed to unmarshal the *nats.Msg")
 			return
 		}
 
@@ -156,7 +169,7 @@ func (s *Stream) handleMsg(cfg am.SubscriberConfig, handler am.MessageHandler[am
 		if cfg.AckType() == am.AckTypeAuto {
 			err = msg.Ack()
 			if err != nil {
-				// TODO logging?
+				s.logger.WithError(err).Warn("failed to auto-Ack a message")
 			}
 		}
 
@@ -164,12 +177,13 @@ func (s *Stream) handleMsg(cfg am.SubscriberConfig, handler am.MessageHandler[am
 		case err = <-errc:
 			if err == nil {
 				if ackErr := msg.Ack(); ackErr != nil {
-					// TODO logging?
+					s.logger.WithError(err).Warn("failed to auto-Ack a message")
 				}
 				return
 			}
+			s.logger.WithError(err).Warn("error while handling message")
 			if nakErr := msg.NAck(); nakErr != nil {
-				// TODO logging?
+				s.logger.WithError(err).Warn("failed to Nack a message")
 			}
 		case <-wCtx.Done():
 			// TODO logging?

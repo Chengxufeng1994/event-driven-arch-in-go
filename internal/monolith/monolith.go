@@ -12,7 +12,9 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/logger"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/server"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/waiter"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/web"
 	"github.com/fatih/color"
+	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
 	"github.com/nats-io/nats.go"
 	"golang.org/x/sync/errgroup"
@@ -27,7 +29,7 @@ type Monolith interface {
 	Config() *config.Config
 	Database() *gorm.DB
 	Gin() *gin.Engine
-	RPC() *server.RpcServer
+	RPC() *server.RPCServer
 	JetStream() nats.JetStreamContext
 	Run() error
 }
@@ -67,7 +69,7 @@ func WithGinEngine(ginEngine *gin.Engine) Option {
 	}
 }
 
-func WithGrpcServer(grpcServer *server.RpcServer) Option {
+func WithGrpcServer(grpcServer *server.RPCServer) Option {
 	return func(app *MonolithApplication) {
 		app.grpcServer = grpcServer
 	}
@@ -92,8 +94,8 @@ type MonolithApplication struct {
 	appCfg            *config.Config
 	gormDB            *gorm.DB
 	gin               *gin.Engine
-	grpcServer        *server.RpcServer
-	genericHttpServer *server.GenericHttpServer
+	grpcServer        *server.RPCServer
+	genericHttpServer *server.GenericHTTPServer
 	nc                *nats.Conn
 	js                nats.JetStreamContext
 	modules           []Module
@@ -148,7 +150,7 @@ func (app *MonolithApplication) Gin() *gin.Engine {
 	return app.gin
 }
 
-func (app *MonolithApplication) RPC() *server.RpcServer {
+func (app *MonolithApplication) RPC() *server.RPCServer {
 	return app.grpcServer
 }
 
@@ -170,7 +172,7 @@ func (app *MonolithApplication) PrepareRunModules() error {
 func (app *MonolithApplication) waitForWeb(ctx context.Context) error {
 	eg, gCtx := errgroup.WithContext(ctx)
 	eg.Go(func() error {
-		app.logger.Infof("web server started")
+		app.logger.Infof("web server started: %d", app.appCfg.Server.HTTP.Port)
 		defer app.logger.Infof("web server shutdown")
 		return app.genericHttpServer.ListenAndServe(gCtx)
 	})
@@ -178,7 +180,7 @@ func (app *MonolithApplication) waitForWeb(ctx context.Context) error {
 	return eg.Wait()
 }
 
-func (app *MonolithApplication) waitForRpc(ctx context.Context) error {
+func (app *MonolithApplication) waitForRPC(ctx context.Context) error {
 	eg, gCtx := errgroup.WithContext(ctx)
 
 	address := fmt.Sprintf("%s:%d", app.appCfg.Server.GPPC.Host, app.appCfg.Server.GPPC.Port)
@@ -189,7 +191,7 @@ func (app *MonolithApplication) waitForRpc(ctx context.Context) error {
 	}
 
 	eg.Go(func() error {
-		app.logger.Infof("rpc server started")
+		app.logger.Infof("rpc server started: %d", app.appCfg.Server.GPPC.Port)
 		defer app.logger.Infof("rpc server shutdown")
 		err := app.RPC().GRPCServer().Serve(lis)
 		if err != nil && !errors.Is(err, grpc.ErrServerStopped) {
@@ -225,18 +227,19 @@ func (app *MonolithApplication) waitForStream(ctx context.Context) error {
 	app.nc.SetClosedHandler(func(*nats.Conn) {
 		close(closed)
 	})
-	group, gCtx := errgroup.WithContext(ctx)
-	group.Go(func() error {
-		fmt.Println("message stream started")
-		defer fmt.Println("message stream stopped")
+	eg, gCtx := errgroup.WithContext(ctx)
+	eg.Go(func() error {
+		app.logger.Info("message stream started")
+		defer app.logger.Info("message stream stopped")
 		<-closed
 		return nil
 	})
-	group.Go(func() error {
+
+	eg.Go(func() error {
 		<-gCtx.Done()
 		return app.nc.Drain()
 	})
-	return group.Wait()
+	return eg.Wait()
 }
 
 func (app *MonolithApplication) Run() error {
@@ -249,11 +252,21 @@ func (app *MonolithApplication) Run() error {
 		return err
 	}
 
+	staticFiles := static.EmbedFolder(web.WebUI, ".")
+	app.gin.Use(static.Serve("/", staticFiles))
+	// static := http.FileServer(http.FS(web.WebUI))
+	// app.gin.GET("/", func(ctx *gin.Context) {
+	// 	static.ServeHTTP(ctx.Writer, ctx.Request)
+	// })
+	// app.gin.GET("/swagger-ui/*filepath", func(ctx *gin.Context) {
+	// 	static.ServeHTTP(ctx.Writer, ctx.Request)
+	// })
+
 	app.genericHttpServer = server.NewGenericHttpServer(app.gin, app.appCfg.Server)
 
 	app.waiter = waiter.New(waiter.CatchSignals())
 
-	app.waiter.Add(app.waitForWeb, app.waitForRpc, app.waitForStream)
+	app.waiter.Add(app.waitForWeb, app.waitForRPC, app.waitForStream)
 
 	return app.waiter.Wait()
 }

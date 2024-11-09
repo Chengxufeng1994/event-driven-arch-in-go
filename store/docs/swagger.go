@@ -2,7 +2,6 @@ package docs
 
 import (
 	"embed"
-	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -14,10 +13,6 @@ var swaggerUI embed.FS
 
 func RegisterSwagger(mux *gin.Engine) error {
 	const specRoot = "/stores-spec/"
-
-	mux.Any(fmt.Sprintf("%s*any", specRoot), gin.WrapH(
-		http.StripPrefix(specRoot, http.FileServer(http.FS(swaggerUI)))),
-	)
-
+	mux.StaticFS(specRoot, http.FS(swaggerUI))
 	return nil
 }

@@ -25,7 +25,7 @@ type AuthorizePaymentHandler struct {
 	payments repository.PaymentRepository
 }
 
-func NewAuthorizePaymentCommandHandler(payments repository.PaymentRepository) AuthorizePaymentHandler {
+func NewAuthorizePaymentHandler(payments repository.PaymentRepository) AuthorizePaymentHandler {
 	return AuthorizePaymentHandler{
 		payments: payments,
 	}

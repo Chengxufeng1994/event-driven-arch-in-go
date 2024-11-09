@@ -18,6 +18,7 @@ type (
 	appCommands struct {
 		command.CreateShoppingListHandler
 		command.CancelShoppingListHandler
+		command.InitiateShoppingHandler
 		command.AssignShoppingListHandler
 		command.CompleteShoppingListHandler
 	}
@@ -30,21 +31,22 @@ type (
 var _ usecase.ShoppingListUseCase = (*ShoppingListApplication)(nil)
 
 func NewShoppingListApplication(
-	shoppingListRepository repository.ShoppingListRepository,
+	shoppingRepository repository.ShoppingListRepository,
 	storeClient client.StoreClient,
 	productClient client.ProductClient,
 	orderClient client.OrderClient,
-	domainEventDispatcher ddd.EventDispatcher[ddd.AggregateEvent],
+	publisher ddd.EventDispatcher[ddd.AggregateEvent],
 ) *ShoppingListApplication {
 	return &ShoppingListApplication{
 		appCommands: appCommands{
-			CreateShoppingListHandler:   command.NewCreateShoppingListHandler(shoppingListRepository, storeClient, productClient, domainEventDispatcher),
-			AssignShoppingListHandler:   command.NewAssignShoppingListHandler(shoppingListRepository, domainEventDispatcher),
-			CancelShoppingListHandler:   command.NewCancelShoppingListHandler(shoppingListRepository, domainEventDispatcher),
-			CompleteShoppingListHandler: command.NewCompleteShoppingListHandler(shoppingListRepository, orderClient, domainEventDispatcher),
+			CreateShoppingListHandler:   command.NewCreateShoppingListHandler(shoppingRepository, storeClient, productClient, publisher),
+			CancelShoppingListHandler:   command.NewCancelShoppingListHandler(shoppingRepository, publisher),
+			InitiateShoppingHandler:     command.NewInitiateShoppingHandler(shoppingRepository, publisher),
+			AssignShoppingListHandler:   command.NewAssignShoppingListHandler(shoppingRepository, publisher),
+			CompleteShoppingListHandler: command.NewCompleteShoppingListHandler(shoppingRepository, orderClient, publisher),
 		},
 		appQueries: appQueries{
-			GetShoppingListHandler: query.NewGetShoppingListHandler(shoppingListRepository),
+			GetShoppingListHandler: query.NewGetShoppingListHandler(shoppingRepository),
 		},
 	}
 }

@@ -33,8 +33,8 @@ func (a *Application) RegisterCustomer(ctx context.Context, register command.Reg
 
 // AuthorizeCustomer implements usecase.CustomerUsecase.
 func (a *Application) AuthorizeCustomer(ctx context.Context, authorize command.AuthorizeCustomer) (err error) {
-	a.logger.Info("--> Customers.RegisterCustomer")
-	defer func() { a.logger.WithError(err).Info("<-- Customers.RegisterCustomer") }()
+	a.logger.Info("--> Customers.AuthorizeCustomer")
+	defer func() { a.logger.WithError(err).Info("<-- Customers.AuthorizeCustomer") }()
 	return a.CustomerUsecase.AuthorizeCustomer(ctx, authorize)
 }
 

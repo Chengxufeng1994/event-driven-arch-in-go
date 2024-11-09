@@ -3,8 +3,8 @@ package command
 import (
 	"context"
 
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/aggregate"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/repository"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/stackus/errors"
 )
 
@@ -22,17 +22,24 @@ func NewStartBasket(id, customerID string) StartBasket {
 
 type StartBasketHandler struct {
 	basketRepository repository.BasketRepository
+	publisher        ddd.EventPublisher[ddd.Event]
 }
 
-func NewStartBasketHandler(basketRepository repository.BasketRepository) StartBasketHandler {
+func NewStartBasketHandler(basketRepository repository.BasketRepository, publisher ddd.EventPublisher[ddd.Event]) StartBasketHandler {
 	return StartBasketHandler{
 		basketRepository: basketRepository,
+		publisher:        publisher,
 	}
 }
 
 func (h StartBasketHandler) StartBasket(ctx context.Context, cmd StartBasket) error {
+	basket, err := h.basketRepository.Load(ctx, cmd.ID)
+	if err != nil {
+		return errors.Wrap(err, "start basket command")
+	}
+
 	// create basket
-	basket, err := aggregate.StartBasket(cmd.ID, cmd.CustomerID)
+	event, err := basket.Start(cmd.CustomerID)
 	if err != nil {
 		return errors.Wrap(err, "start basket command")
 	}
@@ -42,5 +49,5 @@ func (h StartBasketHandler) StartBasket(ctx context.Context, cmd StartBasket) er
 		return errors.Wrap(err, "start basket command")
 	}
 
-	return nil
+	return h.publisher.Publish(ctx, event)
 }

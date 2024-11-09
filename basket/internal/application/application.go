@@ -3,9 +3,9 @@ package application
 import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/application/port/in/command"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/application/port/in/query"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/application/port/out/client"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/application/usecase"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/repository"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 )
 
 type (
@@ -31,17 +31,17 @@ var _ usecase.BasketUseCase = (*BasketApplication)(nil)
 
 func NewBasketApplication(
 	basketRepository repository.BasketRepository,
-	orderClient client.OrderClient,
-	productClient client.ProductClient,
-	storeClient client.StoreClient,
+	productRepository repository.ProductRepository,
+	storeRepository repository.StoreRepository,
+	publisher ddd.EventPublisher[ddd.Event],
 ) *BasketApplication {
 	return &BasketApplication{
 		appCommands: appCommands{
-			StartBasketHandler:    command.NewStartBasketHandler(basketRepository),
-			CancelBasketHandler:   command.NewCancelBasketHandler(basketRepository),
-			CheckoutBasketHandler: command.NewCheckoutBasketHandler(basketRepository, orderClient),
-			AddItemHandler:        command.NewAddItemHandler(basketRepository, productClient, storeClient),
-			RemoveItemHandler:     command.NewRemoveItemHandler(basketRepository, productClient),
+			StartBasketHandler:    command.NewStartBasketHandler(basketRepository, publisher),
+			CancelBasketHandler:   command.NewCancelBasketHandler(basketRepository, publisher),
+			CheckoutBasketHandler: command.NewCheckoutBasketHandler(basketRepository, publisher),
+			AddItemHandler:        command.NewAddItemHandler(basketRepository, productRepository, storeRepository),
+			RemoveItemHandler:     command.NewRemoveItemHandler(basketRepository, productRepository),
 		},
 		appQueries: appQueries{
 			GetBasketHandler: query.NewGetBasketHandler(basketRepository),

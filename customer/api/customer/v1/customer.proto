@@ -42,8 +42,8 @@ message ChangeSmsNumberRequest {
   string id = 1;
   string sms_number = 2;
 }
-message ChangeSmsNumberResponse {
-}
+
+message ChangeSmsNumberResponse {}
 
 message AuthorizeCustomerRequest {
   string id = 1;

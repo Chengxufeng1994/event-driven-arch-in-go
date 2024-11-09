@@ -261,6 +261,31 @@
         }
       }
     },
+    "basketv1Item": {
+      "type": "object",
+      "properties": {
+        "storeId": {
+          "type": "string"
+        },
+        "productId": {
+          "type": "string"
+        },
+        "storeName": {
+          "type": "string"
+        },
+        "productName": {
+          "type": "string"
+        },
+        "productPrice": {
+          "type": "number",
+          "format": "double"
+        },
+        "quantity": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
     "protobufAny": {
       "type": "object",
       "properties": {
@@ -302,7 +327,7 @@
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/v1Item"
+            "$ref": "#/definitions/basketv1Item"
           }
         }
       }
@@ -318,31 +343,6 @@
       "properties": {
         "basket": {
           "$ref": "#/definitions/v1Basket"
-        }
-      }
-    },
-    "v1Item": {
-      "type": "object",
-      "properties": {
-        "storeId": {
-          "type": "string"
-        },
-        "productId": {
-          "type": "string"
-        },
-        "storeName": {
-          "type": "string"
-        },
-        "productName": {
-          "type": "string"
-        },
-        "productPrice": {
-          "type": "number",
-          "format": "double"
-        },
-        "quantity": {
-          "type": "integer",
-          "format": "int32"
         }
       }
     },
