@@ -50,7 +50,7 @@ func CreateShoppingList(id, orderID string) *ShoppingList {
 
 func (ShoppingList) Key() string { return ShoppingListAggregate }
 
-func (shoppingList *ShoppingList) AddItem(store valueobject.Store, product valueobject.Product, quantity int) error {
+func (shoppingList *ShoppingList) AddItem(store *valueobject.Store, product *valueobject.Product, quantity int) error {
 	if _, exists := shoppingList.Stops[store.ID]; !exists {
 		storeEnt := entity.NewStop(store.Name, store.Location)
 		shoppingList.Stops[store.ID] = storeEnt

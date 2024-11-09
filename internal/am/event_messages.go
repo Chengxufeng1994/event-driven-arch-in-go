@@ -4,12 +4,12 @@ import (
 	"context"
 	"time"
 
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/registry"
-
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
-	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/registry"
 )
 
 type (
@@ -27,13 +27,11 @@ type (
 	EventSubscriber = MessageSubscriber[IncomingEventMessage]
 	EventStream     = MessageStream[ddd.Event, IncomingEventMessage]
 
-	// EventStreamBase
 	eventStream struct {
 		reg    registry.Registry
 		stream RawMessageStream
 	}
 
-	// EventMessageBase
 	eventMessage struct {
 		id         string
 		name       string
@@ -63,7 +61,8 @@ func (es *eventStream) Publish(ctx context.Context, topicName string, event ddd.
 	}
 
 	payload, err := es.reg.Serialize(
-		event.EventName(), event.Payload())
+		event.EventName(), event.Payload(),
+	)
 	if err != nil {
 		return err
 	}
@@ -78,11 +77,11 @@ func (es *eventStream) Publish(ctx context.Context, topicName string, event ddd.
 	}
 
 	return es.stream.Publish(ctx, topicName, rawMessage{
-		id:   event.ID(),
-		name: event.EventName(),
-		data: data,
-	},
-	)
+		id:      event.ID(),
+		name:    event.EventName(),
+		subject: topicName,
+		data:    data,
+	})
 }
 
 // Subscribe implements MessageStream.
@@ -138,8 +137,50 @@ func (e eventMessage) EventName() string         { return e.name }
 func (e eventMessage) Payload() ddd.EventPayload { return e.payload }
 func (e eventMessage) Metadata() ddd.Metadata    { return e.metadata }
 func (e eventMessage) OccurredAt() time.Time     { return e.occurredAt }
+func (e eventMessage) Subject() string           { return e.msg.Subject() }
 func (e eventMessage) MessageName() string       { return e.msg.MessageName() }
 func (e eventMessage) Ack() error                { return e.msg.Ack() }
 func (e eventMessage) NAck() error               { return e.msg.NAck() }
 func (e eventMessage) Extend() error             { return e.msg.Extend() }
 func (e eventMessage) Kill() error               { return e.msg.Kill() }
+
+type eventMsgHandler struct {
+	reg     registry.Registry
+	handler ddd.EventHandler[ddd.Event]
+}
+
+var _ RawMessageHandler = (*eventMsgHandler)(nil)
+
+func NewEventMessageHandler(registry registry.Registry, handler ddd.EventHandler[ddd.Event]) RawMessageHandler {
+	return &eventMsgHandler{
+		reg:     registry,
+		handler: handler,
+	}
+}
+
+func (h *eventMsgHandler) HandleMessage(ctx context.Context, msg IncomingRawMessage) error {
+	var eventData EventMessageData
+
+	err := proto.Unmarshal(msg.Data(), &eventData)
+	if err != nil {
+		return err
+	}
+
+	eventName := msg.MessageName()
+
+	payload, err := h.reg.Deserialize(eventName, eventData.GetPayload())
+	if err != nil {
+		return err
+	}
+
+	eventMsg := eventMessage{
+		id:         msg.ID(),
+		name:       eventName,
+		payload:    payload,
+		metadata:   eventData.GetMetadata().AsMap(),
+		occurredAt: eventData.GetOccurredAt().AsTime(),
+		msg:        msg,
+	}
+
+	return h.handler.HandleEvent(ctx, eventMsg)
+}

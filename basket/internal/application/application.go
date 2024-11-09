@@ -31,8 +31,8 @@ var _ usecase.BasketUseCase = (*BasketApplication)(nil)
 
 func NewBasketApplication(
 	basketRepository repository.BasketRepository,
-	productRepository repository.ProductRepository,
 	storeRepository repository.StoreRepository,
+	productRepository repository.ProductRepository,
 	publisher ddd.EventPublisher[ddd.Event],
 ) *BasketApplication {
 	return &BasketApplication{

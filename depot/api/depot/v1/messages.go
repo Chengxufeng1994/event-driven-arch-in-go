@@ -6,17 +6,25 @@ import (
 )
 
 const (
+	ShoppingListAggregateChannel = "mallbots.depot.events.ShoppingList"
+
+	ShoppingListCompletedEvent = "depotapi.ShoppingListCompleted"
+
 	CommandChannel = "mallbots.depot.commands"
 
-	CreateShoppingListCommand = "depotapi.CreateShoppingListCommand"
-	CancelShoppingListCommand = "depotapi.CancelShoppingListCommand"
-	InitiateShoppingCommand   = "depotapi.InitiateShoppingCommand"
+	CreateShoppingListCommand   = "depotapi.CreateShoppingListCommand"
+	CancelShoppingListCommand   = "depotapi.CancelShoppingListCommand"
+	InitiateShoppingListCommand = "depotapi.InitiateShoppingCommand"
 
 	CreatedShoppingListReply = "depotapi.CreatedShoppingListReply"
 )
 
 func Registrations(reg registry.Registry) (err error) {
 	serde := serdes.NewProtoSerde(reg)
+
+	if err = serde.Register(&ShoppingListCompleted{}); err != nil {
+		return
+	}
 
 	if err = serde.Register(&CreateShoppingList{}); err != nil {
 		return err
@@ -35,10 +43,13 @@ func Registrations(reg registry.Registry) (err error) {
 	return nil
 }
 
+// Events
+func (*ShoppingListCompleted) Key() string { return ShoppingListCompletedEvent }
+
 // Commands
 func (*CreateShoppingList) Key() string { return CreateShoppingListCommand }
 func (*CancelShoppingList) Key() string { return CancelShoppingListCommand }
-func (*InitiateShopping) Key() string   { return InitiateShoppingCommand }
+func (*InitiateShopping) Key() string   { return InitiateShoppingListCommand }
 
 // Replies
 func (*CreatedShoppingList) Key() string { return CreatedShoppingListReply }

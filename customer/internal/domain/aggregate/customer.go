@@ -92,7 +92,7 @@ func (c *Customer) Disable() error {
 
 	c.Enabled = false
 
-	c.AddEvent(event.CustomerEnabledEvent, event.NewCustomerEnabled())
+	c.AddEvent(event.CustomerDisabledEvent, event.NewCustomerDisabled())
 
 	return nil
 }

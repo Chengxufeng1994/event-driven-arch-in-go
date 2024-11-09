@@ -74,7 +74,7 @@ func TestGormEventStore(t *testing.T) {
 	err = jsonSerde.Register(&testChangeName{})
 	assert.NoError(t, err)
 
-	eventStore := NewGormEventStore("test.events", db, registry)
+	eventStore := NewEventStore("test.events", db, registry)
 
 	agg := NewTestAggregate("1", "testAggregate")
 	agg.AddEvent("test.ChangeName", &testChangeName{Name: "changeTest"})

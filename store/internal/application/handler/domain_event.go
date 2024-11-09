@@ -9,20 +9,20 @@ import (
 	domainevent "github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/domain/event"
 )
 
-type StoreDomainEventHandler[T ddd.AggregateEvent] struct {
+type DomainEventHandler[T ddd.AggregateEvent] struct {
 	publisher am.MessagePublisher[ddd.Event]
 }
 
-var _ ddd.EventHandler[ddd.AggregateEvent] = (*StoreDomainEventHandler[ddd.AggregateEvent])(nil)
+var _ ddd.EventHandler[ddd.AggregateEvent] = (*DomainEventHandler[ddd.AggregateEvent])(nil)
 
-func NewStoreDomainEventHandler(publisher am.MessagePublisher[ddd.Event]) *StoreDomainEventHandler[ddd.AggregateEvent] {
-	return &StoreDomainEventHandler[ddd.AggregateEvent]{
+func NewDomainEventHandler(publisher am.MessagePublisher[ddd.Event]) *DomainEventHandler[ddd.AggregateEvent] {
+	return &DomainEventHandler[ddd.AggregateEvent]{
 		publisher: publisher,
 	}
 }
 
-func RegisterStoreDomainEventHandler(eventHandler ddd.EventHandler[ddd.AggregateEvent], domainSubscriber ddd.EventSubscriber[ddd.AggregateEvent]) {
-	domainSubscriber.Subscribe(eventHandler,
+func RegisterDomainEventHandlers(subscriber ddd.EventSubscriber[ddd.AggregateEvent], handlers ddd.EventHandler[ddd.AggregateEvent]) {
+	subscriber.Subscribe(handlers,
 		domainevent.StoreCreatedEvent,
 		domainevent.StoreParticipationEnabledEvent,
 		domainevent.StoreParticipationDisabledEvent,
@@ -35,7 +35,7 @@ func RegisterStoreDomainEventHandler(eventHandler ddd.EventHandler[ddd.Aggregate
 	)
 }
 
-func (h StoreDomainEventHandler[T]) HandleEvent(ctx context.Context, event T) error {
+func (h DomainEventHandler[T]) HandleEvent(ctx context.Context, event T) error {
 	switch event.EventName() {
 	case domainevent.StoreCreatedEvent:
 		return h.onStoreCreated(ctx, event)
@@ -60,7 +60,7 @@ func (h StoreDomainEventHandler[T]) HandleEvent(ctx context.Context, event T) er
 	return nil
 }
 
-func (h StoreDomainEventHandler[T]) onStoreCreated(ctx context.Context, event ddd.AggregateEvent) error {
+func (h DomainEventHandler[T]) onStoreCreated(ctx context.Context, event ddd.AggregateEvent) error {
 	payload := event.Payload().(*domainevent.StoreCreated)
 	return h.publisher.Publish(ctx, storev1.StoreAggregateChannel,
 		ddd.NewEvent(storev1.StoreCreatedEvent, &storev1.StoreCreated{
@@ -70,7 +70,7 @@ func (h StoreDomainEventHandler[T]) onStoreCreated(ctx context.Context, event dd
 		}))
 }
 
-func (h StoreDomainEventHandler[T]) onStoreParticipationEnabled(ctx context.Context, event ddd.AggregateEvent) error {
+func (h DomainEventHandler[T]) onStoreParticipationEnabled(ctx context.Context, event ddd.AggregateEvent) error {
 	return h.publisher.Publish(ctx, storev1.StoreAggregateChannel,
 		ddd.NewEvent(storev1.StoreParticipatingToggledEvent, &storev1.StoreParticipationToggled{
 			Id:            event.AggregateID(),
@@ -79,7 +79,7 @@ func (h StoreDomainEventHandler[T]) onStoreParticipationEnabled(ctx context.Cont
 	)
 }
 
-func (h StoreDomainEventHandler[T]) onStoreParticipationDisabled(ctx context.Context, event ddd.AggregateEvent) error {
+func (h DomainEventHandler[T]) onStoreParticipationDisabled(ctx context.Context, event ddd.AggregateEvent) error {
 	return h.publisher.Publish(ctx, storev1.StoreAggregateChannel,
 		ddd.NewEvent(storev1.StoreParticipatingToggledEvent, &storev1.StoreParticipationToggled{
 			Id:            event.AggregateID(),
@@ -88,7 +88,7 @@ func (h StoreDomainEventHandler[T]) onStoreParticipationDisabled(ctx context.Con
 	)
 }
 
-func (h StoreDomainEventHandler[T]) onStoreRebranded(ctx context.Context, event ddd.AggregateEvent) error {
+func (h DomainEventHandler[T]) onStoreRebranded(ctx context.Context, event ddd.AggregateEvent) error {
 	payload := event.Payload().(*domainevent.StoreRebranded)
 	return h.publisher.Publish(ctx, storev1.StoreAggregateChannel,
 		ddd.NewEvent(storev1.StoreRebrandedEvent, &storev1.StoreRebranded{
@@ -98,7 +98,7 @@ func (h StoreDomainEventHandler[T]) onStoreRebranded(ctx context.Context, event 
 	)
 }
 
-func (h StoreDomainEventHandler[T]) onProductAdded(ctx context.Context, event ddd.AggregateEvent) error {
+func (h DomainEventHandler[T]) onProductAdded(ctx context.Context, event ddd.AggregateEvent) error {
 	payload := event.Payload().(*domainevent.ProductAdded)
 	return h.publisher.Publish(ctx, storev1.ProductAggregateChannel,
 		ddd.NewEvent(storev1.ProductAddedEvent, &storev1.ProductAdded{
@@ -112,7 +112,7 @@ func (h StoreDomainEventHandler[T]) onProductAdded(ctx context.Context, event dd
 	)
 }
 
-func (h StoreDomainEventHandler[T]) onProductRebranded(ctx context.Context, event ddd.AggregateEvent) error {
+func (h DomainEventHandler[T]) onProductRebranded(ctx context.Context, event ddd.AggregateEvent) error {
 	payload := event.Payload().(*domainevent.ProductRebranded)
 	return h.publisher.Publish(ctx, storev1.ProductAggregateChannel,
 		ddd.NewEvent(storev1.ProductRebrandedEvent, &storev1.ProductRebranded{
@@ -123,7 +123,7 @@ func (h StoreDomainEventHandler[T]) onProductRebranded(ctx context.Context, even
 	)
 }
 
-func (h StoreDomainEventHandler[T]) onProductPriceIncreased(ctx context.Context, event ddd.AggregateEvent) error {
+func (h DomainEventHandler[T]) onProductPriceIncreased(ctx context.Context, event ddd.AggregateEvent) error {
 	payload := event.Payload().(*domainevent.ProductPriceChanged)
 	return h.publisher.Publish(ctx, storev1.ProductAggregateChannel,
 		ddd.NewEvent(storev1.ProductPriceIncreasedEvent, &storev1.ProductPriceChanged{
@@ -133,7 +133,7 @@ func (h StoreDomainEventHandler[T]) onProductPriceIncreased(ctx context.Context,
 	)
 }
 
-func (h StoreDomainEventHandler[T]) onProductPriceDecreased(ctx context.Context, event ddd.AggregateEvent) error {
+func (h DomainEventHandler[T]) onProductPriceDecreased(ctx context.Context, event ddd.AggregateEvent) error {
 	payload := event.Payload().(*domainevent.ProductPriceChanged)
 	return h.publisher.Publish(ctx, storev1.ProductAggregateChannel,
 		ddd.NewEvent(storev1.ProductPriceDecreasedEvent, &storev1.ProductPriceChanged{
@@ -143,7 +143,7 @@ func (h StoreDomainEventHandler[T]) onProductPriceDecreased(ctx context.Context,
 	)
 }
 
-func (h StoreDomainEventHandler[T]) onProductRemoved(ctx context.Context, event ddd.AggregateEvent) error {
+func (h DomainEventHandler[T]) onProductRemoved(ctx context.Context, event ddd.AggregateEvent) error {
 	return h.publisher.Publish(ctx, storev1.ProductAggregateChannel,
 		ddd.NewEvent(storev1.ProductRemovedEvent, &storev1.ProductRemoved{
 			Id: event.AggregateID(),

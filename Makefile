@@ -1,17 +1,3 @@
-pgadmin:
-	docker run --name paadmin \
-		-p 5050:80 -d \
-    -e "PGADMIN_DEFAULT_EMAIL=admin@gmail.com" \
-    -e "PGADMIN_DEFAULT_PASSWORD=admin" \
-    -d dpage/pgadmin4
-
-postgres:
-	docker run --name postgres \
-		-p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -d \
-		-v pgdata:/var/lib/postgresql/data \
-		-v $(PWD)/build/docker/database:/docker-entrypoint-initdb.d/ \
-		postgres:14-alpine
-
 generate:
 	@echo code generation
 	@go generate ./...
@@ -32,8 +18,40 @@ check-outdated:
 	@echo check outdated
 	@go list -u -m -json all | go run github.com/psampaz/go-mod-outdated@latest -update -direct
 
+.PHONY: docker-compose-up
 docker-compose-up:
 	@docker compose up -d --remove-orphans
 
+.PHONY: docker-compose-down
 docker-compose-down:
 	@docker compose down -v
+
+.PHONY: prepare-configmap
+prepare-configmap:
+	@kubectl delete cm --namespace mallbots initdb
+	@kubectl create cm --namespace mallbots initdb --from-file=build/docker/database
+
+.PHONY: k8s-postgres
+k8s-postgres:
+	@helm upgrade --install postgresql bitnami/postgresql \
+		--namespace mallbots \
+		--create-namespace \
+		--set global.storageClass=nfs-client \
+		--set global.postgresql.auth.postgresPassword="postgres" \
+		--set architecture=standalone \
+		--set primary.service.type=NodePort \
+		--set primary.service.nodePorts.postgresql=32345 \
+		--set primary.persistence.enabled=true \
+		--set primary.persistence.storageClass=nfs-client \
+		--set primary.initdb.scriptsConfigMap=initdb \
+
+.PHONY: k8s-nats
+k8s-nats:
+	@helm upgrade --install nats bitnami/nats \
+		--namespace mallbots \
+		--create-namespace \
+		--set service.type=NodePort \
+		--set service.nodePorts.client=32224 \
+		--set jetstream.enabled=true \
+		--set persistence.enabled=true \
+		--set persistence.storageClass=nfs-client

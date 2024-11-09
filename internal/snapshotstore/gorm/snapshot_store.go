@@ -11,17 +11,17 @@ import (
 	"gorm.io/gorm"
 )
 
-type GormSnapshotStore struct {
+type SnapshotStore struct {
 	es.AggregateStore
 	db        *gorm.DB
 	tableName string
 	registry  registry.Registry
 }
 
-var _ es.AggregateStore = (*GormSnapshotStore)(nil)
+var _ es.AggregateStore = (*SnapshotStore)(nil)
 
-func NewGormSnapshotStore(tableName string, db *gorm.DB, registry registry.Registry) es.AggregateStoreMiddleware {
-	snapshots := GormSnapshotStore{
+func NewSnapshotStore(tableName string, db *gorm.DB, registry registry.Registry) es.AggregateStoreMiddleware {
+	snapshots := SnapshotStore{
 		tableName: tableName,
 		db:        db,
 		registry:  registry,
@@ -33,13 +33,14 @@ func NewGormSnapshotStore(tableName string, db *gorm.DB, registry registry.Regis
 	}
 }
 
-func (s *GormSnapshotStore) Load(ctx context.Context, aggregate es.EventSourcedAggregate) error {
+func (s *SnapshotStore) Load(ctx context.Context, aggregate es.EventSourcedAggregate) error {
 	const prepareStmt = `SELECT stream_version, snapshot_name, snapshot_data FROM %s WHERE stream_id = $1 AND stream_name = $2 LIMIT 1`
 	stmt := fmt.Sprintf(prepareStmt, s.table())
 
 	var entityVersion int
 	var snapshotName string
 	var snapshotData []byte
+
 	err := s.db.WithContext(ctx).Raw(stmt, aggregate.ID(), aggregate.AggregateName()).Row().Scan(&entityVersion, &snapshotName, &snapshotData)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -60,7 +61,7 @@ func (s *GormSnapshotStore) Load(ctx context.Context, aggregate es.EventSourcedA
 	return s.AggregateStore.Load(ctx, aggregate)
 }
 
-func (s *GormSnapshotStore) Save(ctx context.Context, aggregate es.EventSourcedAggregate) error {
+func (s *SnapshotStore) Save(ctx context.Context, aggregate es.EventSourcedAggregate) error {
 	const prepareStmt = `INSERT INTO %s (stream_id, stream_name, stream_version, snapshot_name, snapshot_data)
 VALUES ($1, $2, $3, $4, $5)
 ON CONFLICT (stream_id, stream_name) DO
@@ -96,7 +97,7 @@ UPDATE SET stream_version = EXCLUDED.stream_version, snapshot_name = EXCLUDED.sn
 }
 
 // TODO use injected & configurable strategies
-func (GormSnapshotStore) shouldSnapshot(aggregate es.EventSourcedAggregate) bool {
+func (SnapshotStore) shouldSnapshot(aggregate es.EventSourcedAggregate) bool {
 	var maxChanges = 3 // low for demonstration; production envs should use higher values 50, 75, 100...
 	var pendingVersion = aggregate.PendingVersion()
 	var pendingChanges = len(aggregate.Events())
@@ -106,6 +107,6 @@ func (GormSnapshotStore) shouldSnapshot(aggregate es.EventSourcedAggregate) bool
 		(pendingVersion%maxChanges == 0))
 }
 
-func (s *GormSnapshotStore) table() string {
+func (s *SnapshotStore) table() string {
 	return s.tableName
 }

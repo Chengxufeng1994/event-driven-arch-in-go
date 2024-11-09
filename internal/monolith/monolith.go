@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"runtime"
 	"time"
 
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/config"
@@ -267,6 +268,15 @@ func (app *MonolithApplication) Run() error {
 	app.waiter = waiter.New(waiter.CatchSignals())
 
 	app.waiter.Add(app.waitForWeb, app.waitForRPC, app.waitForStream)
+
+	go func() {
+		for {
+			var mem runtime.MemStats
+			runtime.ReadMemStats(&mem)
+			app.logger.Debugf("Alloc = %v  TotalAlloc = %v  Sys = %v  NumGC = %v", mem.Alloc/1024, mem.TotalAlloc/1024, mem.Sys/1024, mem.NumGC)
+			time.Sleep(10 * time.Second)
+		}
+	}()
 
 	return app.waiter.Wait()
 }

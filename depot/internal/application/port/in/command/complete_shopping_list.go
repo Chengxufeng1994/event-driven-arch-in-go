@@ -3,7 +3,6 @@ package command
 import (
 	"context"
 
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/application/port/out/client"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/domain/repository"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/stackus/errors"
@@ -15,18 +14,15 @@ type CompleteShoppingList struct {
 
 type CompleteShoppingListHandler struct {
 	shoppingListRepository repository.ShoppingListRepository
-	orderClient            client.OrderClient
 	publisher              ddd.EventPublisher[ddd.AggregateEvent]
 }
 
 func NewCompleteShoppingListHandler(
 	shoppingListRepository repository.ShoppingListRepository,
-	orderClient client.OrderClient,
 	publisher ddd.EventPublisher[ddd.AggregateEvent],
 ) CompleteShoppingListHandler {
 	return CompleteShoppingListHandler{
 		shoppingListRepository: shoppingListRepository,
-		orderClient:            orderClient,
 		publisher:              publisher,
 	}
 }

@@ -49,6 +49,7 @@ func NewEventDispatcher[T Event]() *EventDispatcherBase[T] {
 func (e *EventDispatcherBase[T]) Subscribe(handler EventHandler[T], events ...string) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
+
 	var filters map[string]struct{}
 	if len(events) > 0 {
 		filters = make(map[string]struct{})
@@ -64,9 +65,9 @@ func (e *EventDispatcherBase[T]) Subscribe(handler EventHandler[T], events ...st
 }
 
 // Publish implements EventDispatcherIntf.
-func (e *EventDispatcherBase[T]) Publish(ctx context.Context, events ...T) error {
+func (h *EventDispatcherBase[T]) Publish(ctx context.Context, events ...T) error {
 	for _, event := range events {
-		for _, handler := range e.handlers {
+		for _, handler := range h.handlers {
 			if handler.filters != nil {
 				if _, exists := handler.filters[event.EventName()]; !exists {
 					continue

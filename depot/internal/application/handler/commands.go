@@ -18,15 +18,11 @@ type CommandHandlers[T ddd.Command] struct {
 
 var _ ddd.CommandHandler[ddd.Command] = (*CommandHandlers[ddd.Command])(nil)
 
-func RegisterCommandHandlers(subscriber am.CommandSubscriber, handlers ddd.CommandHandler[ddd.Command]) error {
-	cmdMsgHandler := am.CommandMessageHandlerFunc(func(ctx context.Context, cmdMsg am.IncomingCommandMessage) (ddd.Reply, error) {
-		return handlers.HandleCommand(ctx, cmdMsg)
-	})
-
-	return subscriber.Subscribe(depotv1.CommandChannel, cmdMsgHandler, am.MessageFilter{
+func RegisterCommandHandlers(subscriber am.RawMessageSubscriber, handlers am.RawMessageHandler) error {
+	return subscriber.Subscribe(depotv1.CommandChannel, handlers, am.MessageFilter{
 		depotv1.CreateShoppingListCommand,
 		depotv1.CancelShoppingListCommand,
-		depotv1.InitiateShoppingCommand,
+		depotv1.InitiateShoppingListCommand,
 	}, am.GroupName("depot-commands"))
 }
 
@@ -42,7 +38,7 @@ func (h *CommandHandlers[T]) HandleCommand(ctx context.Context, cmd T) (ddd.Repl
 		return h.doCreateShoppingList(ctx, cmd)
 	case depotv1.CancelShoppingListCommand:
 		return h.doCancelShoppingList(ctx, cmd)
-	case depotv1.InitiateShoppingCommand:
+	case depotv1.InitiateShoppingListCommand:
 		return h.doInitiateShopping(ctx, cmd)
 	}
 

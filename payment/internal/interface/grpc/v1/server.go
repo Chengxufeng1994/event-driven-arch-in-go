@@ -17,7 +17,7 @@ type server struct {
 
 var _ paymentv1.PaymentsServiceServer = (*server)(nil)
 
-func RegisterServer(_ context.Context, app usecase.PaymentUseCase, registrar grpc.ServiceRegistrar) error {
+func RegisterServer(app usecase.PaymentUseCase, registrar grpc.ServiceRegistrar) error {
 	paymentv1.RegisterPaymentsServiceServer(registrar, server{app: app})
 	return nil
 }

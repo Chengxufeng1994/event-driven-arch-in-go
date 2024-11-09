@@ -18,7 +18,7 @@ type server struct {
 
 var _ depotv1.DepotServiceServer = (*server)(nil)
 
-func RegisterServer(_ context.Context, app usecase.ShoppingListUseCase, registrar grpc.ServiceRegistrar) error {
+func RegisterServer(app usecase.ShoppingListUseCase, registrar grpc.ServiceRegistrar) error {
 	depotv1.RegisterDepotServiceServer(registrar, server{app: app})
 	return nil
 }

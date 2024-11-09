@@ -22,12 +22,8 @@ func NewCommandHandler(app usecase.PaymentUseCase) *CommandHandler[ddd.Command] 
 	}
 }
 
-func RegisterCommandHandler(subscriber am.CommandSubscriber, handlers ddd.CommandHandler[ddd.Command]) error {
-	cmdMsgHandler := am.CommandMessageHandlerFunc(func(ctx context.Context, cmdMsg am.IncomingCommandMessage) (ddd.Reply, error) {
-		return handlers.HandleCommand(ctx, cmdMsg)
-	})
-
-	return subscriber.Subscribe(paymentv1.CommandChannel, cmdMsgHandler, am.MessageFilter{
+func RegisterCommandHandlers(subscriber am.RawMessageStream, handlers am.RawMessageHandler) error {
+	return subscriber.Subscribe(paymentv1.CommandChannel, handlers, am.MessageFilter{
 		paymentv1.ConfirmPaymentCommand,
 	}, am.GroupName("payment-commands"))
 }
@@ -43,5 +39,6 @@ func (h *CommandHandler[T]) HandleCommand(ctx context.Context, cmd T) (ddd.Reply
 
 func (h *CommandHandler[T]) doConfirmPayment(ctx context.Context, cmd T) (ddd.Reply, error) {
 	payload := cmd.Payload().(*paymentv1.ConfirmPayment)
+
 	return nil, h.app.ConfirmPayment(ctx, command.ConfirmPayment{ID: payload.GetId()})
 }

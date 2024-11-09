@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-psql -v ON_ERROR_STOP=1 --username $POSTGRES_USER --dbname "$POSTGRES_DB" <<-EOSQL
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
   CREATE DATABASE mallbots;
 
   CREATE USER mallbots_user WITH ENCRYPTED PASSWORD 'mallbots_pass';
@@ -9,7 +9,7 @@ psql -v ON_ERROR_STOP=1 --username $POSTGRES_USER --dbname "$POSTGRES_DB" <<-EOS
   GRANT CONNECT ON DATABASE mallbots TO mallbots_user;
 EOSQL
 
-psql -v ON_ERROR_STOP=1 --username $POSTGRES_USER --dbname "mallbots" <<-EOSQL
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "mallbots" <<-EOSQL
   -- Apply to keep modifications to the created_at column from being made
   CREATE OR REPLACE FUNCTION created_at_trigger()
   RETURNS TRIGGER AS \$\$

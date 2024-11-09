@@ -3,7 +3,6 @@ package application
 import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/application/port/in/command"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/application/port/in/query"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/application/port/out/client"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/application/usecase"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/domain/repository"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
@@ -31,22 +30,21 @@ type (
 var _ usecase.ShoppingListUseCase = (*ShoppingListApplication)(nil)
 
 func NewShoppingListApplication(
-	shoppingRepository repository.ShoppingListRepository,
-	storeClient client.StoreClient,
-	productClient client.ProductClient,
-	orderClient client.OrderClient,
+	shoppingList repository.ShoppingListRepository,
+	stores repository.StoreCacheRepository,
+	products repository.ProductCacheRepository,
 	publisher ddd.EventDispatcher[ddd.AggregateEvent],
 ) *ShoppingListApplication {
 	return &ShoppingListApplication{
 		appCommands: appCommands{
-			CreateShoppingListHandler:   command.NewCreateShoppingListHandler(shoppingRepository, storeClient, productClient, publisher),
-			CancelShoppingListHandler:   command.NewCancelShoppingListHandler(shoppingRepository, publisher),
-			InitiateShoppingHandler:     command.NewInitiateShoppingHandler(shoppingRepository, publisher),
-			AssignShoppingListHandler:   command.NewAssignShoppingListHandler(shoppingRepository, publisher),
-			CompleteShoppingListHandler: command.NewCompleteShoppingListHandler(shoppingRepository, orderClient, publisher),
+			CreateShoppingListHandler:   command.NewCreateShoppingListHandler(shoppingList, stores, products, publisher),
+			CancelShoppingListHandler:   command.NewCancelShoppingListHandler(shoppingList, publisher),
+			InitiateShoppingHandler:     command.NewInitiateShoppingHandler(shoppingList, publisher),
+			AssignShoppingListHandler:   command.NewAssignShoppingListHandler(shoppingList, publisher),
+			CompleteShoppingListHandler: command.NewCompleteShoppingListHandler(shoppingList, publisher),
 		},
 		appQueries: appQueries{
-			GetShoppingListHandler: query.NewGetShoppingListHandler(shoppingRepository),
+			GetShoppingListHandler: query.NewGetShoppingListHandler(shoppingList),
 		},
 	}
 }

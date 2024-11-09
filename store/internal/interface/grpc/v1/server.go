@@ -25,7 +25,6 @@ func RegisterServer(app usecase.StoreUseCase, registrar grpc.ServiceRegistrar) e
 	return nil
 }
 
-// AddProduct implements storev1.StoresServiceServer.
 func (s *server) AddProduct(ctx context.Context, request *storev1.AddProductRequest) (*storev1.AddProductResponse, error) {
 	id := uuid.New().String()
 	err := s.app.AddProduct(ctx, command.AddProduct{
@@ -103,7 +102,7 @@ func (s *server) GetParticipatingStores(ctx context.Context, request *storev1.Ge
 }
 
 func (s *server) RebrandStore(ctx context.Context, request *storev1.RebrandStoreRequest) (*storev1.RebrandStoreResponse, error) {
-	err := s.app.RebrandStore(context.Background(), command.RebrandStore{
+	err := s.app.RebrandStore(ctx, command.RebrandStore{
 		ID:   request.GetId(),
 		Name: request.GetName(),
 	})
@@ -137,7 +136,7 @@ func (s *server) GetStores(ctx context.Context, request *storev1.GetStoresReques
 }
 
 func (s *server) RebrandProduct(ctx context.Context, request *storev1.RebrandProductRequest) (*storev1.RebrandProductResponse, error) {
-	err := s.app.RebrandProduct(context.Background(), command.RebrandProduct{
+	err := s.app.RebrandProduct(ctx, command.RebrandProduct{
 		ID:          request.GetId(),
 		Name:        request.GetName(),
 		Description: request.GetDescription(),
@@ -155,7 +154,7 @@ func (s *server) RemoveProduct(ctx context.Context, request *storev1.RemoveProdu
 }
 
 func (s *server) IncreaseProductPrice(ctx context.Context, request *storev1.IncreaseProductPriceRequest) (*storev1.IncreaseProductPriceResponse, error) {
-	err := s.app.IncreaseProductPrice(context.Background(), command.IncreaseProductPrice{
+	err := s.app.IncreaseProductPrice(ctx, command.IncreaseProductPrice{
 		ID:    request.GetId(),
 		Price: request.GetPrice(),
 	})
@@ -163,7 +162,7 @@ func (s *server) IncreaseProductPrice(ctx context.Context, request *storev1.Incr
 }
 
 func (s *server) DecreaseProductPrice(ctx context.Context, request *storev1.DecreaseProductPriceRequest) (*storev1.DecreaseProductPriceResponse, error) {
-	err := s.app.DecreaseProductPrice(context.Background(), command.DecreaseProductPrice{
+	err := s.app.DecreaseProductPrice(ctx, command.DecreaseProductPrice{
 		ID:    request.GetId(),
 		Price: request.GetPrice(),
 	})

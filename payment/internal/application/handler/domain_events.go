@@ -16,13 +16,13 @@ type DomainEventHandler[T ddd.Event] struct {
 
 var _ ddd.EventHandler[ddd.Event] = (*DomainEventHandler[ddd.Event])(nil)
 
-func NewDomainEventHandler(publisher am.MessagePublisher[ddd.Event]) *DomainEventHandler[ddd.Event] {
+func NewDomainEventHandlers(publisher am.MessagePublisher[ddd.Event]) *DomainEventHandler[ddd.Event] {
 	return &DomainEventHandler[ddd.Event]{
 		publisher: publisher,
 	}
 }
 
-func RegisterDomainEventHandler(handler ddd.EventHandler[ddd.Event], subscriber ddd.EventSubscriber[ddd.Event]) {
+func RegisterDomainEventHandlers(subscriber ddd.EventSubscriber[ddd.Event], handler ddd.EventHandler[ddd.Event]) {
 	subscriber.Subscribe(handler,
 		domainevent.InvoicePaidEvent,
 	)

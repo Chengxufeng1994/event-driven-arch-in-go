@@ -22,7 +22,7 @@ func NewStop(storeName, storeLocation string) *Stop {
 	}
 }
 
-func (s *Stop) AddItem(product valueobject.Product, quantity int) error {
+func (s *Stop) AddItem(product *valueobject.Product, quantity int) error {
 	if _, exists := s.Items[product.ID]; !exists {
 		item := valueobject.NewItem(product.Name, quantity)
 		s.Items[product.ID] = &item

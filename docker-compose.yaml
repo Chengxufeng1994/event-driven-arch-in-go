@@ -23,7 +23,7 @@ services:
 
   postgres:
     container_name: postgres
-    image: postgres:12-alpine
+    image: postgres:16-alpine
     ports:
       - 5432:5432
     volumes:
@@ -60,6 +60,11 @@ services:
     networks:
       eda_network:
         ipv4_address: 10.5.0.12
+    configs:
+      - source: servers.json
+        target: /pgadmin4/servers.json
+      - source: pgpass
+        target: /pgpass
 
   nats:
     container_name: nats
@@ -77,6 +82,24 @@ services:
     networks:
       eda_network:
         ipv4_address: 10.5.0.13
+
+configs:
+  pgpass:
+    content: db:5432:*:postgres:postgres
+  servers.json:
+    content: |
+      {"Servers": {
+        "1": {
+          "Group": "Servers",
+          "Name": "My Local Postgres 16",
+          "Host": "db",
+          "Port": 5432,
+          "MaintenanceDB": "postgres",
+          "Username": "postgres",
+          "PassFile": "/pgpass",
+          "SSLMode": "prefer"
+        }
+      }}
 
 networks:
   eda_network:

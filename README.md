@@ -2,7 +2,7 @@
 
 ## TODO
 
-* [ ] integration event put it into pkg/event
+* [ ] support interface 'DB'
 * [ ] support broker 'Kafka'
 * [ ] support event store 'EventStoreDB'
 
@@ -21,6 +21,9 @@
 * [Github - golang modular monolith EDA](https://github.com/a-aslani/golang_monolith_event_driven_architecture?tab=readme-ov-file)
 * [Github - ftgo-go](https://github.com/stackus/ftgogo?tab=readme-ov-file)
 * [Github - modular monolith with ddd](https://github.com/kgrzybek/modular-monolith-with-ddd)
+* [Github - golang gorm multilayer db trx](https://github.com/dipeshhkc/Golang-Gorm-MultiLayer-DB-Transaction/tree/main)
 * [event driven architecture in go](https://blog.devops.dev/event-driven-architecture-in-go-golang-ab46f23bf9a8)
 * [ompluscator](https://medium.com/@ompluscator)
 * [setup go with vscode in docker for debugging](https://dev.to/andreidascalu/setup-go-with-vscode-in-docker-for-debugging-24ch)
+* [adding postgres connection to pgadmin](https://stackoverflow.com/questions/64620446/adding-postgress-connections-to-pgadmin-in-docker-file)
+* [event driven](https://event-driven.io/en/)

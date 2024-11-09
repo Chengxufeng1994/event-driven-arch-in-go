@@ -95,7 +95,7 @@ func (r *GormProductCacheRepository) Find(ctx context.Context, productID string)
 	var productPO po.ProductCache
 
 	result := r.db.WithContext(ctx).
-		Model(&po.StoreCache{}).
+		Model(&po.ProductCache{}).
 		Where("id = ?", productID).
 		First(&productPO)
 
@@ -106,7 +106,7 @@ func (r *GormProductCacheRepository) Find(ctx context.Context, productID string)
 
 		product, err := r.fallback.Find(ctx, productID)
 		if err != nil {
-			return nil, errors.Wrap(err, "store fallback failed")
+			return nil, errors.Wrap(err, "product fallback failed")
 		}
 
 		// attempt to add it to the cache

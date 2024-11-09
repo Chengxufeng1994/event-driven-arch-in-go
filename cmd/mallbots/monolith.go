@@ -60,16 +60,6 @@ func NewApp() *monolith.MonolithApplication {
 		return nil
 	}
 
-	basketModule := basket.NewModule()
-	customerModule := customer.NewModule()
-	depotModule := depot.NewModule()
-	notificationModule := notification.NewModule()
-	orderModule := ordering.NewModule()
-	paymentModule := payment.NewModule()
-	searchModule := search.NewModule()
-	storeModule := store.NewModule()
-	cosecModule := cosec.NewModule()
-
 	monolithApplication := monolith.NewMonolithApplication(
 		"MALL BOTS",
 		"mallbots-monolith-application",
@@ -81,15 +71,15 @@ func NewApp() *monolith.MonolithApplication {
 		monolith.WithNatsConn(nc),
 		monolith.WithJetStreamContext(js),
 		monolith.WithModules(
-			basketModule,
-			customerModule,
-			depotModule,
-			notificationModule,
-			orderModule,
-			paymentModule,
-			searchModule,
-			storeModule,
-			cosecModule,
+			basket.NewModule(),
+			customer.NewModule(),
+			depot.NewModule(),
+			notification.NewModule(),
+			ordering.NewModule(),
+			payment.NewModule(),
+			store.NewModule(),
+			search.NewModule(),
+			cosec.NewModule(),
 		),
 	)
 

@@ -22,12 +22,8 @@ func NewCommandHandler(app usecase.CustomerUsecase) ddd.CommandHandler[ddd.Comma
 	}
 }
 
-func RegisterCommandHandlers(subscriber am.CommandSubscriber, handlers ddd.CommandHandler[ddd.Command]) error {
-	cmdMsgHandler := am.CommandMessageHandlerFunc(func(ctx context.Context, cmdMsg am.IncomingCommandMessage) (ddd.Reply, error) {
-		return handlers.HandleCommand(ctx, cmdMsg)
-	})
-
-	return subscriber.Subscribe(customerv1.CommandChannel, cmdMsgHandler, am.MessageFilter{
+func RegisterCommandHandlers(subscriber am.RawMessageSubscriber, handlers am.RawMessageHandler) error {
+	return subscriber.Subscribe(customerv1.CommandChannel, handlers, am.MessageFilter{
 		customerv1.AuthorizeCustomerCommand,
 	}, am.GroupName("customer-commands"))
 }
@@ -43,5 +39,6 @@ func (h commandHandlers) HandleCommand(ctx context.Context, cmd ddd.Command) (dd
 
 func (h commandHandlers) doAuthorizeCustomer(ctx context.Context, cmd ddd.Command) (ddd.Reply, error) {
 	payload := cmd.Payload().(*customerv1.AuthorizeCustomer)
+
 	return nil, h.app.AuthorizeCustomer(ctx, command.NewAuthorizeCustomer(payload.GetId()))
 }

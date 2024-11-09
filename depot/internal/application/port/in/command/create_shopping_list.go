@@ -5,7 +5,6 @@ import (
 
 	"github.com/stackus/errors"
 
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/application/port/out/client"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/domain/aggregate"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/domain/repository"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/domain/valueobject"
@@ -20,21 +19,21 @@ type CreateShoppingList struct {
 
 type CreateShoppingListHandler struct {
 	shoppingRepository repository.ShoppingListRepository
-	storeClient        client.StoreClient
-	productClient      client.ProductClient
+	stores             repository.StoreCacheRepository
+	products           repository.ProductCacheRepository
 	publisher          ddd.EventPublisher[ddd.AggregateEvent]
 }
 
 func NewCreateShoppingListHandler(
-	shoppingRepository repository.ShoppingListRepository,
-	storeClient client.StoreClient,
-	productClient client.ProductClient,
+	shoppingList repository.ShoppingListRepository,
+	stores repository.StoreCacheRepository,
+	products repository.ProductCacheRepository,
 	publisher ddd.EventPublisher[ddd.AggregateEvent],
 ) CreateShoppingListHandler {
 	return CreateShoppingListHandler{
-		shoppingRepository: shoppingRepository,
-		storeClient:        storeClient,
-		productClient:      productClient,
+		shoppingRepository: shoppingList,
+		stores:             stores,
+		products:           products,
 		publisher:          publisher,
 	}
 }
@@ -43,12 +42,12 @@ func (h CreateShoppingListHandler) CreateShoppingList(ctx context.Context, cmd C
 	shoppingList := aggregate.CreateShoppingList(cmd.ID, cmd.OrderID)
 
 	for _, item := range cmd.Items {
-		store, err := h.storeClient.Find(ctx, item.StoreID)
+		store, err := h.stores.Find(ctx, item.StoreID)
 		if err != nil {
-			return errors.Wrap(err, "creating shopping list")
+			return errors.Wrap(err, "finding store")
 		}
 
-		product, err := h.productClient.Find(ctx, item.ProductID)
+		product, err := h.products.Find(ctx, item.ProductID)
 		if err != nil {
 			return errors.Wrap(err, "finding product")
 		}

@@ -49,7 +49,7 @@ func (r *GormCustomerRepository) Update(ctx context.Context, customer *aggregate
 	customerPO := r.mapper.ToPersistent(customer)
 	result := r.db.WithContext(ctx).
 		Model(&po.Customer{}).
-		Where("id = ?", customer.ID).
+		Where("id = ?", customer.ID()).
 		Select("name", "sms_number", "enabled").
 		Updates(&po.Customer{
 			Name:      customerPO.Name,

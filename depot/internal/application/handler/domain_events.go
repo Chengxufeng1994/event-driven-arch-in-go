@@ -3,13 +3,14 @@ package handler
 import (
 	"context"
 
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/application/port/out/client"
+	depotv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/depot/api/depot/v1"
 	domainevent "github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/domain/event"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/am"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 )
 
 type DomainEventHandlers[T ddd.AggregateEvent] struct {
-	orders client.OrderClient
+	publisher am.MessagePublisher[ddd.Event]
 }
 
 var _ ddd.EventHandler[ddd.AggregateEvent] = (*DomainEventHandlers[ddd.AggregateEvent])(nil)
@@ -18,9 +19,9 @@ func RegisterDomainEventHandlers(subscriber ddd.EventSubscriber[ddd.AggregateEve
 	subscriber.Subscribe(handler, domainevent.ShoppingListCompletedEvent)
 }
 
-func NewDomainEventHandlers(orders client.OrderClient) ddd.EventHandler[ddd.AggregateEvent] {
+func NewDomainEventHandlers(publisher am.MessagePublisher[ddd.Event]) ddd.EventHandler[ddd.AggregateEvent] {
 	return &DomainEventHandlers[ddd.AggregateEvent]{
-		orders: orders,
+		publisher: publisher,
 	}
 }
 
@@ -35,5 +36,9 @@ func (h *DomainEventHandlers[T]) HandleEvent(ctx context.Context, event T) error
 
 func (h DomainEventHandlers[T]) onShoppingListCompleted(ctx context.Context, event ddd.AggregateEvent) error {
 	completed := event.Payload().(*domainevent.ShoppingListCompleted)
-	return h.orders.Ready(ctx, completed.OrderID)
+	return h.publisher.Publish(ctx, depotv1.ShoppingListAggregateChannel,
+		ddd.NewEvent(depotv1.ShoppingListCompletedEvent, &depotv1.ShoppingListCompleted{
+			Id:      event.AggregateID(),
+			OrderId: completed.OrderID,
+		}))
 }

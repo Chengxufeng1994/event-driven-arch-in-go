@@ -33,7 +33,7 @@ func (h CreateStoreHandler) CreateStore(ctx context.Context, cmd CreateStore) er
 	}
 
 	if err = h.stores.Save(ctx, store); err != nil {
-		return errors.Wrap(err, "creating store")
+		return errors.Wrap(err, "saving store")
 	}
 
 	return nil

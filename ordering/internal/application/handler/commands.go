@@ -22,12 +22,8 @@ func NewCommandHandlers(app usecase.OrderUseCase) ddd.CommandHandler[ddd.Command
 	}
 }
 
-func RegisterCommandHandlers(subscriber am.CommandSubscriber, handlers ddd.CommandHandler[ddd.Command]) error {
-	cmdMsgHandler := am.CommandMessageHandlerFunc(func(ctx context.Context, cmdMsg am.IncomingCommandMessage) (ddd.Reply, error) {
-		return handlers.HandleCommand(ctx, cmdMsg)
-	})
-
-	return subscriber.Subscribe(orderv1.CommandChannel, cmdMsgHandler, am.MessageFilter{
+func RegisterCommandHandlers(subscriber am.RawMessageSubscriber, handlers am.RawMessageHandler) error {
+	return subscriber.Subscribe(orderv1.CommandChannel, handlers, am.MessageFilter{
 		orderv1.RejectOrderCommand,
 		orderv1.ApproveOrderCommand,
 	}, am.GroupName("ordering-commands"))

@@ -2,7 +2,7 @@ package nats
 
 import (
 	"context"
-	sync "sync"
+	"sync"
 
 	"github.com/nats-io/nats.go"
 	"google.golang.org/protobuf/proto"
@@ -48,7 +48,7 @@ func (s *Stream) Publish(ctx context.Context, topicName string, rawMsg am.RawMes
 
 	var p nats.PubAckFuture
 	p, err = s.js.PublishMsgAsync(&nats.Msg{
-		Subject: topicName,
+		Subject: rawMsg.Subject(),
 		Data:    data,
 	}, nats.MsgId(rawMsg.ID()))
 	if err != nil {
@@ -100,7 +100,6 @@ func (s *Stream) Subscribe(topicName string, handler am.RawMessageHandler, optio
 		DeliverSubject: topicName,
 		FilterSubject:  topicName,
 	}
-
 	if groupName := subCfg.GroupName(); groupName != "" {
 		cfg.DeliverSubject = groupName
 		cfg.DeliverGroup = groupName
@@ -136,20 +135,38 @@ func (s *Stream) Subscribe(topicName string, handler am.RawMessageHandler, optio
 }
 
 func (s *Stream) handleMsg(cfg am.SubscriberConfig, handler am.RawMessageHandler) func(*nats.Msg) {
+	var filters map[string]struct{}
+	if len(cfg.MessageFilters()) > 0 {
+		filters = make(map[string]struct{})
+		for _, key := range cfg.MessageFilters() {
+			filters[key] = struct{}{}
+		}
+	}
+
 	return func(natsMsg *nats.Msg) {
 		var err error
 
 		m := &StreamMessage{}
 		err = proto.Unmarshal(natsMsg.Data, m)
 		if err != nil {
-			// TODO Nak? ... logging?
 			s.logger.WithError(err).Warn("failed to unmarshal the *nats.Msg")
 			return
+		}
+
+		if filters != nil {
+			if _, exists := filters[m.GetName()]; !exists {
+				err = natsMsg.Ack()
+				if err != nil {
+					s.logger.WithError(err).Warn("failed to Ack a filtered message")
+				}
+				return
+			}
 		}
 
 		msg := &rawMessage{
 			id:       m.GetId(),
 			name:     m.GetName(),
+			subject:  natsMsg.Subject,
 			data:     m.GetData(),
 			acked:    false,
 			ackFn:    func() error { return natsMsg.Ack() },

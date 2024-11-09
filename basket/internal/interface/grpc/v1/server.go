@@ -19,14 +19,13 @@ type server struct {
 
 var _ basketv1.BasketServiceServer = (*server)(nil)
 
-func RegisterServer(_ context.Context, app usecase.BasketUseCase, registrar grpc.ServiceRegistrar) error {
+func RegisterServer(app usecase.BasketUseCase, registrar grpc.ServiceRegistrar) error {
 	basketv1.RegisterBasketServiceServer(registrar, server{app: app})
 	return nil
 }
 
-func (s server) StartBasket(ctx context.Context, request *basketv1.StartBasketRequest) (*basketv1.StartBasketResponse,
-	error,
-) {
+func (s server) StartBasket(ctx context.Context, request *basketv1.StartBasketRequest,
+) (*basketv1.StartBasketResponse, error) {
 	basketID := uuid.New().String()
 	err := s.app.StartBasket(ctx, command.StartBasket{
 		ID:         basketID,
@@ -55,7 +54,8 @@ func (s server) CheckoutBasket(ctx context.Context, request *basketv1.CheckoutBa
 	return &basketv1.CheckoutBasketResponse{}, err
 }
 
-func (s server) AddItem(ctx context.Context, request *basketv1.AddItemRequest) (*basketv1.AddItemResponse, error) {
+func (s server) AddItem(ctx context.Context, request *basketv1.AddItemRequest,
+) (*basketv1.AddItemResponse, error) {
 	err := s.app.AddItem(ctx, command.AddItem{
 		ID:        request.GetId(),
 		ProductID: request.GetProductId(),
@@ -65,9 +65,8 @@ func (s server) AddItem(ctx context.Context, request *basketv1.AddItemRequest) (
 	return &basketv1.AddItemResponse{}, err
 }
 
-func (s server) RemoveItem(ctx context.Context, request *basketv1.RemoveItemRequest) (*basketv1.RemoveItemResponse,
-	error,
-) {
+func (s server) RemoveItem(ctx context.Context, request *basketv1.RemoveItemRequest,
+) (*basketv1.RemoveItemResponse, error) {
 	err := s.app.RemoveItem(ctx, command.RemoveItem{
 		ID:        request.GetId(),
 		ProductID: request.GetProductId(),
@@ -77,9 +76,8 @@ func (s server) RemoveItem(ctx context.Context, request *basketv1.RemoveItemRequ
 	return &basketv1.RemoveItemResponse{}, err
 }
 
-func (s server) GetBasket(ctx context.Context, request *basketv1.GetBasketRequest) (*basketv1.GetBasketResponse,
-	error,
-) {
+func (s server) GetBasket(ctx context.Context, request *basketv1.GetBasketRequest,
+) (*basketv1.GetBasketResponse, error) {
 	basket, err := s.app.GetBasket(ctx, query.GetBasket{
 		ID: request.GetId(),
 	})

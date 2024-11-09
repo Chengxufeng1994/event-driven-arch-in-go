@@ -2,8 +2,11 @@ package am
 
 import (
 	"context"
+	"strings"
 
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/registry"
+	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -13,10 +16,7 @@ const (
 )
 
 type (
-	CommandMessageHandler interface {
-		HandleMessage(ctx context.Context, msg IncomingCommandMessage) (ddd.Reply, error)
-	}
-
+	CommandMessageHandler     = MessageHandler[IncomingCommandMessage]
 	CommandMessageHandlerFunc func(ctx context.Context, msg IncomingCommandMessage) (ddd.Reply, error)
 
 	Command interface {
@@ -42,4 +42,92 @@ func (c command) Destination() string {
 
 func (f CommandMessageHandlerFunc) HandleMessage(ctx context.Context, cmd IncomingCommandMessage) (ddd.Reply, error) {
 	return f(ctx, cmd)
+}
+
+type commandMsgHandler struct {
+	reg       registry.Registry
+	publisher ReplyPublisher
+	handler   ddd.CommandHandler[ddd.Command]
+}
+
+var _ RawMessageHandler = (*commandMsgHandler)(nil)
+
+func NewCommandMessageHandler(reg registry.Registry, publisher ReplyPublisher, handler ddd.CommandHandler[ddd.Command]) RawMessageHandler {
+	return commandMsgHandler{
+		reg:       reg,
+		publisher: publisher,
+		handler:   handler,
+	}
+}
+
+func (h commandMsgHandler) HandleMessage(ctx context.Context, msg IncomingRawMessage) error {
+	var commandData CommandMessageData
+
+	err := proto.Unmarshal(msg.Data(), &commandData)
+	if err != nil {
+		return err
+	}
+
+	commandName := msg.MessageName()
+
+	payload, err := h.reg.Deserialize(commandName, commandData.GetPayload())
+	if err != nil {
+		return err
+	}
+
+	commandMsg := commandMessage{
+		id:         msg.ID(),
+		name:       commandName,
+		payload:    payload,
+		metadata:   commandData.GetMetadata().AsMap(),
+		occurredAt: commandData.GetOccurredAt().AsTime(),
+		msg:        msg,
+	}
+
+	destination := commandMsg.Metadata().Get(CommandReplyChannelHdr).(string)
+
+	reply, err := h.handler.HandleCommand(ctx, commandMsg)
+	if err != nil {
+		return h.publishReply(ctx, destination, h.failure(reply, commandMsg))
+	}
+
+	return h.publishReply(ctx, destination, h.success(reply, commandMsg))
+}
+
+func (h commandMsgHandler) publishReply(ctx context.Context, destination string, reply ddd.Reply) error {
+	return h.publisher.Publish(ctx, destination, reply)
+}
+
+func (h commandMsgHandler) failure(reply ddd.Reply, command ddd.Command) ddd.Reply {
+	if reply == nil {
+		reply = ddd.NewReply(FailureReply, nil)
+	}
+
+	reply.Metadata().Set(ReplyOutcomeHdr, OutcomeFailure)
+
+	return h.applyCorrelationHeaders(reply, command)
+}
+
+func (h commandMsgHandler) success(reply ddd.Reply, command ddd.Command) ddd.Reply {
+	if reply == nil {
+		reply = ddd.NewReply(SuccessReply, nil)
+	}
+
+	reply.Metadata().Set(ReplyOutcomeHdr, OutcomeSuccess)
+	return h.applyCorrelationHeaders(reply, command)
+}
+
+func (h commandMsgHandler) applyCorrelationHeaders(reply ddd.Reply, command ddd.Command) ddd.Reply {
+	for key, value := range command.Metadata() {
+		if key == CommandNameHdr {
+			continue
+		}
+
+		if strings.HasPrefix(key, CommandHdrPrefix) {
+			hdr := ReplyHdrPrefix + key[len(CommandHdrPrefix):]
+			reply.Metadata().Set(hdr, value)
+		}
+	}
+
+	return reply
 }

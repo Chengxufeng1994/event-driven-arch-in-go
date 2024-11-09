@@ -14,14 +14,14 @@ import (
 )
 
 type server struct {
-	usecase.OrderUseCase
+	app usecase.OrderUseCase
 	orderv1.UnimplementedOrderingServiceServer
 }
 
 var _ orderv1.OrderingServiceServer = (*server)(nil)
 
-func RegisterServer(_ context.Context, application usecase.OrderUseCase, registrar grpc.ServiceRegistrar) error {
-	server := &server{OrderUseCase: application}
+func RegisterServer(application usecase.OrderUseCase, registrar grpc.ServiceRegistrar) error {
+	server := &server{app: application}
 	orderv1.RegisterOrderingServiceServer(registrar, server)
 	return nil
 }
@@ -42,7 +42,7 @@ func (s *server) CreateOrder(ctx context.Context, request *orderv1.CreateOrderRe
 		PaymentID:  request.GetPaymentId(),
 		Items:      items,
 	}
-	err := s.OrderUseCase.CreateOrder(ctx, cmd)
+	err := s.app.CreateOrder(ctx, cmd)
 
 	return &orderv1.CreateOrderResponse{Id: id}, err
 }
@@ -50,28 +50,28 @@ func (s *server) CreateOrder(ctx context.Context, request *orderv1.CreateOrderRe
 // CancelOrder implements orderv1.OrderingServiceServer.
 // Subtle: this method shadows the method (OrderUseCase).CancelOrder of server.OrderUseCase.
 func (s *server) CancelOrder(ctx context.Context, request *orderv1.CancelOrderRequest) (*orderv1.CancelOrderResponse, error) {
-	err := s.OrderUseCase.CancelOrder(ctx, command.CancelOrder{ID: request.GetId()})
+	err := s.app.CancelOrder(ctx, command.CancelOrder{ID: request.GetId()})
 	return &orderv1.CancelOrderResponse{}, err
 }
 
 // ReadyOrder implements orderv1.OrderingServiceServer.
 // Subtle: this method shadows the method (OrderUseCase).ReadyOrder of server.OrderUseCase.
 func (s *server) ReadyOrder(ctx context.Context, request *orderv1.ReadyOrderRequest) (*orderv1.ReadyOrderResponse, error) {
-	err := s.OrderUseCase.ReadyOrder(ctx, command.ReadyOrder{ID: request.GetId()})
+	err := s.app.ReadyOrder(ctx, command.ReadyOrder{ID: request.GetId()})
 	return &orderv1.ReadyOrderResponse{}, err
 }
 
 // CompleteOrder implements orderv1.OrderingServiceServer.
 // Subtle: this method shadows the method (OrderUseCase).CompleteOrder of server.OrderUseCase.
 func (s *server) CompleteOrder(ctx context.Context, request *orderv1.CompleteOrderRequest) (*orderv1.CompleteOrderResponse, error) {
-	err := s.OrderUseCase.CompleteOrder(ctx, command.CompleteOrder{ID: request.GetId()})
+	err := s.app.CompleteOrder(ctx, command.CompleteOrder{ID: request.GetId()})
 	return &orderv1.CompleteOrderResponse{}, err
 }
 
 // GetOrder implements orderv1.OrderingServiceServer.
 // Subtle: this method shadows the method (OrderUseCase).GetOrder of server.OrderUseCase.
 func (s *server) GetOrder(ctx context.Context, request *orderv1.GetOrderRequest) (*orderv1.GetOrderResponse, error) {
-	orderAgg, err := s.OrderUseCase.GetOrder(ctx, query.GetOrder{OrderID: request.GetId()})
+	orderAgg, err := s.app.GetOrder(ctx, query.GetOrder{OrderID: request.GetId()})
 	if err != nil {
 		return nil, err
 	}

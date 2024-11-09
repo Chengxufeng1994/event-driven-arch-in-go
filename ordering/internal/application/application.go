@@ -4,7 +4,6 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/application/port/in/command"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/application/port/in/query"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/application/port/out/client"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/application/usecase"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/domain/repository"
 )
@@ -33,7 +32,6 @@ var _ usecase.OrderUseCase = (*OrderApplication)(nil)
 
 func NewOrderApplication(
 	orderRepository repository.OrderRepository,
-	shoppingClient client.ShoppingClient,
 	publisher ddd.EventPublisher[ddd.Event],
 ) *OrderApplication {
 	return &OrderApplication{
@@ -41,7 +39,7 @@ func NewOrderApplication(
 			CreateOrderHandler:   command.NewCreateOrderHandler(orderRepository, publisher),
 			RejectOrderHandler:   command.NewRejectOrderHandler(orderRepository, publisher),
 			ApproveOrderHandler:  command.NewApproveOrderHandler(orderRepository, publisher),
-			CancelOrderHandler:   command.NewCancelOrderHandler(orderRepository, shoppingClient, publisher),
+			CancelOrderHandler:   command.NewCancelOrderHandler(orderRepository, publisher),
 			ReadyOrderHandler:    command.NewReadyOrderHandler(orderRepository, publisher),
 			CompleteOrderHandler: command.NewCompleteOrderHandler(orderRepository, publisher),
 		},

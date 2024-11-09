@@ -98,7 +98,7 @@ func (s createOrderSaga) confirmPayment(ctx context.Context, data *models.Create
 }
 
 func (s createOrderSaga) initiateShopping(ctx context.Context, data *models.CreateOrderData) am.Command {
-	return am.NewCommand(depotv1.InitiateShoppingCommand, depotv1.CommandChannel, &depotv1.InitiateShopping{Id: data.ShoppingID})
+	return am.NewCommand(depotv1.InitiateShoppingListCommand, depotv1.CommandChannel, &depotv1.InitiateShopping{Id: data.ShoppingID})
 }
 
 func (s createOrderSaga) approveOrder(ctx context.Context, data *models.CreateOrderData) am.Command {

@@ -16,19 +16,15 @@ type IntegrationEventHandlers[T ddd.Event] struct {
 
 var _ ddd.EventHandler[ddd.Event] = (*IntegrationEventHandlers[ddd.Event])(nil)
 
-func RegisterIntegrationEventHandlers(subscriber am.EventSubscriber, handler ddd.EventHandler[ddd.Event]) error {
-	evtMsgHandler := am.MessageHandlerFunc[am.IncomingEventMessage](func(ctx context.Context, eventMsg am.IncomingEventMessage) error {
-		return handler.HandleEvent(ctx, eventMsg)
-	})
-
-	if err := subscriber.Subscribe(storev1.StoreAggregateChannel, evtMsgHandler, am.MessageFilter{
+func RegisterIntegrationEventHandlers(subscriber am.RawMessageStream, handlers am.RawMessageHandler) error {
+	if err := subscriber.Subscribe(storev1.StoreAggregateChannel, handlers, am.MessageFilter{
 		storev1.StoreCreatedEvent,
 		storev1.StoreRebrandedEvent,
 	}, am.GroupName("depot-stores")); err != nil {
 		return err
 	}
 
-	if err := subscriber.Subscribe(storev1.ProductAggregateChannel, evtMsgHandler, am.MessageFilter{
+	if err := subscriber.Subscribe(storev1.ProductAggregateChannel, handlers, am.MessageFilter{
 		storev1.ProductAddedEvent,
 		storev1.ProductRebrandedEvent,
 		storev1.ProductPriceIncreasedEvent,

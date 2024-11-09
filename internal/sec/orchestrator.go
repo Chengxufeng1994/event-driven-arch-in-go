@@ -41,12 +41,12 @@ func (o orchestrator[T]) Start(ctx context.Context, id string, data T) error {
 
 	err := o.repo.Save(ctx, o.saga.Name(), sagaCtx)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to save saga context")
 	}
 
 	result := o.execute(ctx, sagaCtx)
 	if result.err != nil {
-		return err
+		return errors.Wrap(result.err, "failed to execute saga")
 	}
 
 	return o.processResult(ctx, result)
@@ -139,7 +139,11 @@ func (o orchestrator[T]) processResult(ctx context.Context, result stepResult[T]
 		}
 	}
 
-	return o.repo.Save(ctx, o.saga.Name(), result.ctx)
+	if err = o.repo.Save(ctx, o.saga.Name(), result.ctx); err != nil {
+		return
+	}
+
+	return
 }
 
 func (o orchestrator[T]) publishCommand(ctx context.Context, result stepResult[T]) error {

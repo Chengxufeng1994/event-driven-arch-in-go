@@ -3,31 +3,56 @@ package v1
 import (
 	"context"
 
+	"gorm.io/gorm"
+
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/di"
 	searchv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/search/api/search/v1"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/search/internal/application/usecase"
 	"google.golang.org/grpc"
 )
 
-type server struct {
-	app usecase.SearchUseCase
+type serverTx struct {
+	c di.Container
 	searchv1.UnimplementedSearchServiceServer
 }
 
-var _ searchv1.SearchServiceServer = (*server)(nil)
+var _ searchv1.SearchServiceServer = (*serverTx)(nil)
 
-func RegisterServer(ctx context.Context, app usecase.SearchUseCase, register grpc.ServiceRegistrar) error {
-	searchv1.RegisterSearchServiceServer(register, server{app: app})
+func RegisterServerTx(container di.Container, register grpc.ServiceRegistrar) error {
+	searchv1.RegisterSearchServiceServer(register, serverTx{c: container})
 	return nil
 }
 
-// GetOrder implements v1.SearchServiceServer.
-func (s server) GetOrder(context.Context, *searchv1.GetOrderRequest) (*searchv1.GetOrderResponse, error) {
-	// TODO: implement me
-	panic("unimplemented")
+func (s serverTx) GetOrder(ctx context.Context, request *searchv1.GetOrderRequest) (resp *searchv1.GetOrderResponse, err error) {
+	ctx = s.c.Scoped(ctx)
+	defer func(tx *gorm.DB) {
+		err = s.closeTx(tx, err)
+	}(di.Get(ctx, "tx").(*gorm.DB))
+
+	next := server{app: di.Get(ctx, "app").(usecase.SearchUseCase)}
+
+	return next.GetOrder(ctx, request)
 }
 
-// SearchOrders implements v1.SearchServiceServer.
-func (s server) SearchOrders(context.Context, *searchv1.SearchOrdersRequest) (*searchv1.SearchOrdersResponse, error) {
-	// TODO: implement me
-	panic("unimplemented")
+func (s serverTx) SearchOrders(ctx context.Context, request *searchv1.SearchOrdersRequest) (resp *searchv1.SearchOrdersResponse, err error) {
+	ctx = s.c.Scoped(ctx)
+	defer func(tx *gorm.DB) {
+		err = s.closeTx(tx, err)
+	}(di.Get(ctx, "tx").(*gorm.DB))
+
+	next := server{app: di.Get(ctx, "app").(usecase.SearchUseCase)}
+
+	return next.SearchOrders(ctx, request)
+}
+
+func (s serverTx) closeTx(tx *gorm.DB, err error) error {
+	if p := recover(); p != nil {
+		_ = tx.Rollback()
+		panic(p)
+	} else if err != nil {
+		_ = tx.Rollback()
+		return err
+	} else {
+		return tx.Commit().Error
+	}
 }
