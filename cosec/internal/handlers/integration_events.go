@@ -22,10 +22,15 @@ func NewIntegrationEventHandlers(saga sec.Orchestrator[*models.CreateOrderData])
 	}
 }
 
-func RegisterIntegrationEventHandlers(subscriber am.RawMessageStream, handlers am.RawMessageHandler) (err error) {
-	return subscriber.Subscribe(orderv1.OrderAggregateChannel, handlers, am.MessageFilter{
+func RegisterIntegrationEventHandlers(subscriber am.EventSubscriber, handlers ddd.EventHandler[ddd.Event]) (err error) {
+	evtMsgHandler := am.MessageHandlerFunc[am.IncomingEventMessage](func(ctx context.Context, eventMsg am.IncomingEventMessage) error {
+		return handlers.HandleEvent(ctx, eventMsg)
+	})
+
+	_, err = subscriber.Subscribe(orderv1.OrderAggregateChannel, evtMsgHandler, am.MessageFilter{
 		orderv1.OrderCreatedEvent,
 	}, am.GroupName("cosec-ordering"))
+	return
 }
 
 func (h integrationHandlers[T]) HandleEvent(ctx context.Context, event T) error {

@@ -1,14 +1,14 @@
 package mapper
 
 import (
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/valueobject"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/entity"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/infrastructure/persistence/gorm/po"
 	"github.com/shopspring/decimal"
 )
 
 type ProductCacheMapperIntf interface {
-	ToPersistence(store valueobject.Product) (po.ProductCache, error)
-	ToDomain(store po.ProductCache) (valueobject.Product, error)
+	ToPersistence(store entity.Product) (po.ProductCache, error)
+	ToDomain(store po.ProductCache) (entity.Product, error)
 }
 
 type ProductCacheMapper struct{}
@@ -19,7 +19,7 @@ func NewProductCacheMapper() *ProductCacheMapper {
 	return &ProductCacheMapper{}
 }
 
-func (p *ProductCacheMapper) ToPersistence(product valueobject.Product) (po.ProductCache, error) {
+func (p *ProductCacheMapper) ToPersistence(product entity.Product) (po.ProductCache, error) {
 	return po.ProductCache{
 		ID:      product.ID,
 		StoreID: product.StoreID,
@@ -28,7 +28,7 @@ func (p *ProductCacheMapper) ToPersistence(product valueobject.Product) (po.Prod
 	}, nil
 }
 
-func (p *ProductCacheMapper) ToDomain(store po.ProductCache) (valueobject.Product, error) {
+func (p *ProductCacheMapper) ToDomain(store po.ProductCache) (entity.Product, error) {
 	price, _ := store.Price.Float64()
-	return valueobject.NewProduct(store.ID, store.StoreID, store.Name, price), nil
+	return entity.NewProduct(store.ID, store.StoreID, store.Name, price), nil
 }

@@ -12,22 +12,19 @@ import (
 	storev1 "github.com/Chengxufeng1994/event-driven-arch-in-go/store/api/store/v1"
 )
 
-type IntegrationEventHandlers[T ddd.Event] struct {
+type integrationEventHandlers[T ddd.Event] struct {
 	orders    out.OrderRepository
 	customers out.CustomerCacheRepository
 	products  out.ProductCacheRepository
 	stores    out.StoreCacheRepository
 }
 
-var _ ddd.EventHandler[ddd.Event] = (*IntegrationEventHandlers[ddd.Event])(nil)
+var _ ddd.EventHandler[ddd.Event] = (*integrationEventHandlers[ddd.Event])(nil)
 
-func NewIntegrationEventHandlers(
-	orders out.OrderRepository,
-	customers out.CustomerCacheRepository,
-	products out.ProductCacheRepository,
-	stores out.StoreCacheRepository,
-) *IntegrationEventHandlers[ddd.Event] {
-	return &IntegrationEventHandlers[ddd.Event]{
+func NewIntegrationEventHandlers(orders out.OrderRepository, customers out.CustomerCacheRepository,
+	products out.ProductCacheRepository, stores out.StoreCacheRepository,
+) *integrationEventHandlers[ddd.Event] {
+	return &integrationEventHandlers[ddd.Event]{
 		orders:    orders,
 		customers: customers,
 		products:  products,
@@ -35,15 +32,18 @@ func NewIntegrationEventHandlers(
 	}
 }
 
-func RegisterIntegrationEventHandlers(subscriber am.RawMessageStream, handlers am.RawMessageHandler) error {
-	err := subscriber.Subscribe(customerv1.CustomerAggregateChannel, handlers, am.MessageFilter{
+func RegisterIntegrationEventHandlers(subscriber am.EventSubscriber, handlers ddd.EventHandler[ddd.Event]) error {
+	evtMsgHandler := am.MessageHandlerFunc[am.IncomingEventMessage](func(ctx context.Context, eventMsg am.IncomingEventMessage) error {
+		return handlers.HandleEvent(ctx, eventMsg)
+	})
+	_, err := subscriber.Subscribe(customerv1.CustomerAggregateChannel, evtMsgHandler, am.MessageFilter{
 		customerv1.CustomerRegisteredEvent,
 	}, am.GroupName("search-customers"))
 	if err != nil {
 		return err
 	}
 
-	err = subscriber.Subscribe(orderv1.OrderAggregateChannel, handlers, am.MessageFilter{
+	_, err = subscriber.Subscribe(orderv1.OrderAggregateChannel, evtMsgHandler, am.MessageFilter{
 		orderv1.OrderCreatedEvent,
 		orderv1.OrderReadiedEvent,
 		orderv1.OrderCanceledEvent,
@@ -53,7 +53,7 @@ func RegisterIntegrationEventHandlers(subscriber am.RawMessageStream, handlers a
 		return err
 	}
 
-	err = subscriber.Subscribe(storev1.ProductAggregateChannel, handlers, am.MessageFilter{
+	_, err = subscriber.Subscribe(storev1.ProductAggregateChannel, evtMsgHandler, am.MessageFilter{
 		storev1.ProductAddedEvent,
 		storev1.ProductRebrandedEvent,
 		storev1.ProductRemovedEvent,
@@ -62,7 +62,7 @@ func RegisterIntegrationEventHandlers(subscriber am.RawMessageStream, handlers a
 		return err
 	}
 
-	err = subscriber.Subscribe(storev1.StoreAggregateChannel, handlers, am.MessageFilter{
+	_, err = subscriber.Subscribe(storev1.StoreAggregateChannel, evtMsgHandler, am.MessageFilter{
 		storev1.StoreCreatedEvent,
 		storev1.StoreRebrandedEvent,
 	}, am.GroupName("search-stores"))
@@ -73,18 +73,10 @@ func RegisterIntegrationEventHandlers(subscriber am.RawMessageStream, handlers a
 	return nil
 }
 
-func (h *IntegrationEventHandlers[T]) HandleEvent(ctx context.Context, event T) error {
+func (h *integrationEventHandlers[T]) HandleEvent(ctx context.Context, event T) error {
 	switch event.EventName() {
 	case customerv1.CustomerRegisteredEvent:
 		return h.onCustomerRegistered(ctx, event)
-	case orderv1.OrderCreatedEvent:
-		return h.onOrderCreated(ctx, event)
-	case orderv1.OrderReadiedEvent:
-		return h.onOrderReadied(ctx, event)
-	case orderv1.OrderCanceledEvent:
-		return h.onOrderCanceled(ctx, event)
-	case orderv1.OrderCompletedEvent:
-		return h.onOrderCompleted(ctx, event)
 	case storev1.ProductAddedEvent:
 		return h.onProductAdded(ctx, event)
 	case storev1.ProductRebrandedEvent:
@@ -95,17 +87,50 @@ func (h *IntegrationEventHandlers[T]) HandleEvent(ctx context.Context, event T) 
 		return h.onStoreCreated(ctx, event)
 	case storev1.StoreRebrandedEvent:
 		return h.onStoreRebranded(ctx, event)
+	case orderv1.OrderCreatedEvent:
+		return h.onOrderCreated(ctx, event)
+	case orderv1.OrderReadiedEvent:
+		return h.onOrderReadied(ctx, event)
+	case orderv1.OrderCanceledEvent:
+		return h.onOrderCanceled(ctx, event)
+	case orderv1.OrderCompletedEvent:
+		return h.onOrderCompleted(ctx, event)
 	}
 
 	return nil
 }
 
-func (h IntegrationEventHandlers[T]) onCustomerRegistered(ctx context.Context, event T) error {
+func (h integrationEventHandlers[T]) onCustomerRegistered(ctx context.Context, event T) error {
 	payload := event.Payload().(*customerv1.CustomerRegistered)
 	return h.customers.Add(ctx, payload.GetId(), payload.GetName())
 }
 
-func (h IntegrationEventHandlers[T]) onOrderCreated(ctx context.Context, event T) error {
+func (h integrationEventHandlers[T]) onProductAdded(ctx context.Context, event ddd.Event) error {
+	payload := event.Payload().(*storev1.ProductAdded)
+	return h.products.Add(ctx, payload.GetId(), payload.GetStoreId(), payload.GetName())
+}
+
+func (h integrationEventHandlers[T]) onProductRebranded(ctx context.Context, event ddd.Event) error {
+	payload := event.Payload().(*storev1.ProductRebranded)
+	return h.products.Rebrand(ctx, payload.GetId(), payload.GetName())
+}
+
+func (h integrationEventHandlers[T]) onProductRemoved(ctx context.Context, event ddd.Event) error {
+	payload := event.Payload().(*storev1.ProductRemoved)
+	return h.products.Remove(ctx, payload.GetId())
+}
+
+func (h integrationEventHandlers[T]) onStoreCreated(ctx context.Context, event ddd.Event) error {
+	payload := event.Payload().(*storev1.StoreCreated)
+	return h.stores.Add(ctx, payload.GetId(), payload.GetName())
+}
+
+func (h integrationEventHandlers[T]) onStoreRebranded(ctx context.Context, event ddd.Event) error {
+	payload := event.Payload().(*storev1.StoreRebranded)
+	return h.stores.Rename(ctx, payload.GetId(), payload.GetName())
+}
+
+func (h integrationEventHandlers[T]) onOrderCreated(ctx context.Context, event T) error {
 	payload := event.Payload().(*orderv1.OrderCreated)
 
 	customer, err := h.customers.Find(ctx, payload.CustomerId)
@@ -152,42 +177,17 @@ func (h IntegrationEventHandlers[T]) onOrderCreated(ctx context.Context, event T
 	return h.orders.Add(ctx, order)
 }
 
-func (h IntegrationEventHandlers[T]) onOrderReadied(ctx context.Context, event T) error {
+func (h integrationEventHandlers[T]) onOrderReadied(ctx context.Context, event T) error {
 	payload := event.Payload().(*orderv1.OrderReadied)
 	return h.orders.UpdateStatus(ctx, payload.GetId(), "Ready For Pickup")
 }
 
-func (h IntegrationEventHandlers[T]) onOrderCanceled(ctx context.Context, event T) error {
+func (h integrationEventHandlers[T]) onOrderCanceled(ctx context.Context, event T) error {
 	payload := event.Payload().(*orderv1.OrderCanceled)
 	return h.orders.UpdateStatus(ctx, payload.GetId(), "Canceled")
 }
 
-func (h IntegrationEventHandlers[T]) onOrderCompleted(ctx context.Context, event T) error {
+func (h integrationEventHandlers[T]) onOrderCompleted(ctx context.Context, event T) error {
 	payload := event.Payload().(*orderv1.OrderCompleted)
 	return h.orders.UpdateStatus(ctx, payload.GetId(), "Completed")
-}
-
-func (h IntegrationEventHandlers[T]) onProductAdded(ctx context.Context, event ddd.Event) error {
-	payload := event.Payload().(*storev1.ProductAdded)
-	return h.products.Add(ctx, payload.GetId(), payload.GetStoreId(), payload.GetName())
-}
-
-func (h IntegrationEventHandlers[T]) onProductRebranded(ctx context.Context, event ddd.Event) error {
-	payload := event.Payload().(*storev1.ProductRebranded)
-	return h.products.Rebrand(ctx, payload.GetId(), payload.GetName())
-}
-
-func (h IntegrationEventHandlers[T]) onProductRemoved(ctx context.Context, event ddd.Event) error {
-	payload := event.Payload().(*storev1.ProductRemoved)
-	return h.products.Remove(ctx, payload.GetId())
-}
-
-func (h IntegrationEventHandlers[T]) onStoreCreated(ctx context.Context, event ddd.Event) error {
-	payload := event.Payload().(*storev1.StoreCreated)
-	return h.stores.Add(ctx, payload.GetId(), payload.GetName())
-}
-
-func (h IntegrationEventHandlers[T]) onStoreRebranded(ctx context.Context, event ddd.Event) error {
-	payload := event.Payload().(*storev1.StoreRebranded)
-	return h.stores.Rename(ctx, payload.GetId(), payload.GetName())
 }

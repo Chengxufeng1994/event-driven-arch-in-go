@@ -6,11 +6,57 @@ const (
 	AggregateVersionKey = "aggregate-version"
 )
 
-type Eventer interface {
-	AddEvent(string, EventPayload, ...EventOption)
-	Events() []AggregateEvent
-	ClearEvents()
+// Aggregate
+type (
+	AggregateNamer interface {
+		AggregateName() string
+	}
+
+	Eventer interface {
+		AddEvent(string, EventPayload, ...EventOption)
+		Events() []AggregateEvent
+		ClearEvents()
+	}
+
+	Aggregate interface {
+		IDer
+		AggregateNamer
+		Eventer
+		IDSetter
+		NameSetter
+	}
+
+	aggregate struct {
+		Entity
+		events []AggregateEvent
+	}
+)
+
+var _ Aggregate = (*aggregate)(nil)
+
+func NewAggregate(id, name string) *aggregate {
+	return &aggregate{
+		Entity: NewEntity(id, name),
+		events: make([]AggregateEvent, 0),
+	}
 }
+
+func (agg aggregate) AggregateName() string    { return agg.EntityName() }
+func (agg aggregate) Events() []AggregateEvent { return agg.events }
+func (agg *aggregate) ClearEvents()            { agg.events = []AggregateEvent{} }
+func (agg *aggregate) AddEvent(name string, payload EventPayload, options ...EventOption) {
+	options = append(
+		options,
+		Metadata{
+			AggregateNameKey: agg.EntityName(),
+			AggregateIDKey:   agg.ID(),
+		})
+	agg.events = append(
+		agg.events,
+		NewAggregateEvent(name, payload, options...))
+}
+
+func (agg *aggregate) setEvents(events []AggregateEvent) { agg.events = events }
 
 // AggregateEvent
 type (
@@ -21,58 +67,19 @@ type (
 		AggregateVersion() int
 	}
 
-	aggregateEventBase struct {
+	aggregateEvent struct {
 		event
 	}
 )
 
-var _ AggregateEvent = (*aggregateEventBase)(nil)
+var _ AggregateEvent = (*aggregateEvent)(nil)
 
-func NewAggregateEventBase(name string, payload EventPayload, options ...EventOption) *aggregateEventBase {
-	return &aggregateEventBase{
+func NewAggregateEvent(name string, payload EventPayload, options ...EventOption) aggregateEvent {
+	return aggregateEvent{
 		event: newEvent(name, payload, options...),
 	}
 }
 
-func (a *aggregateEventBase) AggregateID() string   { return a.metadata.Get(AggregateIDKey).(string) }
-func (a *aggregateEventBase) AggregateName() string { return a.metadata.Get(AggregateNameKey).(string) }
-func (a *aggregateEventBase) AggregateVersion() int { return a.metadata.Get(AggregateVersionKey).(int) }
-
-// Aggregate
-type AggregateNamer interface {
-	AggregateName() string
-}
-
-type Aggregate interface {
-	AggregateNamer
-	Eventer
-}
-
-type AggregateBase struct {
-	EntityBase
-	events []AggregateEvent
-}
-
-var _ Aggregate = (*AggregateBase)(nil)
-
-func NewAggregateBase(id, name string) AggregateBase {
-	return AggregateBase{
-		EntityBase: NewEntityBase(id, name),
-		events:     make([]AggregateEvent, 0),
-	}
-}
-
-func (agg *AggregateBase) AggregateName() string { return agg.name }
-func (agg *AggregateBase) AddEvent(name string, payload EventPayload, options ...EventOption) {
-	options = append(
-		options,
-		Metadata{
-			AggregateNameKey: agg.name,
-			AggregateIDKey:   agg.id,
-		})
-
-	agg.events = append(agg.events, NewAggregateEventBase(name, payload, options...))
-}
-func (agg *AggregateBase) Events() []AggregateEvent          { return agg.events }
-func (agg *AggregateBase) ClearEvents()                      { agg.events = []AggregateEvent{} }
-func (agg *AggregateBase) setEvents(events []AggregateEvent) { agg.events = events }
+func (a aggregateEvent) AggregateID() string   { return a.metadata.Get(AggregateIDKey).(string) }
+func (a aggregateEvent) AggregateName() string { return a.metadata.Get(AggregateNameKey).(string) }
+func (a aggregateEvent) AggregateVersion() int { return a.metadata.Get(AggregateVersionKey).(int) }

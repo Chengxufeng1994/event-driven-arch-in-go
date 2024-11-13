@@ -18,7 +18,7 @@ var (
 )
 
 type Customer struct {
-	ddd.AggregateBase
+	ddd.Aggregate
 	Name      string
 	SmsNumber string
 	Enabled   bool
@@ -26,7 +26,7 @@ type Customer struct {
 
 func NewCustomer(id string) *Customer {
 	return &Customer{
-		AggregateBase: ddd.NewAggregateBase(id, CustomerAggregate),
+		Aggregate: ddd.NewAggregate(id, CustomerAggregate),
 	}
 }
 

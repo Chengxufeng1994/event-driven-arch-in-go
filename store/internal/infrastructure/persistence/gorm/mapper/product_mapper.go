@@ -37,12 +37,12 @@ func (p *ProductMapper) ToPersistent(product *aggregate.Product) *po.Product {
 func (p *ProductMapper) ToDomain(product *po.Product) *aggregate.Product {
 	price, _ := product.Price.Float64()
 	return &aggregate.Product{
-		AggregateBase: es.NewAggregateBase(product.ID, aggregate.ProductAggregate),
-		StoreID:       product.StoreID,
-		Name:          product.Name,
-		Description:   product.Description,
-		SKU:           product.SKU,
-		Price:         price,
+		Aggregate:   es.NewAggregate(product.ID, aggregate.ProductAggregate),
+		StoreID:     product.StoreID,
+		Name:        product.Name,
+		Description: product.Description,
+		SKU:         product.SKU,
+		Price:       price,
 	}
 }
 

@@ -30,21 +30,21 @@ type (
 var _ usecase.BasketUseCase = (*BasketApplication)(nil)
 
 func NewBasketApplication(
-	basketRepository repository.BasketRepository,
-	storeRepository repository.StoreRepository,
-	productRepository repository.ProductRepository,
+	baskets repository.BasketRepository,
+	stores repository.StoreRepository,
+	products repository.ProductRepository,
 	publisher ddd.EventPublisher[ddd.Event],
 ) *BasketApplication {
 	return &BasketApplication{
 		appCommands: appCommands{
-			StartBasketHandler:    command.NewStartBasketHandler(basketRepository, publisher),
-			CancelBasketHandler:   command.NewCancelBasketHandler(basketRepository, publisher),
-			CheckoutBasketHandler: command.NewCheckoutBasketHandler(basketRepository, publisher),
-			AddItemHandler:        command.NewAddItemHandler(basketRepository, productRepository, storeRepository),
-			RemoveItemHandler:     command.NewRemoveItemHandler(basketRepository, productRepository),
+			StartBasketHandler:    command.NewStartBasketHandler(baskets, publisher),
+			CancelBasketHandler:   command.NewCancelBasketHandler(baskets, publisher),
+			CheckoutBasketHandler: command.NewCheckoutBasketHandler(baskets, publisher),
+			AddItemHandler:        command.NewAddItemHandler(baskets, products, stores),
+			RemoveItemHandler:     command.NewRemoveItemHandler(baskets, products),
 		},
 		appQueries: appQueries{
-			GetBasketHandler: query.NewGetBasketHandler(basketRepository),
+			GetBasketHandler: query.NewGetBasketHandler(baskets),
 		},
 	}
 }

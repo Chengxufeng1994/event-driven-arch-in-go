@@ -3,6 +3,7 @@ package command
 import (
 	"context"
 
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/domain/repository"
 )
 
@@ -21,24 +22,32 @@ func NewRebrandProduct(id, name, description string) RebrandProduct {
 }
 
 type RebrandProductHandler struct {
-	productRepository repository.ProductRepository
+	products  repository.ProductRepository
+	publisher ddd.EventPublisher[ddd.Event]
 }
 
-func NewRebrandProductHandler(productRepository repository.ProductRepository) RebrandProductHandler {
+func NewRebrandProductHandler(products repository.ProductRepository, publisher ddd.EventPublisher[ddd.Event]) RebrandProductHandler {
 	return RebrandProductHandler{
-		productRepository: productRepository,
+		products:  products,
+		publisher: publisher,
 	}
 }
 
 func (h RebrandProductHandler) RebrandProduct(ctx context.Context, cmd RebrandProduct) error {
-	product, err := h.productRepository.Load(ctx, cmd.ID)
+	product, err := h.products.Load(ctx, cmd.ID)
 	if err != nil {
 		return err
 	}
 
-	if err := product.Rebrand(cmd.Name, cmd.Description); err != nil {
+	event, err := product.Rebrand(cmd.Name, cmd.Description)
+	if err != nil {
 		return err
 	}
 
-	return h.productRepository.Save(ctx, product)
+	err = h.products.Save(ctx, product)
+	if err != nil {
+		return err
+	}
+
+	return h.publisher.Publish(ctx, event)
 }

@@ -18,18 +18,19 @@ type CommandHandlers[T ddd.Command] struct {
 
 var _ ddd.CommandHandler[ddd.Command] = (*CommandHandlers[ddd.Command])(nil)
 
-func RegisterCommandHandlers(subscriber am.RawMessageSubscriber, handlers am.RawMessageHandler) error {
-	return subscriber.Subscribe(depotv1.CommandChannel, handlers, am.MessageFilter{
-		depotv1.CreateShoppingListCommand,
-		depotv1.CancelShoppingListCommand,
-		depotv1.InitiateShoppingListCommand,
-	}, am.GroupName("depot-commands"))
-}
-
 func NewCommandHandlers(app usecase.ShoppingListUseCase) ddd.CommandHandler[ddd.Command] {
 	return &CommandHandlers[ddd.Command]{
 		app: app,
 	}
+}
+
+func RegisterCommandHandlers(subscriber am.RawMessageSubscriber, handlers am.RawMessageHandler) error {
+	_, err := subscriber.Subscribe(depotv1.CommandChannel, handlers, am.MessageFilter{
+		depotv1.CreateShoppingListCommand,
+		depotv1.CancelShoppingListCommand,
+		depotv1.InitiateShoppingListCommand,
+	}, am.GroupName("depot-commands"))
+	return err
 }
 
 func (h *CommandHandlers[T]) HandleCommand(ctx context.Context, cmd T) (ddd.Reply, error) {

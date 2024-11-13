@@ -3,8 +3,8 @@ package gorm
 import (
 	"context"
 
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/entity"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/repository"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/valueobject"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/infrastructure/persistence/gorm/po"
 	"github.com/jackc/pgerrcode"
 	"github.com/lib/pq"
@@ -92,7 +92,7 @@ func (r *GormProductCacheRepository) UpdatePrice(ctx context.Context, productID 
 }
 
 // Find implements repository.ProductCacheRepository.
-func (r *GormProductCacheRepository) Find(ctx context.Context, productID string) (*valueobject.Product, error) {
+func (r *GormProductCacheRepository) Find(ctx context.Context, productID string) (*entity.Product, error) {
 	var productPO po.ProductCache
 
 	result := r.db.WithContext(ctx).
@@ -115,6 +115,6 @@ func (r *GormProductCacheRepository) Find(ctx context.Context, productID string)
 	}
 
 	price, _ := productPO.Price.Float64()
-	product := valueobject.NewProduct(productPO.ID, productPO.StoreID, productPO.Name, price)
+	product := entity.NewProduct(productPO.ID, productPO.StoreID, productPO.Name, price)
 	return &product, nil
 }

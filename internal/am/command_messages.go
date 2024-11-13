@@ -50,7 +50,7 @@ var _ CommandMessage = (*commandMessage)(nil)
 var _ CommandStream = (*commandStream)(nil)
 
 func NewCommandStream(reg registry.Registry, stream RawMessageStream) CommandStream {
-	return &commandStream{
+	return commandStream{
 		reg:    reg,
 		stream: stream,
 	}
@@ -86,7 +86,7 @@ func (s commandStream) Publish(ctx context.Context, topicName string, command dd
 	})
 }
 
-func (s commandStream) Subscribe(topicName string, handler CommandMessageHandler, options ...SubscriberOption) error {
+func (s commandStream) Subscribe(topicName string, handler CommandMessageHandler, options ...SubscriberOption) (Subscription, error) {
 	cfg := NewSubscriberConfig(options)
 
 	var filters map[string]struct{}
@@ -131,6 +131,9 @@ func (s commandStream) Subscribe(topicName string, handler CommandMessageHandler
 	})
 
 	return s.stream.Subscribe(topicName, fn, options...)
+}
+func (s commandStream) Unsubscribe() error {
+	return s.stream.Unsubscribe()
 }
 
 func (c commandMessage) ID() string                  { return c.id }

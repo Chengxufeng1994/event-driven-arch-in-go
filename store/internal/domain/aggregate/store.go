@@ -17,7 +17,7 @@ var (
 )
 
 type Store struct {
-	es.AggregateBase
+	es.Aggregate
 	Name          string
 	Location      string
 	Participating bool
@@ -30,11 +30,11 @@ var _ interface {
 
 func NewStore(id string) *Store {
 	return &Store{
-		AggregateBase: es.NewAggregateBase(id, StoreAggregate),
+		Aggregate: es.NewAggregate(id, StoreAggregate),
 	}
 }
 
-func CreateStore(id, name, location string) (*Store, error) {
+func (s *Store) InitStore(name, location string) (ddd.Event, error) {
 	if name == "" {
 		return nil, ErrStoreNameIsBlank
 	}
@@ -43,48 +43,51 @@ func CreateStore(id, name, location string) (*Store, error) {
 		return nil, ErrStoreLocationIsBlank
 	}
 
-	store := NewStore(id)
+	s.AddEvent(event.StoreCreatedEvent, event.NewStoreCreatedEvent(
+		name,
+		location,
+	))
 
-	store.AddEvent(event.StoreCreatedEvent, event.NewStoreCreatedEvent(name, location))
-
-	return store, nil
+	return ddd.NewEvent(event.StoreCreatedEvent, s), nil
 }
 
 // register serialize deserialize
 func (Store) Key() string { return StoreAggregate }
 
-func (store *Store) EnableParticipation() error {
-	if store.Participating {
-		return ErrStoreIsAlreadyParticipating
+func (s *Store) EnableParticipation() (ddd.Event, error) {
+	if s.Participating {
+		return nil, ErrStoreIsAlreadyParticipating
 	}
 
-	store.Participating = true
+	s.Participating = true
 
-	store.AddEvent(event.StoreParticipationEnabledEvent, event.NewStoreParticipationToggled(
+	s.AddEvent(event.StoreParticipationEnabledEvent, event.NewStoreParticipationToggled(
 		true,
 	))
 
-	return nil
+	return ddd.NewEvent(event.StoreParticipationEnabledEvent, s), nil
 }
 
-func (store *Store) DisableParticipation() error {
-	if !store.Participating {
-		return ErrStoreIsAlreadyNotParticipating
+func (s *Store) DisableParticipation() (ddd.Event, error) {
+	if !s.Participating {
+		return nil, ErrStoreIsAlreadyNotParticipating
 	}
 
-	store.Participating = false
+	s.Participating = false
 
-	store.AddEvent(event.StoreParticipationDisabledEvent, event.NewStoreParticipationToggled(
+	s.AddEvent(event.StoreParticipationDisabledEvent, event.NewStoreParticipationToggled(
 		false,
 	))
 
-	return nil
+	return ddd.NewEvent(event.StoreParticipationDisabledEvent, s), nil
 }
 
-func (store *Store) Rebrand(name string) error {
-	store.AddEvent(event.StoreRebrandedEvent, event.NewStoreRebranded(name))
+func (s *Store) Rebrand(name string) (ddd.Event, error) {
+	s.AddEvent(event.StoreRebrandedEvent, event.NewStoreRebranded(
+		name,
+	))
 
-	return nil
+	return ddd.NewEvent(event.StoreRebrandedEvent, s), nil
 }
 
 func (store *Store) ApplyEvent(e ddd.Event) error {

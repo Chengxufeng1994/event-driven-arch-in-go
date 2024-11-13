@@ -62,9 +62,7 @@ func (s replyStream) Publish(ctx context.Context, topicName string, reply ddd.Re
 	var payload []byte
 
 	if reply.ReplyName() != SuccessReply && reply.ReplyName() != FailureReply {
-		payload, err = s.reg.Serialize(
-			reply.ReplyName(), reply.Payload(),
-		)
+		payload, err = s.reg.Serialize(reply.ReplyName(), reply.Payload())
 		if err != nil {
 			return err
 		}
@@ -87,7 +85,7 @@ func (s replyStream) Publish(ctx context.Context, topicName string, reply ddd.Re
 	})
 }
 
-func (s replyStream) Subscribe(topicName string, handler MessageHandler[IncomingReplyMessage], options ...SubscriberOption) error {
+func (s replyStream) Subscribe(topicName string, handler MessageHandler[IncomingReplyMessage], options ...SubscriberOption) (Subscription, error) {
 	cfg := NewSubscriberConfig(options)
 
 	var filters map[string]struct{}
@@ -137,6 +135,9 @@ func (s replyStream) Subscribe(topicName string, handler MessageHandler[Incoming
 
 	return s.stream.Subscribe(topicName, fn, options...)
 }
+func (s replyStream) Unsubscribe() error {
+	return s.stream.Unsubscribe()
+}
 
 func (r replyMessage) ID() string                { return r.id }
 func (r replyMessage) ReplyName() string         { return r.name }
@@ -158,13 +159,13 @@ type replyMsgHandler struct {
 var _ RawMessageHandler = (*replyMsgHandler)(nil)
 
 func NewReplyMessageHandler(reg registry.Registry, handler ddd.ReplyHandler[ddd.Reply]) RawMessageHandler {
-	return &replyMsgHandler{
+	return replyMsgHandler{
 		reg:     reg,
 		handler: handler,
 	}
 }
 
-func (h *replyMsgHandler) HandleMessage(ctx context.Context, msg IncomingRawMessage) error {
+func (h replyMsgHandler) HandleMessage(ctx context.Context, msg IncomingRawMessage) error {
 	var replyData ReplyMessageData
 
 	err := proto.Unmarshal(msg.Data(), &replyData)

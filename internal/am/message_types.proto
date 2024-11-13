@@ -20,4 +20,3 @@ message CommandMessageData {
   google.protobuf.Timestamp occurred_at = 2;
   google.protobuf.Struct metadata = 3;
 }
-

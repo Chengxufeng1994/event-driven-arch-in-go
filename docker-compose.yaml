@@ -1,6 +1,8 @@
+include:
+  - docker-compose.infra.yaml
 services:
-  monolith:
-    container_name: monolith
+  monolith_debug:
+    container_name: monolith_debug
     build:
       context: .
       dockerfile: build/docker/Dockerfile.debug
@@ -14,92 +16,33 @@ services:
     depends_on:
       - nats
       - postgres
-    profiles:
-      - debug
     command: ["/wait-for", "postgres:5432", "--", "/dlv", "exec", "--listen=:2345", "--headless=true", "--continue", "--api-version=2", "--accept-multiclient", "/mallbots/monolith"]
     networks:
       eda_network:
         ipv4_address: 10.5.0.10
+    profiles:
+      - debug
 
-  postgres:
-    container_name: postgres
-    image: postgres:16-alpine
-    ports:
-      - 5432:5432
-    volumes:
-      - $PWD/build/docker/database:/docker-entrypoint-initdb.d
-      - pgdata:/var/lib/postgresql/data
+  monolith:
+    container_name: monolith
+    build:
+      context: .
+      dockerfile: build/docker/Dockerfile
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=postgres
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
-      interval: 10s
-      retries: 5
-      start_period: 30s
-      timeout: 10s
-    networks:
-      eda_network:
-        ipv4_address: 10.5.0.11
-
-  pgadmin:
-    container_name: pgadmin
-    image: dpage/pgadmin4
+      - EDA_INFRASTRUCTURE_GORM_DSN=host=postgres user=postgres password=postgres dbname=mallbots port=5432 sslmode=disable TimeZone=Asia/Taipei
+      - EDA_INFRASTRUCTURE_NATS_URL=nats://nats:4222
     ports:
-      - 5050:80
-    environment:
-      - PGADMIN_DEFAULT_EMAIL=admin@gmail.com
-      - PGADMIN_DEFAULT_PASSWORD=admin
+      - 8080:8080
+      - 8081:8081
     depends_on:
-      postgres:
-        condition: service_healthy
-        restart: true
-    links:
-      - "postgres:db"
+      - nats
+      - postgres
+    command: [ "./wait-for", "postgres:5432", "--", "/mallbots/monolith" ]
+    profiles:
+      - monolith
     networks:
       eda_network:
-        ipv4_address: 10.5.0.12
-    configs:
-      - source: servers.json
-        target: /pgadmin4/servers.json
-      - source: pgpass
-        target: /pgpass
-
-  nats:
-    container_name: nats
-    image: nats:2-alpine
-    ports:
-      - 4222:4222
-      - 6222:6222
-      - 8222:8222
-    command:
-      - -js
-      - -sd
-      - /var/lib/nats/data
-    volumes:
-      - jsdata:/var/lib/nats/data
-    networks:
-      eda_network:
-        ipv4_address: 10.5.0.13
-
-configs:
-  pgpass:
-    content: db:5432:*:postgres:postgres
-  servers.json:
-    content: |
-      {"Servers": {
-        "1": {
-          "Group": "Servers",
-          "Name": "My Local Postgres 16",
-          "Host": "db",
-          "Port": 5432,
-          "MaintenanceDB": "postgres",
-          "Username": "postgres",
-          "PassFile": "/pgpass",
-          "SSLMode": "prefer"
-        }
-      }}
+        ipv4_address: 10.5.0.10
 
 networks:
   eda_network:
@@ -109,7 +52,3 @@ networks:
       config:
        - subnet: 10.5.0.0/16
          gateway: 10.5.0.1
-
-volumes:
-  pgdata: {}
-  jsdata: {}

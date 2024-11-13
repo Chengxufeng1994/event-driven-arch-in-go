@@ -7,6 +7,7 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/di"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/registry"
+	storev1 "github.com/Chengxufeng1994/event-driven-arch-in-go/store/api/store/v1"
 	"gorm.io/gorm"
 )
 
@@ -37,5 +38,19 @@ func RegisterIntegrationEventHandlersTx(container di.Container) error {
 
 	subscriber := container.Get("stream").(am.RawMessageStream)
 
-	return RegisterIntegrationEventHandlers(subscriber, evtMsgHandler)
+	_, err := subscriber.Subscribe(storev1.StoreAggregateChannel, evtMsgHandler, am.MessageFilter{
+		storev1.StoreCreatedEvent,
+		storev1.StoreRebrandedEvent,
+	}, am.GroupName("depot-stores"))
+	if err != nil {
+		return err
+	}
+
+	_, err = subscriber.Subscribe(storev1.ProductAggregateChannel, evtMsgHandler, am.MessageFilter{
+		storev1.ProductAddedEvent,
+		storev1.ProductRebrandedEvent,
+		storev1.ProductRemovedEvent,
+	}, am.GroupName("depot-products"))
+
+	return err
 }

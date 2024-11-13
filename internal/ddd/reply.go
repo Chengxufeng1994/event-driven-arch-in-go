@@ -29,7 +29,7 @@ type (
 	}
 
 	reply struct {
-		EntityBase
+		Entity
 		payload    ReplyPayload
 		metadata   Metadata
 		occurredAt time.Time
@@ -44,7 +44,7 @@ func NewReply(name string, payload ReplyPayload, options ...ReplyOption) Reply {
 
 func newReply(name string, payload ReplyPayload, options ...ReplyOption) reply {
 	rep := reply{
-		EntityBase: NewEntityBase(uuid.New().String(), name),
+		Entity:     NewEntity(uuid.New().String(), name),
 		payload:    payload,
 		metadata:   make(Metadata),
 		occurredAt: time.Now(),
@@ -57,7 +57,7 @@ func newReply(name string, payload ReplyPayload, options ...ReplyOption) reply {
 	return rep
 }
 
-func (e reply) ReplyName() string     { return e.name }
+func (e reply) ReplyName() string     { return e.EntityName() }
 func (e reply) Payload() ReplyPayload { return e.payload }
 func (e reply) Metadata() Metadata    { return e.metadata }
 func (e reply) OccurredAt() time.Time { return e.occurredAt }

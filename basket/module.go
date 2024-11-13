@@ -12,9 +12,8 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/docs"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/application"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/application/handler"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/aggregate"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/entity"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/event"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/repository"
 	infragrpc "github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/infrastructure/client/grpc"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/infrastructure/logging"
@@ -28,28 +27,27 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/es"
 	evenstoregorm "github.com/Chengxufeng1994/event-driven-arch-in-go/internal/eventstore/gorm"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/logger"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/monolith"
 	outboxstoregorm "github.com/Chengxufeng1994/event-driven-arch-in-go/internal/outboxstore/gorm"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/registry"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/registry/serdes"
 	snapshotstoregorm "github.com/Chengxufeng1994/event-driven-arch-in-go/internal/snapshotstore/gorm"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/system"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/tm"
 	storev1 "github.com/Chengxufeng1994/event-driven-arch-in-go/store/api/store/v1"
 )
 
 type Module struct{}
 
-var _ monolith.Module = (*Module)(nil)
+var _ system.Module = (*Module)(nil)
 
 func NewModule() *Module { return &Module{} }
 
-func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
+func (m *Module) Startup(ctx context.Context, mono system.Service) error {
 	container := di.New()
 	// setup Driven adapters
 	endpoint := fmt.Sprintf("%s:%d", mono.Config().Server.GPPC.Host, mono.Config().Server.GPPC.Port)
 	container.AddSingleton("registry", func(c di.Container) (any, error) {
 		reg := registry.New()
-		if err := registrations(reg); err != nil {
+		if err := domain.Registrations(reg); err != nil {
 			return nil, err
 		}
 		if err := basketv1.Registrations(reg); err != nil {
@@ -64,7 +62,7 @@ func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 		return mono.Logger(), nil
 	})
 	container.AddSingleton("stream", func(c di.Container) (any, error) {
-		return nats.NewStream(mono.Config().Infrastructure.Nats.Stream, mono.JetStream(), mono.Logger()), nil
+		return nats.NewStream(mono.Config().Infrastructure.Nats.Stream, mono.JetStream(), c.Get("logger").(logger.Logger)), nil
 	})
 	container.AddSingleton("domainEventDispatcher", func(c di.Container) (any, error) {
 		return ddd.NewEventDispatcher[ddd.Event](), nil
@@ -102,20 +100,14 @@ func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 		inboxStore := outboxstoregorm.NewInboxStore("baskets.inbox", tx)
 		return tm.NewInboxHandlerMiddleware(inboxStore), nil
 	})
-	container.AddScoped("aggregateStore", func(c di.Container) (any, error) {
+	container.AddScoped("baskets", func(c di.Container) (any, error) {
 		tx := c.Get("tx").(*gorm.DB)
 		reg := c.Get("registry").(registry.Registry)
-		return es.AggregateStoreWithMiddleware(
+		store := es.AggregateStoreWithMiddleware(
 			evenstoregorm.NewEventStore("baskets.events", tx, reg),
 			snapshotstoregorm.NewSnapshotStore("baskets.snapshots", tx, reg),
-		), nil
-	})
-	container.AddScoped("baskets", func(c di.Container) (any, error) {
-		return es.NewAggregateRepository[*aggregate.Basket](
-				aggregate.BasketAggregate,
-				c.Get("registry").(registry.Registry),
-				c.Get("aggregateStore").(es.AggregateStore)),
-			nil
+		)
+		return es.NewAggregateRepository[*aggregate.Basket](aggregate.BasketAggregate, reg, store), nil
 	})
 	container.AddScoped("stores", func(c di.Container) (any, error) {
 		return persistencegorm.NewGormStoreCacheRepository(
@@ -134,7 +126,7 @@ func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 	container.AddScoped("app", func(c di.Container) (any, error) {
 		return logging.NewLogApplicationAccess(
 			application.NewBasketApplication(
-				c.Get("baskets").(es.AggregateRepository[*aggregate.Basket]),
+				c.Get("baskets").(repository.BasketRepository),
 				c.Get("stores").(repository.StoreCacheRepository),
 				c.Get("products").(repository.ProductCacheRepository),
 				c.Get("domainEventDispatcher").(ddd.EventDispatcher[ddd.Event]),
@@ -177,42 +169,6 @@ func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 
 func (m *Module) Name() string {
 	return "basket"
-}
-
-func registrations(reg registry.Registry) error {
-	serde := serdes.NewJSONSerde(reg)
-	// Basket
-	if err := serde.Register(&aggregate.Basket{}, func(v interface{}) error {
-		basket := v.(*aggregate.Basket)
-		basket.Items = make(map[string]*entity.Item)
-		return nil
-	}); err != nil {
-		return err
-	}
-
-	// basket events
-	if err := serde.Register(event.BasketStarted{}); err != nil {
-		return err
-	}
-	if err := serde.Register(event.BasketCanceled{}); err != nil {
-		return err
-	}
-	if err := serde.Register(event.BasketCheckedOut{}); err != nil {
-		return err
-	}
-	if err := serde.Register(event.BasketItemAdded{}); err != nil {
-		return err
-	}
-	if err := serde.Register(event.BasketItemRemoved{}); err != nil {
-		return err
-	}
-
-	// basket snapshots
-	if err := serde.RegisterKey(aggregate.BasketV1{}.SnapshotName(), aggregate.BasketV1{}); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (m *Module) startOutboxProcessor(ctx context.Context, container di.Container) {

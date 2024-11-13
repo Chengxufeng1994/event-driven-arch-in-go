@@ -13,8 +13,8 @@ import (
 
 type GormShoppingListRepository struct {
 	db                 *gorm.DB
-	shoppingListMapper mapper.ShoppingListMapperIntf
 	shoppingListDao    dao.ShoppingListDaoIntf
+	shoppingListMapper mapper.ShoppingListMapperIntf
 }
 
 var _ repository.ShoppingListRepository = (*GormShoppingListRepository)(nil)
@@ -22,8 +22,8 @@ var _ repository.ShoppingListRepository = (*GormShoppingListRepository)(nil)
 func NewGormShoppingListRepository(db *gorm.DB) *GormShoppingListRepository {
 	return &GormShoppingListRepository{
 		db:                 db,
-		shoppingListMapper: mapper.NewShoppingListMapper(),
 		shoppingListDao:    dao.NewShoppingListDao(db),
+		shoppingListMapper: mapper.NewShoppingListMapper(),
 	}
 }
 

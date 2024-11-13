@@ -31,7 +31,7 @@ func (m *StoreMapper) ToPersistent(store *aggregate.Store) *po.Store {
 
 func (m *StoreMapper) ToDomain(store *po.Store) *aggregate.Store {
 	return &aggregate.Store{
-		AggregateBase: es.NewAggregateBase(store.ID, aggregate.StoreAggregate),
+		Aggregate:     es.NewAggregate(store.ID, aggregate.StoreAggregate),
 		Name:          store.Name,
 		Location:      store.Location,
 		Participating: store.Participating,

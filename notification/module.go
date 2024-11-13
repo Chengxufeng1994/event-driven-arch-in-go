@@ -7,8 +7,8 @@ import (
 	customerv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/customer/api/customer/v1"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/am"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/broker/nats"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/monolith"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/registry"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/system"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/notification/internal/application"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/notification/internal/application/handler"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/notification/internal/infrastructure/client/grpc"
@@ -20,13 +20,13 @@ import (
 
 type Module struct{}
 
-var _ monolith.Module = Module{}
+var _ system.Module = Module{}
 
 func NewModule() *Module {
 	return &Module{}
 }
 
-func (m Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
+func (m Module) Startup(ctx context.Context, mono system.Service) error {
 	// setup Driven adapters
 	endpoint := fmt.Sprintf("%s:%d", mono.Config().Server.GPPC.Host, mono.Config().Server.GPPC.Port)
 	reg := registry.New()

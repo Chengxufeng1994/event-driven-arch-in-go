@@ -39,14 +39,14 @@ func RegisterIntegrationEventHandlersTx(container di.Container) error {
 
 	subscriber := container.Get("stream").(am.RawMessageStream)
 
-	err := subscriber.Subscribe(basketv1.BasketAggregateChannel, evtMsgHandler, am.MessageFilter{
+	_, err := subscriber.Subscribe(basketv1.BasketAggregateChannel, evtMsgHandler, am.MessageFilter{
 		basketv1.BasketCheckedOutEvent,
 	}, am.GroupName("ordering-baskets"))
 	if err != nil {
 		return err
 	}
 
-	err = subscriber.Subscribe(depotv1.ShoppingListAggregateChannel, evtMsgHandler, am.MessageFilter{
+	_, err = subscriber.Subscribe(depotv1.ShoppingListAggregateChannel, evtMsgHandler, am.MessageFilter{
 		depotv1.ShoppingListCompletedEvent,
 	}, am.GroupName("ordering-depot"))
 

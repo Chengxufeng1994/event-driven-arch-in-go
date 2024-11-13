@@ -1,0 +1,114 @@
+{
+  "consumer": {
+    "name": "depot-sub"
+  },
+  "interactions": [
+    {
+      "contents": {
+        "content": {
+          "Name": "storesapi.StoreCreated",
+          "Payload": {
+            "id": "store-id",
+            "location": "NewLocation",
+            "name": "NewStore"
+          }
+        },
+        "contentType": "application/json",
+        "encoded": false
+      },
+      "description": "a StoreCreated message",
+      "matchingRules": {
+        "body": {
+          "$.Payload": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          }
+        }
+      },
+      "metadata": {
+        "contentType": "application/json"
+      },
+      "pending": false,
+      "type": "Asynchronous/Messages"
+    },
+    {
+      "contents": {
+        "content": {
+          "Name": "storesapi.StoreCreated",
+          "Payload": {
+            "id": "store-id",
+            "location": "NewLocation",
+            "name": "NewStore"
+          }
+        },
+        "contentType": "application/json",
+        "encoded": false
+      },
+      "description": "a StoreCreated message",
+      "matchingRules": {
+        "body": {
+          "$.Payload": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          }
+        }
+      },
+      "metadata": {
+        "contentType": "application/json"
+      },
+      "pending": false,
+      "type": "Asynchronous/Messages"
+    },
+    {
+      "contents": {
+        "content": {
+          "Name": "storesapi.StoreRebranded",
+          "Payload": {
+            "id": "store-id",
+            "name": "RebrandedStore"
+          }
+        },
+        "contentType": "application/json",
+        "encoded": false
+      },
+      "description": "a StoreRebranded message",
+      "matchingRules": {
+        "body": {
+          "$.Payload": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          }
+        }
+      },
+      "metadata": {
+        "contentType": "application/json"
+      },
+      "pending": false,
+      "type": "Asynchronous/Messages"
+    }
+  ],
+  "metadata": {
+    "pactRust": {
+      "ffi": "0.4.23",
+      "models": "1.2.5"
+    },
+    "pactSpecification": {
+      "version": "4.0"
+    }
+  },
+  "provider": {
+    "name": "stores-pub"
+  }
+}

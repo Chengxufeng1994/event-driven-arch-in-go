@@ -5,38 +5,40 @@ import (
 
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/di"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/domain/event"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/domain/aggregate"
 	domainevent "github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/domain/event"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/domain/repository"
 )
 
-type CatalogDomainEventHandler[T ddd.AggregateEvent] struct {
+type CatalogDomainEventHandler[T ddd.Event] struct {
 	catalog repository.CatalogRepository
 }
 
-var _ ddd.EventHandler[ddd.AggregateEvent] = (*CatalogDomainEventHandler[ddd.AggregateEvent])(nil)
+var _ ddd.EventHandler[ddd.Event] = (*CatalogDomainEventHandler[ddd.Event])(nil)
 
-func NewCatalogDomainEventHandler(catalog repository.CatalogRepository) *CatalogDomainEventHandler[ddd.AggregateEvent] {
-	return &CatalogDomainEventHandler[ddd.AggregateEvent]{catalog: catalog}
+func NewCatalogDomainEventHandler(catalog repository.CatalogRepository) *CatalogDomainEventHandler[ddd.Event] {
+	return &CatalogDomainEventHandler[ddd.Event]{
+		catalog: catalog,
+	}
 }
 
-func RegisterCatalogDomainEventHandlers(subscriber ddd.EventSubscriber[ddd.AggregateEvent], handlers ddd.EventHandler[ddd.AggregateEvent]) {
+func RegisterCatalogDomainEventHandlers(subscriber ddd.EventSubscriber[ddd.Event], handlers ddd.EventHandler[ddd.Event]) {
 	subscriber.Subscribe(handlers,
-		event.ProductAddedEvent,
-		event.ProductRebrandedEvent,
-		event.ProductPriceIncreasedEvent,
-		event.ProductPriceDecreasedEvent,
-		event.ProductRemovedEvent)
+		domainevent.ProductAddedEvent,
+		domainevent.ProductRebrandedEvent,
+		domainevent.ProductPriceIncreasedEvent,
+		domainevent.ProductPriceDecreasedEvent,
+		domainevent.ProductRemovedEvent)
 }
 
 func RegisterCatalogDomainEventHandlersTx(container di.Container) {
-	handlers := ddd.EventHandlerFunc[ddd.AggregateEvent](func(ctx context.Context, event ddd.AggregateEvent) error {
-		catalogHandlers := di.Get(ctx, "catalogHandlers").(ddd.EventHandler[ddd.AggregateEvent])
+	handlers := ddd.EventHandlerFunc[ddd.Event](func(ctx context.Context, event ddd.Event) error {
+		catalogHandlers := di.Get(ctx, "catalogHandlers").(ddd.EventHandler[ddd.Event])
 
 		return catalogHandlers.HandleEvent(ctx, event)
 	})
 
-	subscriber := container.Get("domainEventDispatcher").(ddd.EventDispatcher[ddd.AggregateEvent])
+	subscriber := container.Get("domainEventDispatcher").(ddd.EventDispatcher[ddd.Event])
 
 	RegisterCatalogDomainEventHandlers(subscriber, handlers)
 }
@@ -57,26 +59,27 @@ func (h *CatalogDomainEventHandler[T]) HandleEvent(ctx context.Context, event T)
 	return nil
 }
 
-func (h CatalogDomainEventHandler[T]) onProductAdded(ctx context.Context, event ddd.AggregateEvent) error {
-	payload := event.Payload().(*domainevent.ProductAdded)
-	return h.catalog.AddProduct(ctx, event.AggregateID(), payload.StoreID, payload.Name, payload.Description, payload.SKU, payload.Price)
+func (h CatalogDomainEventHandler[T]) onProductAdded(ctx context.Context, event ddd.Event) error {
+	payload := event.Payload().(*aggregate.Product)
+	return h.catalog.AddProduct(ctx, payload.ID(), payload.StoreID, payload.Name, payload.Description, payload.SKU, payload.Price)
 }
 
-func (h CatalogDomainEventHandler[T]) onProductRebranded(ctx context.Context, event ddd.AggregateEvent) error {
-	payload := event.Payload().(*domainevent.ProductRebranded)
-	return h.catalog.Rebrand(ctx, event.AggregateID(), payload.Name, payload.Description)
+func (h CatalogDomainEventHandler[T]) onProductRebranded(ctx context.Context, event ddd.Event) error {
+	payload := event.Payload().(*aggregate.Product)
+	return h.catalog.Rebrand(ctx, payload.ID(), payload.Name, payload.Description)
 }
 
-func (h CatalogDomainEventHandler[T]) onProductPriceIncreased(ctx context.Context, event ddd.AggregateEvent) error {
-	payload := event.Payload().(*domainevent.ProductPriceChanged)
-	return h.catalog.UpdatePrice(ctx, event.AggregateID(), payload.Delta)
+func (h CatalogDomainEventHandler[T]) onProductPriceIncreased(ctx context.Context, event ddd.Event) error {
+	payload := event.Payload().(*domainevent.ProductPriceDelta)
+	return h.catalog.UpdatePrice(ctx, payload.ProductID, payload.Delta)
 }
 
-func (h CatalogDomainEventHandler[T]) onProductPriceDecreased(ctx context.Context, event ddd.AggregateEvent) error {
-	payload := event.Payload().(*domainevent.ProductPriceChanged)
-	return h.catalog.UpdatePrice(ctx, event.AggregateID(), payload.Delta)
+func (h CatalogDomainEventHandler[T]) onProductPriceDecreased(ctx context.Context, event ddd.Event) error {
+	payload := event.Payload().(*domainevent.ProductPriceDelta)
+	return h.catalog.UpdatePrice(ctx, payload.ProductID, payload.Delta)
 }
 
-func (h CatalogDomainEventHandler[T]) onProductRemoved(ctx context.Context, event ddd.AggregateEvent) error {
-	return h.catalog.RemoveProduct(ctx, event.AggregateID())
+func (h CatalogDomainEventHandler[T]) onProductRemoved(ctx context.Context, event ddd.Event) error {
+	payload := event.Payload().(*aggregate.Product)
+	return h.catalog.RemoveProduct(ctx, payload.ID())
 }

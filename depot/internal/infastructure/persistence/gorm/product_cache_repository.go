@@ -3,9 +3,8 @@ package gorm
 import (
 	"context"
 
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/application/port/out/client"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/domain/entity"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/domain/repository"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/domain/valueobject"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/infastructure/persistence/gorm/po"
 	"github.com/jackc/pgerrcode"
 	"github.com/lib/pq"
@@ -15,12 +14,12 @@ import (
 
 type GormProductCacheRepository struct {
 	db       *gorm.DB
-	fallback client.ProductClient
+	fallback repository.ProductRepository
 }
 
 var _ repository.ProductCacheRepository = (*GormProductCacheRepository)(nil)
 
-func NewGormProductCacheRepository(db *gorm.DB, fallback client.ProductClient) *GormProductCacheRepository {
+func NewGormProductCacheRepository(db *gorm.DB, fallback repository.ProductRepository) *GormProductCacheRepository {
 	return &GormProductCacheRepository{
 		db:       db,
 		fallback: fallback,
@@ -91,7 +90,7 @@ func (r *GormProductCacheRepository) UpdatePrice(ctx context.Context, productID 
 }
 
 // Find implements repository.ProductCacheRepository.
-func (r *GormProductCacheRepository) Find(ctx context.Context, productID string) (*valueobject.Product, error) {
+func (r *GormProductCacheRepository) Find(ctx context.Context, productID string) (*entity.Product, error) {
 	var productPO po.ProductCache
 
 	result := r.db.WithContext(ctx).
@@ -110,10 +109,10 @@ func (r *GormProductCacheRepository) Find(ctx context.Context, productID string)
 		}
 
 		// attempt to add it to the cache
-		return &product, r.Add(ctx, product.ID, product.StoreID, product.Name)
+		return product, r.Add(ctx, product.ID, product.StoreID, product.Name)
 	}
 
-	return &valueobject.Product{
+	return &entity.Product{
 		ID:      productPO.ID,
 		StoreID: productPO.StoreID,
 		Name:    productPO.Name,

@@ -16,36 +16,38 @@ type (
 		VersionSetter
 	}
 
-	AggregateBase struct {
-		ddd.AggregateBase
+	// FIXME: rename to aggregate
+	aggregate struct {
+		ddd.Aggregate
 		version int
 	}
 )
 
-var _ Aggregate = (*AggregateBase)(nil)
+var _ Aggregate = (*aggregate)(nil)
 
-func NewAggregateBase(id, name string) AggregateBase {
-	return AggregateBase{
-		AggregateBase: ddd.NewAggregateBase(id, name),
-		version:       0,
+func NewAggregate(id, name string) *aggregate {
+	return &aggregate{
+		Aggregate: ddd.NewAggregate(id, name),
+		version:   0,
 	}
 }
 
-func (a *AggregateBase) AddEvent(name string, payload ddd.EventPayload, options ...ddd.EventOption) {
+func (a *aggregate) AddEvent(name string, payload ddd.EventPayload, options ...ddd.EventOption) {
 	options = append(
 		options,
 		ddd.Metadata{
 			ddd.AggregateVersionKey: a.PendingVersion() + 1,
 		})
 
-	a.AggregateBase.AddEvent(name, payload, options...)
+	a.Aggregate.AddEvent(name, payload, options...)
 }
 
-func (a *AggregateBase) CommitEvents() {
+func (a *aggregate) CommitEvents() {
 	a.version += len(a.Events())
 	a.ClearEvents()
 }
 
-func (a *AggregateBase) Version() int           { return a.version }
-func (a *AggregateBase) PendingVersion() int    { return a.version + len(a.Events()) }
-func (a *AggregateBase) setVersion(version int) { a.version = version }
+func (a aggregate) Version() int        { return a.version }
+func (a aggregate) PendingVersion() int { return a.version + len(a.Events()) }
+
+func (a *aggregate) SetVersion(version int) { a.version = version }

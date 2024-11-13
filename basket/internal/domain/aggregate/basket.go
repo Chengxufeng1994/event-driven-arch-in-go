@@ -22,7 +22,7 @@ var (
 )
 
 type Basket struct {
-	es.AggregateBase
+	es.Aggregate
 	CustomerID string
 	PaymentID  string
 	Items      map[string]*entity.Item
@@ -36,25 +36,9 @@ var _ interface {
 
 func NewBasket(id string) *Basket {
 	return &Basket{
-		AggregateBase: es.NewAggregateBase(id, BasketAggregate),
-		Items:         make(map[string]*entity.Item),
+		Aggregate: es.NewAggregate(id, BasketAggregate),
+		Items:     make(map[string]*entity.Item),
 	}
-}
-
-func StartBasket(id, customerID string) (*Basket, error) {
-	if id == "" {
-		return nil, ErrBasketIDCannotBeBlank
-	}
-
-	if customerID == "" {
-		return nil, ErrCustomerIDCannotBeBlank
-	}
-
-	basket := NewBasket(id)
-
-	basket.AddEvent(event.BasketStartedEvent, event.NewBasketStarted(customerID))
-
-	return basket, nil
 }
 
 func (Basket) Key() string { return BasketAggregate }
@@ -109,7 +93,7 @@ func (b *Basket) Checkout(paymentID string) (ddd.Event, error) {
 	return ddd.NewEvent(event.BasketCheckedOutEvent, b), nil
 }
 
-func (b *Basket) AddItem(store *valueobject.Store, product *valueobject.Product, quantity int) error {
+func (b *Basket) AddItem(store *entity.Store, product *entity.Product, quantity int) error {
 	if !b.IsOpen() {
 		return ErrBasketCannotBeModified
 	}
@@ -130,7 +114,7 @@ func (b *Basket) AddItem(store *valueobject.Store, product *valueobject.Product,
 	return nil
 }
 
-func (b *Basket) RemoveItem(product *valueobject.Product, quantity int) error {
+func (b *Basket) RemoveItem(product *entity.Product, quantity int) error {
 	if !b.IsOpen() {
 		return ErrBasketCannotBeModified
 	}
@@ -146,7 +130,7 @@ func (b *Basket) RemoveItem(product *valueobject.Product, quantity int) error {
 	return nil
 }
 
-func (b *Basket) hasProduct(product *valueobject.Product) bool {
+func (b *Basket) hasProduct(product *entity.Product) bool {
 	for _, item := range b.Items {
 		if item.ProductID == product.ID && item.StoreID == product.StoreID {
 			return true
@@ -182,7 +166,7 @@ func (b *Basket) ApplyEvent(evt ddd.Event) error {
 
 	case *event.BasketCanceled:
 		b.Items = make(map[string]*entity.Item)
-		b.Status = valueobject.BasketIsCancelled
+		b.Status = valueobject.BasketIsCanceled
 
 	case *event.BasketCheckedOut:
 		b.PaymentID = payload.PaymentID

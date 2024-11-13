@@ -23,9 +23,10 @@ func NewIntegrationEventHandlers(app usecase.PaymentUseCase) *IntegrationEventHa
 }
 
 func RegisterIntegrationEventHandlers(subscriber am.RawMessageStream, handlers am.RawMessageHandler) error {
-	return subscriber.Subscribe(orderv1.OrderAggregateChannel, handlers, am.MessageFilter{
+	_, err := subscriber.Subscribe(orderv1.OrderAggregateChannel, handlers, am.MessageFilter{
 		orderv1.OrderReadiedEvent,
 	}, am.GroupName("payment-orders"))
+	return err
 }
 
 func (h IntegrationEventHandlers[T]) HandleEvent(ctx context.Context, event T) error {

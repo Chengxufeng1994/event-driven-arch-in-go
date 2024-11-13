@@ -2,6 +2,7 @@
 
 ## TODO
 
+* [ ] testing
 * [ ] support interface 'DB'
 * [ ] support broker 'Kafka'
 * [ ] support event store 'EventStoreDB'
@@ -27,3 +28,4 @@
 * [setup go with vscode in docker for debugging](https://dev.to/andreidascalu/setup-go-with-vscode-in-docker-for-debugging-24ch)
 * [adding postgres connection to pgadmin](https://stackoverflow.com/questions/64620446/adding-postgress-connections-to-pgadmin-in-docker-file)
 * [event driven](https://event-driven.io/en/)
+* [gorm and goose migrations](https://dev.to/kengowada/gorm-and-goose-migrations-1ec)

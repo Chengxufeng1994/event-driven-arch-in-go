@@ -3,6 +3,7 @@ package command
 import (
 	"context"
 
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/domain/repository"
 	"github.com/stackus/errors"
 )
@@ -12,30 +13,31 @@ type RemoveProduct struct {
 }
 
 type RemoveProductHandler struct {
-	productRepository repository.ProductRepository
+	products  repository.ProductRepository
+	publisher ddd.EventPublisher[ddd.Event]
 }
 
-func NewRemoveProductHandler(
-	productRepository repository.ProductRepository,
-) RemoveProductHandler {
+func NewRemoveProductHandler(products repository.ProductRepository, publisher ddd.EventPublisher[ddd.Event]) RemoveProductHandler {
 	return RemoveProductHandler{
-		productRepository: productRepository,
+		products:  products,
+		publisher: publisher,
 	}
 }
 
 func (h RemoveProductHandler) RemoveProduct(ctx context.Context, cmd RemoveProduct) error {
-	product, err := h.productRepository.Load(ctx, cmd.ID)
+	product, err := h.products.Load(ctx, cmd.ID)
 	if err != nil {
-		return errors.Wrap(err, "remove product command")
+		return errors.Wrap(err, "loading product")
 	}
 
-	if err := product.Remove(); err != nil {
-		return errors.Wrap(err, "remove product command")
+	event, err := product.Remove()
+	if err != nil {
+		return errors.Wrap(err, "remove product")
 	}
 
-	if err := h.productRepository.Save(ctx, product); err != nil {
+	if err := h.products.Save(ctx, product); err != nil {
 		return errors.Wrap(err, "saving product")
 	}
 
-	return nil
+	return h.publisher.Publish(ctx, event)
 }

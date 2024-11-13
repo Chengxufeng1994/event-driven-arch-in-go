@@ -3,8 +3,8 @@ package grpc
 import (
 	"context"
 
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/entity"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/repository"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/valueobject"
 	storev1 "github.com/Chengxufeng1994/event-driven-arch-in-go/store/api/store/v1"
 	"github.com/stackus/errors"
 	"google.golang.org/grpc"
@@ -23,20 +23,20 @@ func NewGrpcProductClient(conn *grpc.ClientConn) *GrpcProductClient {
 	}
 }
 
-func (c *GrpcProductClient) Find(ctx context.Context, productID string) (*valueobject.Product, error) {
+func (c *GrpcProductClient) Find(ctx context.Context, productID string) (*entity.Product, error) {
 	resp, err := c.client.GetProduct(ctx, &storev1.GetProductRequest{
 		Id: productID,
 	})
 	if err != nil {
-		return &valueobject.Product{}, errors.Wrap(err, "requesting product")
+		return &entity.Product{}, errors.Wrap(err, "requesting product")
 	}
 
 	product := c.productToDomain(resp.Product)
 	return &product, nil
 }
 
-func (c *GrpcProductClient) productToDomain(product *storev1.Product) valueobject.Product {
-	return valueobject.NewProduct(
+func (c *GrpcProductClient) productToDomain(product *storev1.Product) entity.Product {
+	return entity.NewProduct(
 		product.GetId(),
 		product.GetStoreId(),
 		product.GetName(),

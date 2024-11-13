@@ -16,11 +16,11 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/es"
 	evenstoregorm "github.com/Chengxufeng1994/event-driven-arch-in-go/internal/eventstore/gorm"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/logger"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/monolith"
 	outboxstoregorm "github.com/Chengxufeng1994/event-driven-arch-in-go/internal/outboxstore/gorm"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/registry"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/registry/serdes"
 	snapshotstoregorm "github.com/Chengxufeng1994/event-driven-arch-in-go/internal/snapshotstore/gorm"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/system"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/tm"
 	orderv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/api/order/v1"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/docs"
@@ -38,11 +38,11 @@ import (
 
 type Module struct{}
 
-var _ monolith.Module = (*Module)(nil)
+var _ system.Module = (*Module)(nil)
 
 func NewModule() *Module { return &Module{} }
 
-func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
+func (m *Module) Startup(ctx context.Context, mono system.Service) error {
 	container := di.New()
 	// setup Driver adapters
 	endpoint := fmt.Sprintf("%s:%d", mono.Config().Server.GPPC.Host, mono.Config().Server.GPPC.Port)
@@ -182,7 +182,7 @@ func registrations(reg registry.Registry) (err error) {
 	// Order
 	if err := serde.Register(aggregate.Order{}, func(v any) error {
 		order := v.(*aggregate.Order)
-		order.AggregateBase = es.NewAggregateBase("", aggregate.OrderAggregate)
+		order.Aggregate = es.NewAggregate("", aggregate.OrderAggregate)
 		return nil
 	}); err != nil {
 		return err

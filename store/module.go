@@ -14,11 +14,11 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/es"
 	evenstoregorm "github.com/Chengxufeng1994/event-driven-arch-in-go/internal/eventstore/gorm"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/logger"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/monolith"
 	outboxstoregorm "github.com/Chengxufeng1994/event-driven-arch-in-go/internal/outboxstore/gorm"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/registry"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/registry/serdes"
 	snapshotstoregorm "github.com/Chengxufeng1994/event-driven-arch-in-go/internal/snapshotstore/gorm"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/system"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/tm"
 	storev1 "github.com/Chengxufeng1994/event-driven-arch-in-go/store/api/store/v1"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/docs"
@@ -35,11 +35,11 @@ import (
 
 type Module struct{}
 
-var _ monolith.Module = (*Module)(nil)
+var _ system.Module = (*Module)(nil)
 
 func NewModule() *Module { return &Module{} }
 
-func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
+func (m *Module) Startup(ctx context.Context, mono system.Service) error {
 	container := di.New()
 	// setup Driven adapters
 	endpoint := fmt.Sprintf("%s:%d", mono.Config().Server.GPPC.Host, mono.Config().Server.GPPC.Port)
@@ -60,7 +60,7 @@ func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 		return nats.NewStream(mono.Config().Infrastructure.Nats.Stream, mono.JetStream(), mono.Logger()), nil
 	})
 	container.AddSingleton("domainEventDispatcher", func(c di.Container) (any, error) {
-		return ddd.NewEventDispatcher[ddd.AggregateEvent](), nil
+		return ddd.NewEventDispatcher[ddd.Event](), nil
 	})
 	container.AddSingleton("db", func(c di.Container) (any, error) {
 		return mono.Database(), nil
@@ -91,7 +91,6 @@ func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 		reg := c.Get("registry").(registry.Registry)
 		return es.AggregateStoreWithMiddleware(
 			evenstoregorm.NewEventStore("stores.events", tx, reg),
-			es.NewEventPublisher(c.Get("domainEventDispatcher").(ddd.EventDispatcher[ddd.AggregateEvent])),
 			snapshotstoregorm.NewSnapshotStore("stores.snapshots", tx, reg),
 		), nil
 	})
@@ -124,24 +123,25 @@ func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
 				c.Get("products").(repository.ProductRepository),
 				c.Get("mall").(repository.MallRepository),
 				c.Get("catalog").(repository.CatalogRepository),
+				c.Get("domainEventDispatcher").(ddd.EventDispatcher[ddd.Event]),
 			),
 			c.Get("logger").(logger.Logger),
 		), nil
 	})
 	container.AddScoped("catalogHandlers", func(c di.Container) (any, error) {
-		return logging.NewLogEventHandlerAccess[ddd.AggregateEvent](
+		return logging.NewLogEventHandlerAccess[ddd.Event](
 			handler.NewCatalogDomainEventHandler(c.Get("catalog").(repository.CatalogRepository)),
 			"Catalog", c.Get("logger").(logger.Logger),
 		), nil
 	})
 	container.AddScoped("mallHandlers", func(c di.Container) (any, error) {
-		return logging.NewLogEventHandlerAccess[ddd.AggregateEvent](
+		return logging.NewLogEventHandlerAccess[ddd.Event](
 			handler.NewMallDomainEventHandler(c.Get("mall").(repository.MallRepository)),
 			"Mall", c.Get("logger").(logger.Logger),
 		), nil
 	})
 	container.AddScoped("domainEventHandlers", func(c di.Container) (any, error) {
-		return logging.NewLogEventHandlerAccess[ddd.AggregateEvent](
+		return logging.NewLogEventHandlerAccess[ddd.Event](
 			handler.NewDomainEventHandler(c.Get("eventStream").(am.EventStream)),
 			"DomainEvents", c.Get("logger").(logger.Logger),
 		), nil
@@ -179,7 +179,7 @@ func registrations(reg registry.Registry) error {
 	// store
 	if err := serde.Register(aggregate.Store{}, func(v any) error {
 		store := v.(*aggregate.Store)
-		store.AggregateBase = es.NewAggregateBase("", aggregate.StoreAggregate)
+		store.Aggregate = es.NewAggregate("", aggregate.StoreAggregate)
 		return nil
 	}); err != nil {
 		return err
@@ -205,7 +205,7 @@ func registrations(reg registry.Registry) error {
 	// product
 	if err := serde.Register(aggregate.Product{}, func(v any) error {
 		product := v.(*aggregate.Product)
-		product.AggregateBase = es.NewAggregateBase("", aggregate.ProductAggregate)
+		product.Aggregate = es.NewAggregate("", aggregate.ProductAggregate)
 		return nil
 	}); err != nil {
 		return err

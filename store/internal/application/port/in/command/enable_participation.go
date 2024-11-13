@@ -3,6 +3,7 @@ package command
 import (
 	"context"
 
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/domain/repository"
 	"github.com/stackus/errors"
 )
@@ -12,30 +13,31 @@ type EnableParticipation struct {
 }
 
 type EnableParticipationHandler struct {
-	storeRepository repository.StoreRepository
+	stores    repository.StoreRepository
+	publisher ddd.EventPublisher[ddd.Event]
 }
 
-func NewEnableParticipationHandler(
-	storeRepository repository.StoreRepository,
-) EnableParticipationHandler {
+func NewEnableParticipationHandler(stores repository.StoreRepository, publisher ddd.EventPublisher[ddd.Event]) EnableParticipationHandler {
 	return EnableParticipationHandler{
-		storeRepository: storeRepository,
+		stores:    stores,
+		publisher: publisher,
 	}
 }
 
 func (h EnableParticipationHandler) EnableParticipation(ctx context.Context, cmd EnableParticipation) error {
-	store, err := h.storeRepository.Load(ctx, cmd.ID)
+	store, err := h.stores.Load(ctx, cmd.ID)
 	if err != nil {
 		return errors.Wrap(err, "finding store")
 	}
 
-	if err := store.EnableParticipation(); err != nil {
+	event, err := store.EnableParticipation()
+	if err != nil {
 		return errors.Wrap(err, "enabling participation")
 	}
 
-	if err := h.storeRepository.Save(ctx, store); err != nil {
+	if err := h.stores.Save(ctx, store); err != nil {
 		return errors.Wrap(err, "saving store")
 	}
 
-	return nil
+	return h.publisher.Publish(ctx, event)
 }

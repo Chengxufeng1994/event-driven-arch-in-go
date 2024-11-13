@@ -3,9 +3,8 @@ package gorm
 import (
 	"context"
 
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/application/port/out/client"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/domain/entity"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/domain/repository"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/domain/valueobject"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/infastructure/persistence/gorm/po"
 	"github.com/jackc/pgerrcode"
 	"github.com/lib/pq"
@@ -15,12 +14,12 @@ import (
 
 type GormStoreCacheRepository struct {
 	db       *gorm.DB
-	fallback client.StoreClient
+	fallback repository.StoreRepository
 }
 
 var _ repository.StoreCacheRepository = (*GormStoreCacheRepository)(nil)
 
-func NewGormStoreCacheRepository(db *gorm.DB, fallback client.StoreClient) *GormStoreCacheRepository {
+func NewGormStoreCacheRepository(db *gorm.DB, fallback repository.StoreRepository) *GormStoreCacheRepository {
 	return &GormStoreCacheRepository{
 		db:       db,
 		fallback: fallback,
@@ -64,7 +63,7 @@ func (r *GormStoreCacheRepository) Rename(ctx context.Context, storeID string, n
 }
 
 // Find implements repository.StoreCacheRepository.
-func (r *GormStoreCacheRepository) Find(ctx context.Context, storeID string) (*valueobject.Store, error) {
+func (r *GormStoreCacheRepository) Find(ctx context.Context, storeID string) (*entity.Store, error) {
 	var storePO po.StoreCache
 
 	result := r.db.WithContext(ctx).
@@ -83,9 +82,13 @@ func (r *GormStoreCacheRepository) Find(ctx context.Context, storeID string) (*v
 		}
 
 		// attempt to add it to the cache
-		return &store, r.Add(ctx, store.ID, store.Name, store.Location)
+		return store, r.Add(ctx, store.ID, store.Name, store.Location)
 	}
 
-	store := valueobject.NewStore(storePO.ID, storePO.Name)
-	return &store, nil
+	store := &entity.Store{
+		ID:       storePO.ID,
+		Name:     storePO.Name,
+		Location: storePO.Location,
+	}
+	return store, nil
 }

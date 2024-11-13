@@ -3,6 +3,7 @@ package command
 import (
 	"context"
 
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/domain/repository"
 )
 
@@ -19,24 +20,32 @@ func NewDecreaseProductPrice(id string, price float64) DecreaseProductPrice {
 }
 
 type DecreaseProductPriceHandler struct {
-	productRepository repository.ProductRepository
+	products  repository.ProductRepository
+	publisher ddd.EventPublisher[ddd.Event]
 }
 
-func NewDecreaseProductPriceHandler(productRepository repository.ProductRepository) DecreaseProductPriceHandler {
+func NewDecreaseProductPriceHandler(products repository.ProductRepository, publisher ddd.EventPublisher[ddd.Event]) DecreaseProductPriceHandler {
 	return DecreaseProductPriceHandler{
-		productRepository: productRepository,
+		products:  products,
+		publisher: publisher,
 	}
 }
 
 func (h DecreaseProductPriceHandler) DecreaseProductPrice(ctx context.Context, cmd DecreaseProductPrice) error {
-	product, err := h.productRepository.Load(ctx, cmd.ID)
+	product, err := h.products.Load(ctx, cmd.ID)
 	if err != nil {
 		return err
 	}
 
-	if err = product.DecreasePrice(cmd.Price); err != nil {
+	event, err := product.DecreasePrice(cmd.Price)
+	if err != nil {
 		return err
 	}
 
-	return h.productRepository.Save(ctx, product)
+	err = h.products.Save(ctx, product)
+	if err != nil {
+		return err
+	}
+
+	return h.publisher.Publish(ctx, event)
 }

@@ -1,7 +1,6 @@
 package registry
 
 import (
-	"fmt"
 	"sync"
 )
 
@@ -16,8 +15,11 @@ type (
 
 	Registry interface {
 		Serialize(key string, v interface{}) ([]byte, error)
-		Deserialize(key string, data []byte, options ...BuildOption) (interface{}, error)
+		MustSerialize(key string, v interface{}) []byte
 		Build(key string, options ...BuildOption) (interface{}, error)
+		MustBuild(key string, options ...BuildOption) interface{}
+		Deserialize(key string, data []byte, options ...BuildOption) (interface{}, error)
+		MustDeserialize(key string, data []byte, options ...BuildOption) interface{}
 		register(key string, fn func() interface{}, s Serializer, d Deserializer, o []BuildOption) error
 	}
 )
@@ -34,6 +36,8 @@ type registry struct {
 	mu         sync.RWMutex
 }
 
+var _ Registry = (*registry)(nil)
+
 func New() *registry {
 	return &registry{
 		registered: make(map[string]registered),
@@ -43,9 +47,17 @@ func New() *registry {
 func (r *registry) Serialize(key string, v interface{}) ([]byte, error) {
 	reg, exists := r.registered[key]
 	if !exists {
-		return nil, fmt.Errorf("nothing has been registered with the key `%s`", key)
+		return nil, UnregisteredKey(key)
 	}
 	return reg.serializer(v)
+}
+
+func (r *registry) MustSerialize(key string, v interface{}) []byte {
+	data, err := r.Serialize(key, v)
+	if err != nil {
+		panic(err)
+	}
+	return data
 }
 
 func (r *registry) Deserialize(key string, data []byte, options ...BuildOption) (interface{}, error) {
@@ -60,6 +72,14 @@ func (r *registry) Deserialize(key string, data []byte, options ...BuildOption) 
 	}
 
 	return v, nil
+}
+
+func (r *registry) MustDeserialize(key string, data []byte, options ...BuildOption) interface{} {
+	v, err := r.Deserialize(key, data, options...)
+	if err != nil {
+		panic(err)
+	}
+	return v
 }
 
 func (r *registry) Build(key string, options ...BuildOption) (interface{}, error) {
@@ -79,6 +99,14 @@ func (r *registry) Build(key string, options ...BuildOption) (interface{}, error
 	}
 
 	return v, nil
+}
+
+func (r *registry) MustBuild(key string, options ...BuildOption) interface{} {
+	v, err := r.Build(key, options...)
+	if err != nil {
+		panic(err)
+	}
+	return v
 }
 
 func (r *registry) register(key string, fn func() interface{}, s Serializer, d Deserializer, o []BuildOption) error {

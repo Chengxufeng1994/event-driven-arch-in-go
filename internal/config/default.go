@@ -29,7 +29,7 @@ func setDefaults() {
 	viper.SetDefault("server.https.tls.enabled", false)
 
 	viper.SetDefault("server.grpc.host", "0.0.0.0")
-	viper.SetDefault("server.grpc.port", 8081)
+	viper.SetDefault("server.grpc.port", 9000)
 
 	viper.SetDefault("infrastructure.gorm.debug", true)
 	viper.SetDefault("infrastructure.gorm.db_type", "postgres")

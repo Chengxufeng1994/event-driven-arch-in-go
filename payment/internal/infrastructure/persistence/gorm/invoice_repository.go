@@ -34,29 +34,17 @@ func (r *GormInvoiceRepository) Save(ctx context.Context, invoice *aggregate.Inv
 		return err
 	}
 
-	tx := r.db.Begin()
-	defer func() {
-		if p := recover(); p != nil {
-			_ = tx.Rollback()
-		}
-	}()
-
-	if err := tx.Error; err != nil {
-		return err
-	}
-
-	if err := tx.WithContext(ctx).
+	if err := r.db.WithContext(ctx).
 		Model(&po.Invoice{}).
 		Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: "id"}},
 			DoUpdates: clause.AssignmentColumns([]string{"order_id", "status", "amount"}),
 		}).
 		Create(&invoicePO).Error; err != nil {
-		tx.Rollback()
 		return errors.Wrap(err, "inserting invoice")
 	}
 
-	return tx.Commit().Error
+	return nil
 }
 
 // Update implements repository.InvoiceRepository.
@@ -66,18 +54,7 @@ func (r *GormInvoiceRepository) Update(ctx context.Context, invoice *aggregate.I
 		return err
 	}
 
-	tx := r.db.Begin()
-	defer func() {
-		if p := recover(); p != nil {
-			_ = tx.Rollback()
-		}
-	}()
-
-	if err := tx.Error; err != nil {
-		return err
-	}
-
-	if err := tx.WithContext(ctx).
+	if err := r.db.WithContext(ctx).
 		Model(&po.Invoice{}).
 		Where("id = ?", invoicePO.ID).
 		Select("order_id", "status", "amount").
@@ -87,11 +64,10 @@ func (r *GormInvoiceRepository) Update(ctx context.Context, invoice *aggregate.I
 			Amount:  invoicePO.Amount,
 		}).
 		Error; err != nil {
-		tx.Rollback()
 		return errors.Wrap(err, "updating invoice")
 	}
 
-	return tx.Commit().Error
+	return nil
 }
 
 // Find implements repository.InvoiceRepository.

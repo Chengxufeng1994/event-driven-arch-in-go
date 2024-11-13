@@ -17,7 +17,7 @@ var (
 )
 
 type Product struct {
-	es.AggregateBase
+	es.Aggregate
 	StoreID     string
 	Name        string
 	Description string
@@ -32,11 +32,11 @@ var _ interface {
 
 func NewProduct(id string) *Product {
 	return &Product{
-		AggregateBase: es.NewAggregateBase(id, ProductAggregate),
+		Aggregate: es.NewAggregate(id, ProductAggregate),
 	}
 }
 
-func CreateProduct(id, storeID, name, description, sku string, price float64) (*Product, error) {
+func (p *Product) InitProduct(id, storeID, name, description, sku string, price float64) (ddd.Event, error) {
 	if name == "" {
 		return nil, ErrProductNameIsBlank
 	}
@@ -45,51 +45,67 @@ func CreateProduct(id, storeID, name, description, sku string, price float64) (*
 		return nil, ErrProductPriceIsNegative
 	}
 
-	product := NewProduct(id)
+	p.AddEvent(event.ProductAddedEvent, &event.ProductAdded{
+		StoreID:     storeID,
+		Name:        name,
+		Description: description,
+		SKU:         sku,
+		Price:       price,
+	})
 
-	product.AddEvent(event.ProductAddedEvent, event.NewProductAdded(
-		storeID,
-		name,
-		description,
-		sku,
-		price,
-	))
-
-	return product, nil
+	return ddd.NewEvent(event.ProductAddedEvent, p), nil
 }
 
+// Key implements registry.Registerable
 func (Product) Key() string { return ProductAggregate }
 
-func (p *Product) Rebrand(name, description string) error {
-	p.AddEvent(event.ProductRebrandedEvent, event.NewProductRebranded(name, description))
+func (p *Product) Rebrand(name, description string) (ddd.Event, error) {
+	p.AddEvent(event.ProductRebrandedEvent, &event.ProductRebranded{
+		Name:        name,
+		Description: description,
+	})
 
-	return nil
+	return ddd.NewEvent(event.ProductRebrandedEvent, p), nil
 }
 
-func (p *Product) IncreasePrice(price float64) error {
+func (p *Product) IncreasePrice(price float64) (ddd.Event, error) {
 	if price < p.Price {
-		return ErrNotAPriceIncrease
+		return nil, ErrNotAPriceIncrease
 	}
 
-	p.AddEvent(event.ProductPriceIncreasedEvent, event.NewProductPriceChanged(price-p.Price))
+	delta := price - p.Price
+	p.AddEvent(event.ProductPriceIncreasedEvent, &event.ProductPriceChanged{
+		Delta: delta,
+	})
 
-	return nil
+	// FIXME: ProductID to Product
+	return ddd.NewEvent(event.ProductPriceIncreasedEvent, event.ProductPriceDelta{
+		ProductID: p.ID(),
+		Delta:     delta,
+	}), nil
 }
 
-func (p *Product) DecreasePrice(price float64) error {
+func (p *Product) DecreasePrice(price float64) (ddd.Event, error) {
 	if price > p.Price {
-		return ErrNotAPriceDecrease
+		return nil, ErrNotAPriceDecrease
 	}
 
-	p.AddEvent(event.ProductPriceDecreasedEvent, event.NewProductPriceChanged(price-p.Price))
+	delta := price - p.Price
+	p.AddEvent(event.ProductPriceDecreasedEvent, &event.ProductPriceChanged{
+		Delta: delta,
+	})
 
-	return nil
+	// FIXME: ProductID to Product
+	return ddd.NewEvent(event.ProductPriceDecreasedEvent, event.ProductPriceDelta{
+		ProductID: p.ID(),
+		Delta:     delta,
+	}), nil
 }
 
-func (p *Product) Remove() error {
-	p.AddEvent(event.ProductRemovedEvent, event.NewProductRemoved())
+func (p *Product) Remove() (ddd.Event, error) {
+	p.AddEvent(event.ProductRemovedEvent, &event.ProductRemoved{})
 
-	return nil
+	return ddd.NewEvent(event.ProductRemovedEvent, p), nil
 }
 
 func (p *Product) ApplyEvent(e ddd.Event) error {
@@ -106,7 +122,7 @@ func (p *Product) ApplyEvent(e ddd.Event) error {
 		p.Description = payload.Description
 
 	case *event.ProductPriceChanged:
-		p.Price = p.Price + payload.Delta
+		p.Price += payload.Delta
 
 	case *event.ProductRemoved:
 		// noop
@@ -134,7 +150,7 @@ func (p *Product) ApplySnapshot(snapshot es.Snapshot) error {
 	return nil
 }
 
-func (p *Product) ToSnapshot() es.Snapshot {
+func (p Product) ToSnapshot() es.Snapshot {
 	return ProductV1{
 		StoreID:     p.StoreID,
 		Name:        p.Name,

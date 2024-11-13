@@ -3,8 +3,8 @@ package gorm
 import (
 	"context"
 
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/entity"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/repository"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/valueobject"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/infrastructure/persistence/gorm/po"
 	"github.com/jackc/pgerrcode"
 	"github.com/lib/pq"
@@ -62,7 +62,7 @@ func (r *GormStoreCacheRepository) Rename(ctx context.Context, storeID string, n
 }
 
 // Find implements repository.StoreCacheRepository.
-func (r *GormStoreCacheRepository) Find(ctx context.Context, storeID string) (*valueobject.Store, error) {
+func (r *GormStoreCacheRepository) Find(ctx context.Context, storeID string) (*entity.Store, error) {
 	var storePO po.StoreCache
 
 	result := r.db.WithContext(ctx).
@@ -84,6 +84,6 @@ func (r *GormStoreCacheRepository) Find(ctx context.Context, storeID string) (*v
 		return store, r.Add(ctx, store.ID, store.Name)
 	}
 
-	store := valueobject.NewStore(storePO.ID, storePO.Name)
+	store := entity.NewStore(storePO.ID, storePO.Name)
 	return &store, nil
 }

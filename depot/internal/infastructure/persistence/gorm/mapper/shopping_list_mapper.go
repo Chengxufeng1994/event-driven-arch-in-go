@@ -47,7 +47,7 @@ func (m *ShoppingListMapper) ToDomain(shoppingList *po.ShoppingList) (*aggregate
 	}
 
 	return &aggregate.ShoppingList{
-		AggregateBase: ddd.NewAggregateBase(shoppingList.ID, aggregate.ShoppingListAggregate),
+		Aggregate:     ddd.NewAggregate(shoppingList.ID, aggregate.ShoppingListAggregate),
 		OrderID:       shoppingList.OrderID,
 		AssignedBotID: shoppingList.AssignedBotID,
 		Stops:         stops,

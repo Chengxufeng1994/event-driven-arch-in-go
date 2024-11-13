@@ -27,20 +27,23 @@ func RegisterIntegrationEventHandlers(subscriber am.EventSubscriber, handler ddd
 	evtMsgHandler := am.MessageHandlerFunc[am.IncomingEventMessage](func(ctx context.Context, eventMsg am.IncomingEventMessage) error {
 		return handler.HandleEvent(ctx, eventMsg)
 	})
-	if err := subscriber.Subscribe(storev1.StoreAggregateChannel, evtMsgHandler, am.MessageFilter{
+	_, err := subscriber.Subscribe(storev1.StoreAggregateChannel, evtMsgHandler, am.MessageFilter{
 		storev1.StoreCreatedEvent,
 		storev1.StoreRebrandedEvent,
-	}, am.GroupName("baskets-stores")); err != nil {
+	}, am.GroupName("baskets-stores"))
+	if err != nil {
 		return err
 	}
 
-	return subscriber.Subscribe(storev1.ProductAggregateChannel, evtMsgHandler, am.MessageFilter{
+	_, err = subscriber.Subscribe(storev1.ProductAggregateChannel, evtMsgHandler, am.MessageFilter{
 		storev1.ProductAddedEvent,
 		storev1.ProductRebrandedEvent,
 		storev1.ProductPriceIncreasedEvent,
 		storev1.ProductPriceDecreasedEvent,
 		storev1.ProductRemovedEvent,
 	}, am.GroupName("baskets-products"))
+
+	return err
 }
 
 func (h IntegrationEventHandler[T]) HandleEvent(ctx context.Context, event T) error {

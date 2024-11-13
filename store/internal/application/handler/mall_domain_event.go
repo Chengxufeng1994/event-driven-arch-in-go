@@ -5,37 +5,39 @@ import (
 
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/di"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/domain/event"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/domain/aggregate"
 	domainevent "github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/domain/event"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/domain/repository"
 )
 
-type MallDomainEventHandler[T ddd.AggregateEvent] struct {
+type MallDomainEventHandler[T ddd.Event] struct {
 	mall repository.MallRepository
 }
 
-var _ ddd.EventHandler[ddd.AggregateEvent] = (*MallDomainEventHandler[ddd.AggregateEvent])(nil)
+var _ ddd.EventHandler[ddd.Event] = (*MallDomainEventHandler[ddd.Event])(nil)
 
-func NewMallDomainEventHandler(mall repository.MallRepository) *MallDomainEventHandler[ddd.AggregateEvent] {
-	return &MallDomainEventHandler[ddd.AggregateEvent]{mall: mall}
+func NewMallDomainEventHandler(mall repository.MallRepository) *MallDomainEventHandler[ddd.Event] {
+	return &MallDomainEventHandler[ddd.Event]{
+		mall: mall,
+	}
 }
 
-func RegisterMallDomainEventHandlers(subscriber ddd.EventSubscriber[ddd.AggregateEvent], handlers ddd.EventHandler[ddd.AggregateEvent]) {
+func RegisterMallDomainEventHandlers(subscriber ddd.EventSubscriber[ddd.Event], handlers ddd.EventHandler[ddd.Event]) {
 	subscriber.Subscribe(handlers,
-		event.StoreCreatedEvent,
-		event.StoreParticipationEnabledEvent,
-		event.StoreParticipationDisabledEvent,
-		event.StoreRebrandedEvent)
+		domainevent.StoreCreatedEvent,
+		domainevent.StoreParticipationEnabledEvent,
+		domainevent.StoreParticipationDisabledEvent,
+		domainevent.StoreRebrandedEvent)
 }
 
 func RegisterMallDomainEventHandlersTx(container di.Container) {
-	handlers := ddd.EventHandlerFunc[ddd.AggregateEvent](func(ctx context.Context, event ddd.AggregateEvent) error {
-		mallHandlers := di.Get(ctx, "mallHandlers").(ddd.EventHandler[ddd.AggregateEvent])
+	handlers := ddd.EventHandlerFunc[ddd.Event](func(ctx context.Context, event ddd.Event) error {
+		mallHandlers := di.Get(ctx, "mallHandlers").(ddd.EventHandler[ddd.Event])
 
 		return mallHandlers.HandleEvent(ctx, event)
 	})
 
-	subscriber := container.Get("domainEventDispatcher").(ddd.EventDispatcher[ddd.AggregateEvent])
+	subscriber := container.Get("domainEventDispatcher").(ddd.EventDispatcher[ddd.Event])
 
 	RegisterMallDomainEventHandlers(subscriber, handlers)
 }
@@ -54,20 +56,22 @@ func (h *MallDomainEventHandler[T]) HandleEvent(ctx context.Context, event T) er
 	return nil
 }
 
-func (h MallDomainEventHandler[T]) onStoreCreated(ctx context.Context, event ddd.AggregateEvent) error {
-	payload := event.Payload().(*domainevent.StoreCreated)
-	return h.mall.AddStore(ctx, event.AggregateID(), payload.Name, payload.Location)
+func (h MallDomainEventHandler[T]) onStoreCreated(ctx context.Context, event ddd.Event) error {
+	payload := event.Payload().(*aggregate.Store)
+	return h.mall.AddStore(ctx, payload.ID(), payload.Name, payload.Location)
 }
 
-func (h MallDomainEventHandler[T]) onStoreParticipationEnabled(ctx context.Context, event ddd.AggregateEvent) error {
-	return h.mall.SetStoreParticipation(ctx, event.AggregateID(), true)
+func (h MallDomainEventHandler[T]) onStoreParticipationEnabled(ctx context.Context, event ddd.Event) error {
+	payload := event.Payload().(*aggregate.Store)
+	return h.mall.SetStoreParticipation(ctx, payload.ID(), true)
 }
 
-func (h MallDomainEventHandler[T]) onStoreParticipationDisabled(ctx context.Context, event ddd.AggregateEvent) error {
-	return h.mall.SetStoreParticipation(ctx, event.AggregateID(), false)
+func (h MallDomainEventHandler[T]) onStoreParticipationDisabled(ctx context.Context, event ddd.Event) error {
+	payload := event.Payload().(*aggregate.Store)
+	return h.mall.SetStoreParticipation(ctx, payload.ID(), false)
 }
 
-func (h MallDomainEventHandler[T]) onStoreRebranded(ctx context.Context, event ddd.AggregateEvent) error {
-	payload := event.Payload().(*domainevent.StoreRebranded)
-	return h.mall.RenameStore(ctx, event.AggregateID(), payload.Name)
+func (h MallDomainEventHandler[T]) onStoreRebranded(ctx context.Context, event ddd.Event) error {
+	payload := event.Payload().(*aggregate.Store)
+	return h.mall.RenameStore(ctx, payload.ID(), payload.Name)
 }

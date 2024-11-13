@@ -8,27 +8,36 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/registry"
 )
 
-// FIXME: add repository interface
+type (
+	AggregateRepository[T EventSourcedAggregate] interface {
+		Load(ctx context.Context, aggregateID string) (agg T, err error)
+		Save(ctx context.Context, aggregate T) error
+	}
 
-type AggregateRepository[T EventSourcedAggregate] struct {
-	aggregateName string
-	registry      registry.Registry
-	store         AggregateStore
-}
+	aggregateRepository[T EventSourcedAggregate] struct {
+		aggregateName string
+		registry      registry.Registry
+		store         AggregateStore
+	}
+)
 
-func NewAggregateRepository[T EventSourcedAggregate](aggregateName string, registry registry.Registry, store AggregateStore) AggregateRepository[T] {
-	return AggregateRepository[T]{
+var _ AggregateRepository[EventSourcedAggregate] = (*aggregateRepository[EventSourcedAggregate])(nil)
+
+func NewAggregateRepository[T EventSourcedAggregate](aggregateName string, registry registry.Registry, store AggregateStore) aggregateRepository[T] {
+	return aggregateRepository[T]{
 		aggregateName: aggregateName,
 		registry:      registry,
 		store:         store,
 	}
 }
 
-func (r AggregateRepository[T]) Load(ctx context.Context, aggregateID string) (agg T, err error) {
+func (r aggregateRepository[T]) Load(ctx context.Context, aggregateID string) (agg T, err error) {
 	var v any
-	v, err = r.registry.Build(r.aggregateName,
+	v, err = r.registry.Build(
+		r.aggregateName,
 		ddd.SetID(aggregateID),
-		ddd.SetName(r.aggregateName))
+		ddd.SetName(r.aggregateName),
+	)
 	if err != nil {
 		return agg, err
 	}
@@ -38,14 +47,14 @@ func (r AggregateRepository[T]) Load(ctx context.Context, aggregateID string) (a
 		return agg, fmt.Errorf("%T is not the expected type %T", v, agg)
 	}
 
-	if err := r.store.Load(ctx, agg); err != nil {
+	if err = r.store.Load(ctx, agg); err != nil {
 		return agg, err
 	}
 
 	return agg, nil
 }
 
-func (r AggregateRepository[T]) Save(ctx context.Context, aggregate T) error {
+func (r aggregateRepository[T]) Save(ctx context.Context, aggregate T) error {
 	if aggregate.Version() == aggregate.PendingVersion() {
 		return nil
 	}
@@ -56,7 +65,8 @@ func (r AggregateRepository[T]) Save(ctx context.Context, aggregate T) error {
 		}
 	}
 
-	if err := r.store.Save(ctx, aggregate); err != nil {
+	err := r.store.Save(ctx, aggregate)
+	if err != nil {
 		return err
 	}
 

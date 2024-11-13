@@ -19,7 +19,7 @@ var (
 )
 
 type Order struct {
-	es.AggregateBase
+	es.Aggregate
 	CustomerID string
 	PaymentID  string
 	InvoiceID  string
@@ -35,7 +35,7 @@ var _ interface {
 
 func NewOrder(id string) *Order {
 	return &Order{
-		AggregateBase: es.NewAggregateBase(id, OrderAggregate),
+		Aggregate: es.NewAggregate(id, OrderAggregate),
 	}
 }
 

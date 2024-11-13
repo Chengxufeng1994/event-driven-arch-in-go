@@ -47,22 +47,20 @@ var _ EventMessage = (*eventMessage)(nil)
 var _ EventStream = (*eventStream)(nil)
 
 func NewEventStream(reg registry.Registry, stream RawMessageStream) EventStream {
-	return &eventStream{
+	return eventStream{
 		reg:    reg,
 		stream: stream,
 	}
 }
 
 // Publish implements MessageStream.
-func (es *eventStream) Publish(ctx context.Context, topicName string, event ddd.Event) error {
+func (es eventStream) Publish(ctx context.Context, topicName string, event ddd.Event) error {
 	metadata, err := structpb.NewStruct(event.Metadata())
 	if err != nil {
 		return err
 	}
 
-	payload, err := es.reg.Serialize(
-		event.EventName(), event.Payload(),
-	)
+	payload, err := es.reg.Serialize(event.EventName(), event.Payload())
 	if err != nil {
 		return err
 	}
@@ -84,15 +82,14 @@ func (es *eventStream) Publish(ctx context.Context, topicName string, event ddd.
 	})
 }
 
-// Subscribe implements MessageStream.
-func (es *eventStream) Subscribe(topicName string, handler MessageHandler[IncomingEventMessage], options ...SubscriberOption) error {
+func (es eventStream) Subscribe(topicName string, handler MessageHandler[IncomingEventMessage], options ...SubscriberOption) (Subscription, error) {
 	cfg := NewSubscriberConfig(options)
 
 	var filters map[string]struct{}
 	if len(cfg.MessageFilters()) > 0 {
 		filters = make(map[string]struct{})
-		for _, filter := range cfg.MessageFilters() {
-			filters[filter] = struct{}{}
+		for _, key := range cfg.MessageFilters() {
+			filters[key] = struct{}{}
 		}
 	}
 
@@ -131,6 +128,9 @@ func (es *eventStream) Subscribe(topicName string, handler MessageHandler[Incomi
 
 	return es.stream.Subscribe(topicName, fn, options...)
 }
+func (s eventStream) Unsubscribe() error {
+	return s.stream.Unsubscribe()
+}
 
 func (e eventMessage) ID() string                { return e.id }
 func (e eventMessage) EventName() string         { return e.name }
@@ -152,13 +152,13 @@ type eventMsgHandler struct {
 var _ RawMessageHandler = (*eventMsgHandler)(nil)
 
 func NewEventMessageHandler(registry registry.Registry, handler ddd.EventHandler[ddd.Event]) RawMessageHandler {
-	return &eventMsgHandler{
+	return eventMsgHandler{
 		reg:     registry,
 		handler: handler,
 	}
 }
 
-func (h *eventMsgHandler) HandleMessage(ctx context.Context, msg IncomingRawMessage) error {
+func (h eventMsgHandler) HandleMessage(ctx context.Context, msg IncomingRawMessage) error {
 	var eventData EventMessageData
 
 	err := proto.Unmarshal(msg.Data(), &eventData)

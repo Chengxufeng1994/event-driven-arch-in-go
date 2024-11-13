@@ -18,7 +18,7 @@ var (
 )
 
 type ShoppingList struct {
-	ddd.AggregateBase
+	ddd.Aggregate
 	OrderID       string
 	Stops         entity.Stops
 	AssignedBotID string
@@ -29,7 +29,7 @@ var _ ddd.Aggregate = (*ShoppingList)(nil)
 
 func NewShoppingList(id string) *ShoppingList {
 	return &ShoppingList{
-		AggregateBase: ddd.NewAggregateBase(id, ShoppingListAggregate),
+		Aggregate: ddd.NewAggregate(id, ShoppingListAggregate),
 	}
 }
 
@@ -50,7 +50,7 @@ func CreateShoppingList(id, orderID string) *ShoppingList {
 
 func (ShoppingList) Key() string { return ShoppingListAggregate }
 
-func (shoppingList *ShoppingList) AddItem(store *valueobject.Store, product *valueobject.Product, quantity int) error {
+func (shoppingList *ShoppingList) AddItem(store *entity.Store, product *entity.Product, quantity int) error {
 	if _, exists := shoppingList.Stops[store.ID]; !exists {
 		storeEnt := entity.NewStop(store.Name, store.Location)
 		shoppingList.Stops[store.ID] = storeEnt

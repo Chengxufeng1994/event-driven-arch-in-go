@@ -1,0 +1,116 @@
+services:
+  postgres:
+    container_name: postgres
+    hostname: postgres
+    image: postgres:16-alpine
+    restart: always
+    ports:
+      - 5432:5432
+    volumes:
+      - $PWD/build/docker/database:/docker-entrypoint-initdb.d
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
+    networks:
+      eda_network:
+        ipv4_address: 10.5.0.21
+
+  pgadmin:
+    container_name: pgadmin
+    hostname: pgadmin
+    image: dpage/pgadmin4
+    restart: always
+    ports:
+      - 5050:80
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@gmail.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    depends_on:
+      postgres:
+        condition: service_healthy
+        restart: true
+    links:
+      - "postgres:db"
+    networks:
+      eda_network:
+        ipv4_address: 10.5.0.22
+    configs:
+      - source: servers.json
+        target: /pgadmin4/servers.json
+      - source: pgpass
+        target: /pgpass
+
+  nats:
+    container_name: nats
+    hostname: nats
+    image: nats:2-alpine
+    restart: always
+    ports:
+      - 4222:4222
+      - 6222:6222
+      - 8222:8222
+    command:
+      - -js
+      - -sd
+      - /var/lib/nats/data
+    volumes:
+      - jsdata:/var/lib/nats/data
+    networks:
+      eda_network:
+        ipv4_address: 10.5.0.23
+
+  pact-broker:
+    container_name: pact
+    hostname: pact
+    image: pactfoundation/pact-broker:2
+    restart: always
+    ports:
+      - 9292:9292
+    depends_on:
+      - postgres
+    environment:
+      PACT_BROKER_BASIC_AUTH_USERNAME: pact_workshop
+      PACT_BROKER_BASIC_AUTH_PASSWORD: pact_workshop
+      PACT_BROKER_DATABASE_USERNAME: postgres
+      PACT_BROKER_DATABASE_PASSWORD: postgres
+      PACT_BROKER_DATABASE_HOST: postgres
+      PACT_BROKER_DATABASE_NAME: postgres
+      PACT_BROKER_DATABASE_CONNECT_MAX_RETRIES: "10"
+      PACT_BROKER_PUBLIC_HEARTBEAT: "true"
+      PACT_BROKER_WEBHOOK_SCHEME_WHITELIST: http
+      PACT_BROKER_WEBHOOK_HOST_WHITELIST: host.docker.internal
+    networks:
+      eda_network:
+        ipv4_address: 10.5.0.24
+    profiles:
+      - testing
+
+configs:
+  pgpass:
+    content: db:5432:*:postgres:postgres
+  servers.json:
+    content: |
+      {"Servers": {
+        "1": {
+          "Group": "Servers",
+          "Name": "My Local Postgres 16",
+          "Host": "db",
+          "Port": 5432,
+          "MaintenanceDB": "postgres",
+          "Username": "postgres",
+          "PassFile": "/pgpass",
+          "SSLMode": "prefer"
+        }
+      }}
+
+volumes:
+  pgdata: {}
+  jsdata: {}

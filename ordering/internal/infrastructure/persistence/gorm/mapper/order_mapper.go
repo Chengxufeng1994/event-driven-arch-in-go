@@ -47,12 +47,12 @@ func (m *OrderMapper) ToDomain(order *po.Order) (*aggregate.Order, error) {
 	}
 
 	return &aggregate.Order{
-		AggregateBase: es.NewAggregateBase(order.ID, aggregate.OrderAggregate),
-		CustomerID:    order.CustomerID,
-		PaymentID:     order.PaymentID,
-		InvoiceID:     order.InvoiceID,
-		ShoppingID:    order.ShoppingID,
-		Items:         items,
-		Status:        valueobject.OrderStatus(order.Status),
+		Aggregate:  es.NewAggregate(order.ID, aggregate.OrderAggregate),
+		CustomerID: order.CustomerID,
+		PaymentID:  order.PaymentID,
+		InvoiceID:  order.InvoiceID,
+		ShoppingID: order.ShoppingID,
+		Items:      items,
+		Status:     valueobject.OrderStatus(order.Status),
 	}, nil
 }

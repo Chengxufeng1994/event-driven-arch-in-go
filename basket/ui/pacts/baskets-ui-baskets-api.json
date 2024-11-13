@@ -1,0 +1,331 @@
+{
+  "consumer": {
+    "name": "baskets-ui"
+  },
+  "interactions": [
+    {
+      "description": "a request to add a product",
+      "pending": false,
+      "providerStates": [
+        {
+          "name": "a basket exists",
+          "params": {
+            "id": "basket-id"
+          }
+        }
+      ],
+      "request": {
+        "body": {
+          "content": {
+            "productId": "product-id",
+            "quantity": 1
+          },
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "method": "PUT",
+        "path": "/api/v1/baskets/basket-id/addItem"
+      },
+      "response": {
+        "body": {
+          "content": {
+            "message": "product with id: `product-id` does not exist"
+          },
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "matchingRules": {
+          "body": {
+            "$": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            }
+          },
+          "header": {},
+          "status": {}
+        },
+        "status": 404
+      },
+      "type": "Synchronous/HTTP"
+    },
+    {
+      "description": "a request to add a product",
+      "pending": false,
+      "providerStates": [
+        {
+          "name": "a store exists"
+        },
+        {
+          "name": "a product exists",
+          "params": {
+            "id": "product-id"
+          }
+        },
+        {
+          "name": "a basket exists",
+          "params": {
+            "id": "basket-id"
+          }
+        }
+      ],
+      "request": {
+        "body": {
+          "content": {
+            "productId": "product-id",
+            "quantity": 1
+          },
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "method": "PUT",
+        "path": "/api/v1/baskets/basket-id/addItem"
+      },
+      "response": {
+        "body": {
+          "content": {},
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "matchingRules": {
+          "body": {
+            "$": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "equality"
+                }
+              ]
+            }
+          },
+          "header": {},
+          "status": {}
+        },
+        "status": 200
+      },
+      "type": "Synchronous/HTTP"
+    },
+    {
+      "description": "a request to add a product with a negative quantity",
+      "pending": false,
+      "providerStates": [
+        {
+          "name": "a store exists"
+        },
+        {
+          "name": "a product exists",
+          "params": {
+            "id": "product-id"
+          }
+        },
+        {
+          "name": "a basket exists",
+          "params": {
+            "id": "basket-id"
+          }
+        }
+      ],
+      "request": {
+        "body": {
+          "content": {
+            "productId": "product-id",
+            "quantity": -1
+          },
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "method": "PUT",
+        "path": "/api/v1/baskets/basket-id/addItem"
+      },
+      "response": {
+        "body": {
+          "content": {
+            "message": "the item quantity cannot be negative"
+          },
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "matchingRules": {
+          "body": {
+            "$": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            }
+          },
+          "header": {},
+          "status": {}
+        },
+        "status": 400
+      },
+      "type": "Synchronous/HTTP"
+    },
+    {
+      "description": "a request to start a basket",
+      "pending": false,
+      "request": {
+        "body": {
+          "content": {
+            "customerId": "customer-id"
+          },
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "method": "POST",
+        "path": "/api/v1/baskets"
+      },
+      "response": {
+        "body": {
+          "content": {
+            "id": "e2490de5-5bd3-43d5-b7c4-526e33f71304"
+          },
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "generators": {
+          "body": {
+            "$.id": {
+              "type": "Uuid"
+            }
+          }
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "matchingRules": {
+          "body": {
+            "$": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.id": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "regex",
+                  "regex": "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+                }
+              ]
+            }
+          },
+          "header": {},
+          "status": {}
+        },
+        "status": 200
+      },
+      "type": "Synchronous/HTTP"
+    },
+    {
+      "description": "a request to start a basket without a customerId",
+      "pending": false,
+      "request": {
+        "body": {
+          "content": {
+            "customerId": ""
+          },
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "method": "POST",
+        "path": "/api/v1/baskets"
+      },
+      "response": {
+        "body": {
+          "content": {
+            "message": "the customer id cannot be blank"
+          },
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "matchingRules": {
+          "body": {
+            "$": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            }
+          },
+          "header": {},
+          "status": {}
+        },
+        "status": 400
+      },
+      "type": "Synchronous/HTTP"
+    }
+  ],
+  "metadata": {
+    "pact-js": {
+      "version": "13.1.5"
+    },
+    "pactRust": {
+      "ffi": "0.4.22",
+      "models": "1.2.3"
+    },
+    "pactSpecification": {
+      "version": "4.0"
+    }
+  },
+  "provider": {
+    "name": "baskets-api"
+  }
+}

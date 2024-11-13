@@ -14,7 +14,7 @@ import (
 )
 
 type testAggregate struct {
-	es.AggregateBase
+	es.Aggregate
 	Name string
 }
 
@@ -22,7 +22,7 @@ var _ es.EventSourcedAggregate = (*testAggregate)(nil)
 
 func NewTestAggregate(id, name string) *testAggregate {
 	return &testAggregate{
-		AggregateBase: es.NewAggregateBase(id, name),
+		Aggregate: es.NewAggregate(id, name),
 	}
 }
 

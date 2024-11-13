@@ -41,4 +41,3 @@ message ProductPriceChanged {
 message ProductRemoved {
   string id = 1;
 }
-

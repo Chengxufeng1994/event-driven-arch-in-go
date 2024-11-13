@@ -31,10 +31,10 @@ func (c *CustomerMapper) ToPersistent(customer *aggregate.Customer) *po.Customer
 
 func (c *CustomerMapper) ToDomain(customer *po.Customer) *aggregate.Customer {
 	return &aggregate.Customer{
-		AggregateBase: ddd.NewAggregateBase(customer.ID, aggregate.CustomerAggregate),
-		Name:          customer.Name,
-		SmsNumber:     customer.SmsNumber,
-		Enabled:       customer.Enabled,
+		Aggregate: ddd.NewAggregate(customer.ID, aggregate.CustomerAggregate),
+		Name:      customer.Name,
+		SmsNumber: customer.SmsNumber,
+		Enabled:   customer.Enabled,
 	}
 }
 

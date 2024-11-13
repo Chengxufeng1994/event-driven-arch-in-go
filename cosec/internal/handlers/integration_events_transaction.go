@@ -7,6 +7,7 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/di"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/registry"
+	orderv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/api/order/v1"
 	"gorm.io/gorm"
 )
 
@@ -37,5 +38,9 @@ func RegisterIntegrationEventHandlersTx(container di.Container) error {
 
 	subscriber := container.Get("stream").(am.RawMessageStream)
 
-	return RegisterIntegrationEventHandlers(subscriber, evtMsgHandler)
+	_, err := subscriber.Subscribe(orderv1.OrderAggregateChannel, evtMsgHandler, am.MessageFilter{
+		orderv1.OrderCreatedEvent,
+	}, am.GroupName("cosec-ordering"))
+
+	return err
 }

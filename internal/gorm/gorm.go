@@ -19,6 +19,7 @@ type GormConfig[K comparable, V any] map[K]func(config V) gorm.Dialector
 var (
 	gormDBOnce   sync.Once
 	db           *gorm.DB
+	SqlDB        *sql.DB
 	dialectorMap = GormConfig[string, any]{
 		"postgres": func(config any) gorm.Dialector {
 			pgConfig, ok := config.(postgres.Config)
@@ -69,7 +70,6 @@ func NewGormDB(config *config.Infrastructure, opts ...GormConfigOption) (*gorm.D
 		return nil, fmt.Errorf("dialector %s not found", config.GORM.DBType)
 	}
 
-	var sqlDB *sql.DB
 	var err error
 	gormDBOnce.Do(func() {
 		db, err = gorm.Open(dialector(postgres.Config{
@@ -80,29 +80,29 @@ func NewGormDB(config *config.Infrastructure, opts ...GormConfigOption) (*gorm.D
 			return
 		}
 
-		sqlDB, err = db.DB()
+		SqlDB, err = db.DB()
 		if err != nil {
 			return
 		}
 
-		err = sqlDB.Ping()
+		err = SqlDB.Ping()
 		if err != nil {
 			return
 		}
 
 		if config.GORM.MaxLifetime > 0 {
 			t, _ := time.ParseDuration(fmt.Sprintf("%ds", config.GORM.MaxLifetime))
-			sqlDB.SetConnMaxLifetime(t)
+			SqlDB.SetConnMaxLifetime(t)
 		}
 		if config.GORM.MaxIdleTime > 0 {
 			t, _ := time.ParseDuration(fmt.Sprintf("%ds", config.GORM.MaxIdleTime))
-			sqlDB.SetConnMaxIdleTime(t)
+			SqlDB.SetConnMaxIdleTime(t)
 		}
 		if config.GORM.MaxOpenConns > 0 {
-			sqlDB.SetMaxOpenConns(config.GORM.MaxOpenConns)
+			SqlDB.SetMaxOpenConns(config.GORM.MaxOpenConns)
 		}
 		if config.GORM.MaxIdleConns > 0 {
-			sqlDB.SetMaxIdleConns(config.GORM.MaxIdleConns)
+			SqlDB.SetMaxIdleConns(config.GORM.MaxIdleConns)
 		}
 	})
 

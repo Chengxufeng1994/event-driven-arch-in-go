@@ -24,21 +24,22 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/di"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/logger"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/monolith"
 	outboxstoregorm "github.com/Chengxufeng1994/event-driven-arch-in-go/internal/outboxstore/gorm"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/registry"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/system"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/tm"
 	storev1 "github.com/Chengxufeng1994/event-driven-arch-in-go/store/api/store/v1"
 )
 
 type Module struct{}
 
-var _ monolith.Module = (*Module)(nil)
+var _ system.Module = (*Module)(nil)
 
 func NewModule() *Module { return &Module{} }
 
-func (m *Module) PrepareRun(ctx context.Context, mono monolith.Monolith) error {
+func (m *Module) Startup(ctx context.Context, mono system.Service) error {
 	container := di.New()
+
 	// setup Driver adapters
 	endpoint := fmt.Sprintf("%s:%d", mono.Config().Server.GPPC.Host, mono.Config().Server.GPPC.Port)
 	container.AddSingleton("registry", func(c di.Container) (any, error) {

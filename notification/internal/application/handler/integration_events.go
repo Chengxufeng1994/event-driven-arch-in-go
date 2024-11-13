@@ -12,19 +12,26 @@ import (
 	orderv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/api/order/v1"
 )
 
-type IntegrationEventHandler[T ddd.Event] struct {
+type integrationEventHandlers[T ddd.Event] struct {
 	app       application.NotificationUseCase
 	customers repository.CustomerCacheRepository
 }
 
-var _ ddd.EventHandler[ddd.Event] = (*IntegrationEventHandler[ddd.Event])(nil)
+var _ ddd.EventHandler[ddd.Event] = (*integrationEventHandlers[ddd.Event])(nil)
+
+func NewIntegrationEventHandler(app application.NotificationUseCase, customers repository.CustomerCacheRepository) ddd.EventHandler[ddd.Event] {
+	return &integrationEventHandlers[ddd.Event]{
+		app:       app,
+		customers: customers,
+	}
+}
 
 func RegisterIntegrationEventHandlers(subscriber am.EventSubscriber, handlers ddd.EventHandler[ddd.Event]) error {
 	evtMsgHandler := am.MessageHandlerFunc[am.IncomingEventMessage](func(ctx context.Context, eventMsg am.IncomingEventMessage) error {
 		return handlers.HandleEvent(ctx, eventMsg)
 	})
 
-	err := subscriber.Subscribe(customerv1.CustomerAggregateChannel, evtMsgHandler, am.MessageFilter{
+	_, err := subscriber.Subscribe(customerv1.CustomerAggregateChannel, evtMsgHandler, am.MessageFilter{
 		customerv1.CustomerRegisteredEvent,
 		customerv1.CustomerSmsChangedEvent,
 	}, am.GroupName("notification-customers"))
@@ -32,30 +39,17 @@ func RegisterIntegrationEventHandlers(subscriber am.EventSubscriber, handlers dd
 		return err
 	}
 
-	err = subscriber.Subscribe(customerv1.CustomerAggregateChannel, evtMsgHandler, am.MessageFilter{
+	_, err = subscriber.Subscribe(customerv1.CustomerAggregateChannel, evtMsgHandler, am.MessageFilter{
 		orderv1.OrderCreatedEvent,
 		orderv1.OrderReadiedEvent,
 		orderv1.OrderCanceledEvent,
 		orderv1.OrderCompletedEvent,
 	}, am.GroupName("notification-orders"))
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return err
 }
 
-func NewIntegrationEventHandler(
-	app application.NotificationUseCase,
-	customers repository.CustomerCacheRepository,
-) *IntegrationEventHandler[ddd.Event] {
-	return &IntegrationEventHandler[ddd.Event]{
-		app:       app,
-		customers: customers,
-	}
-}
-
-func (h IntegrationEventHandler[T]) HandleEvent(ctx context.Context, event T) error {
+func (h integrationEventHandlers[T]) HandleEvent(ctx context.Context, event T) error {
 	switch event.EventName() {
 	case customerv1.CustomerRegisteredEvent:
 		return h.onCustomerRegistered(ctx, event)
@@ -72,27 +66,36 @@ func (h IntegrationEventHandler[T]) HandleEvent(ctx context.Context, event T) er
 	return nil
 }
 
-func (h IntegrationEventHandler[T]) onCustomerRegistered(ctx context.Context, event T) error {
+func (h integrationEventHandlers[T]) onCustomerRegistered(ctx context.Context, event T) error {
 	payload := event.Payload().(*customerv1.CustomerRegistered)
 	return h.customers.Add(ctx, payload.GetId(), payload.GetName(), payload.GetSmsNumber())
 }
 
-func (h IntegrationEventHandler[T]) onCustomerSmsChanged(ctx context.Context, event T) error {
+func (h integrationEventHandlers[T]) onCustomerSmsChanged(ctx context.Context, event T) error {
 	payload := event.Payload().(*customerv1.CustomerSmsChanged)
 	return h.customers.UpdateSmsNumber(ctx, payload.GetId(), payload.GetSmsNumber())
 }
 
-func (h IntegrationEventHandler[T]) onOrderCreated(ctx context.Context, event T) error {
+func (h integrationEventHandlers[T]) onOrderCreated(ctx context.Context, event T) error {
 	payload := event.Payload().(*orderv1.OrderCreated)
-	return h.app.NotifyOrderCreated(ctx, command.NewOrderCreated(payload.GetId(), payload.GetCustomerId()))
+	return h.app.NotifyOrderCreated(ctx, command.NewOrderCreated(
+		payload.GetId(),
+		payload.GetCustomerId()),
+	)
 }
 
-func (h IntegrationEventHandler[T]) onOrderReadied(ctx context.Context, event T) error {
+func (h integrationEventHandlers[T]) onOrderReadied(ctx context.Context, event T) error {
 	payload := event.Payload().(*orderv1.OrderCreated)
-	return h.app.NotifyOrderReady(ctx, command.NewOrderReady(payload.GetId(), payload.GetCustomerId()))
+	return h.app.NotifyOrderReady(ctx, command.NewOrderReady(
+		payload.GetId(),
+		payload.GetCustomerId()),
+	)
 }
 
-func (h IntegrationEventHandler[T]) onOrderCanceled(ctx context.Context, event T) error {
+func (h integrationEventHandlers[T]) onOrderCanceled(ctx context.Context, event T) error {
 	payload := event.Payload().(*orderv1.OrderCanceled)
-	return h.app.NotifyOrderCanceled(ctx, command.NewOrderCanceled(payload.GetId(), payload.GetCustomerId()))
+	return h.app.NotifyOrderCanceled(ctx, command.NewOrderCanceled(
+		payload.GetId(),
+		payload.GetCustomerId()),
+	)
 }

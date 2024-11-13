@@ -10,11 +10,11 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/domain/event"
 )
 
-type DomainEventHandler[T ddd.Event] struct {
+type domainEventHandlers[T ddd.Event] struct {
 	publisher am.MessagePublisher[ddd.Event]
 }
 
-var _ ddd.EventHandler[ddd.Event] = (*DomainEventHandler[ddd.Event])(nil)
+var _ ddd.EventHandler[ddd.Event] = (*domainEventHandlers[ddd.Event])(nil)
 
 func RegisterDomainEventHandlers(subscriber ddd.EventSubscriber[ddd.Event], handlers ddd.EventHandler[ddd.Event]) {
 	subscriber.Subscribe(handlers,
@@ -27,11 +27,11 @@ func RegisterDomainEventHandlers(subscriber ddd.EventSubscriber[ddd.Event], hand
 	)
 }
 
-func NewDomainEventHandler(publisher am.MessagePublisher[ddd.Event]) DomainEventHandler[ddd.Event] {
-	return DomainEventHandler[ddd.Event]{publisher: publisher}
+func NewDomainEventHandler(publisher am.MessagePublisher[ddd.Event]) domainEventHandlers[ddd.Event] {
+	return domainEventHandlers[ddd.Event]{publisher: publisher}
 }
 
-func (h DomainEventHandler[T]) HandleEvent(ctx context.Context, e T) error {
+func (h domainEventHandlers[T]) HandleEvent(ctx context.Context, e T) error {
 	switch e.EventName() {
 	case event.OrderCreatedEvent:
 		return h.onOrderCreated(ctx, e)
@@ -45,7 +45,7 @@ func (h DomainEventHandler[T]) HandleEvent(ctx context.Context, e T) error {
 	return nil
 }
 
-func (h DomainEventHandler[T]) onOrderCreated(ctx context.Context, event ddd.Event) error {
+func (h domainEventHandlers[T]) onOrderCreated(ctx context.Context, event ddd.Event) error {
 	payload := event.Payload().(*aggregate.Order)
 	items := make([]*orderv1.OrderCreated_Item, len(payload.Items))
 	for i, item := range payload.Items {
@@ -67,7 +67,7 @@ func (h DomainEventHandler[T]) onOrderCreated(ctx context.Context, event ddd.Eve
 	)
 }
 
-func (h DomainEventHandler[T]) onOrderRejected(ctx context.Context, event ddd.Event) error {
+func (h domainEventHandlers[T]) onOrderRejected(ctx context.Context, event ddd.Event) error {
 	payload := event.Payload().(*aggregate.Order)
 	return h.publisher.Publish(ctx, orderv1.OrderAggregateChannel,
 		ddd.NewEvent(orderv1.OrderRejectedEvent, &orderv1.OrderRejected{
@@ -78,7 +78,7 @@ func (h DomainEventHandler[T]) onOrderRejected(ctx context.Context, event ddd.Ev
 	)
 }
 
-func (h DomainEventHandler[T]) onOrderApproved(ctx context.Context, event ddd.Event) error {
+func (h domainEventHandlers[T]) onOrderApproved(ctx context.Context, event ddd.Event) error {
 	payload := event.Payload().(*aggregate.Order)
 	return h.publisher.Publish(ctx, orderv1.OrderAggregateChannel,
 		ddd.NewEvent(orderv1.OrderApprovedEvent, &orderv1.OrderApproved{
@@ -89,7 +89,7 @@ func (h DomainEventHandler[T]) onOrderApproved(ctx context.Context, event ddd.Ev
 	)
 }
 
-func (h DomainEventHandler[T]) onOrderReadied(ctx context.Context, event ddd.Event) error {
+func (h domainEventHandlers[T]) onOrderReadied(ctx context.Context, event ddd.Event) error {
 	payload := event.Payload().(*aggregate.Order)
 	return h.publisher.Publish(ctx, orderv1.OrderAggregateChannel,
 		ddd.NewEvent(orderv1.OrderReadiedEvent, &orderv1.OrderReadied{
@@ -101,7 +101,7 @@ func (h DomainEventHandler[T]) onOrderReadied(ctx context.Context, event ddd.Eve
 	)
 }
 
-func (h DomainEventHandler[T]) onOrderCanceled(ctx context.Context, event ddd.Event) error {
+func (h domainEventHandlers[T]) onOrderCanceled(ctx context.Context, event ddd.Event) error {
 	payload := event.Payload().(*aggregate.Order)
 	return h.publisher.Publish(ctx, orderv1.OrderAggregateChannel,
 		ddd.NewEvent(orderv1.OrderCanceledEvent, &orderv1.OrderCanceled{
@@ -112,7 +112,7 @@ func (h DomainEventHandler[T]) onOrderCanceled(ctx context.Context, event ddd.Ev
 	)
 }
 
-func (h DomainEventHandler[T]) onOrderCompleted(ctx context.Context, event ddd.Event) error {
+func (h domainEventHandlers[T]) onOrderCompleted(ctx context.Context, event ddd.Event) error {
 	payload := event.Payload().(*aggregate.Order)
 	return h.publisher.Publish(ctx, orderv1.OrderAggregateChannel,
 		ddd.NewEvent(orderv1.OrderCompletedEvent, &orderv1.OrderCompleted{
