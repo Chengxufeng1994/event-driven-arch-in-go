@@ -2,7 +2,6 @@ package ordering
 
 import (
 	"context"
-	"fmt"
 
 	"golang.org/x/sync/errgroup"
 	"gorm.io/gorm"
@@ -30,7 +29,6 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/domain/aggregate"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/domain/event"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/domain/repository"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/infrastructure/client/grpc"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/infrastructure/logging"
 	grpcv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/interface/grpc/v1"
 	v1 "github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/interface/rest/v1"
@@ -42,10 +40,9 @@ var _ system.Module = (*Module)(nil)
 
 func NewModule() *Module { return &Module{} }
 
-func (m *Module) Startup(ctx context.Context, mono system.Service) error {
+func Root(ctx context.Context, svc system.Service) error {
 	container := di.New()
 	// setup Driver adapters
-	endpoint := fmt.Sprintf("%s:%d", mono.Config().Server.GPPC.Host, mono.Config().Server.GPPC.Port)
 	container.AddSingleton("registry", func(c di.Container) (any, error) {
 		reg := registry.New()
 		if err := registrations(reg); err != nil {
@@ -63,19 +60,16 @@ func (m *Module) Startup(ctx context.Context, mono system.Service) error {
 		return reg, nil
 	})
 	container.AddSingleton("logger", func(c di.Container) (any, error) {
-		return mono.Logger(), nil
+		return svc.Logger(), nil
 	})
 	container.AddSingleton("stream", func(c di.Container) (any, error) {
-		return nats.NewStream(mono.Config().Infrastructure.Nats.Stream, mono.JetStream(), mono.Logger()), nil
+		return nats.NewStream(svc.Config().Infrastructure.Nats.Stream, svc.JetStream(), svc.Logger()), nil
 	})
 	container.AddSingleton("domainEventDispatcher", func(c di.Container) (any, error) {
 		return ddd.NewEventDispatcher[ddd.Event](), nil
 	})
 	container.AddSingleton("db", func(c di.Container) (any, error) {
-		return mono.Database(), nil
-	})
-	container.AddSingleton("conn", func(c di.Container) (any, error) {
-		return grpc.Dial(ctx, endpoint)
+		return svc.Database(), nil
 	})
 	container.AddSingleton("outboxProcessor", func(c di.Container) (any, error) {
 		return tm.NewOutboxProcessor(
@@ -150,13 +144,13 @@ func (m *Module) Startup(ctx context.Context, mono system.Service) error {
 	})
 
 	// setup Driver adapters
-	if err := grpcv1.RegisterServerTx(container, mono.RPC().GRPCServer()); err != nil {
+	if err := grpcv1.RegisterServerTx(container, svc.RPC().GRPCServer()); err != nil {
 		return err
 	}
-	if err := v1.RegisterGateway(ctx, mono.Gin(), endpoint); err != nil {
+	if err := v1.RegisterGateway(ctx, svc.Gin(), svc.Config().Server.GPPC.Address()); err != nil {
 		return err
 	}
-	if err := docs.RegisterSwagger(mono.Gin()); err != nil {
+	if err := docs.RegisterSwagger(svc.Gin()); err != nil {
 		return err
 	}
 	handler.RegisterDomainEventHandlersTx(container)
@@ -167,13 +161,17 @@ func (m *Module) Startup(ctx context.Context, mono system.Service) error {
 		return err
 	}
 
-	go m.startOutboxProcessor(ctx, container)
+	go startOutboxProcessor(ctx, container)
 
 	return nil
 }
 
+func (m *Module) Startup(ctx context.Context, svc system.Service) error {
+	return Root(ctx, svc)
+}
+
 func (m *Module) Name() string {
-	return "order"
+	return "orders"
 }
 
 func registrations(reg registry.Registry) (err error) {
@@ -216,7 +214,7 @@ func registrations(reg registry.Registry) (err error) {
 	return nil
 }
 
-func (m *Module) startOutboxProcessor(ctx context.Context, container di.Container) {
+func startOutboxProcessor(ctx context.Context, container di.Container) {
 	outboxProcessor := container.Get("outboxProcessor").(tm.OutboxProcessor)
 	logger := container.Get("logger").(logger.Logger)
 

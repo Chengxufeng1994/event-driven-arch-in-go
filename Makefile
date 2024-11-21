@@ -41,11 +41,58 @@ check-outdated:
 
 .PHONY: docker-compose-up-mono
 docker-compose-up-mono:
-	@docker compose --profile monolith up -d --remove-orphans
+	@docker compose \
+		--profile monolith \
+		--profile testing \
+		up -d --remove-orphans
+
+.PHONY: docker-compose-up-microservices
+docker-compose-up-microservices:
+	@docker compose \
+		--profile microservices \
+		--profile testing \
+		up -d --remove-orphans
 
 .PHONY: docker-compose-down-mono
 docker-compose-down-mono:
-	@docker compose --profile monolith down -v
+	@docker compose \
+		--profile monolith \
+		--profile testing \
+		down -v
+
+docker-compose-down-microservices:
+	@docker compose \
+		--profile microservices \
+		--profile testing \
+		down -v
+
+build: build-monolith build-microservices
+
+rebuild: clean-monolith clean-microservices build
+
+.PHONY: build-monolith
+build-monolith:
+	docker build -t mallbots-monolith --file build/docker/Dockerfile .
+
+.PHONY: build-microservices
+build-microservices:
+	docker build -t mallbots-baskets --file build/docker/Dockerfile.microservices --build-arg=service=basket .
+	docker build -t mallbots-cosec --file build/docker/Dockerfile.microservices --build-arg=service=cosec .
+	docker build -t mallbots-customers --file build/docker/Dockerfile.microservices --build-arg=service=customer .
+	docker build -t mallbots-depot --file build/docker/Dockerfile.microservices --build-arg=service=depot .
+	docker build -t mallbots-notifications --file build/docker/Dockerfile.microservices --build-arg=service=notification .
+	docker build -t mallbots-ordering --file build/docker/Dockerfile.microservices --build-arg=service=ordering .
+	docker build -t mallbots-payments --file build/docker/Dockerfile.microservices --build-arg=service=payment .
+	docker build -t mallbots-search --file build/docker/Dockerfile.microservices --build-arg=service=search .
+	docker build -t mallbots-stores --file build/docker/Dockerfile.microservices --build-arg=service=store .
+
+.PHONY: clean-monolith
+clean-monolith:
+	docker image rm mallbots-monolith
+
+.PHONY: clean-microservices
+clean-microservices:
+	docker image rm mallbots-baskets mallbots-cosec mallbots-customers mallbots-depot mallbots-notifications mallbots-ordering mallbots-payments mallbots-search mallbots-stores
 
 .PHONY: prepare-configmap
 prepare-configmap:
@@ -76,13 +123,3 @@ k8s-nats:
 		--set jetstream.enabled=true \
 		--set persistence.enabled=true \
 		--set persistence.storageClass=nfs-client
-
-build: build-monolith
-
-rebuild: clean-monolith build
-
-clean-monolith:
-	docker image rm mallbots-monolith
-
-build-monolith:
-	docker build -t mallbots-monolith --file build/docker/Dockerfile .

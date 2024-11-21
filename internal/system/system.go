@@ -2,10 +2,11 @@ package system
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
+	"io/fs"
 	"net"
+	"net/http"
 	"time"
 
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/config"
@@ -14,7 +15,6 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/logger"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/server"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/waiter"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/migrations"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/requestid"
 	"github.com/gin-gonic/gin"
@@ -35,7 +35,7 @@ type System struct {
 	gormDB            *gorm.DB
 	gin               *gin.Engine
 	grpcServer        *server.RPCServer
-	genericHttpServer *server.GenericHTTPServer
+	genericHTTPServer *server.GenericHTTPServer
 	nc                *nats.Conn
 	js                nats.JetStreamContext
 	waiter            waiter.Waiter
@@ -56,10 +56,6 @@ func NewSystem(name, basename string, cfg *config.Config, logger logger.Logger) 
 		return nil, errors.New("failed to connect to database")
 	}
 
-	if err := migrateDB(pkggorm.SqlDB); err != nil {
-		return nil, errors.New("failed to migrate to database")
-	}
-
 	s.nc, err = nats.Connect(cfg.Infrastructure.Nats.URL)
 	if err != nil {
 		return nil, errors.New("failed to connect to nats")
@@ -70,7 +66,7 @@ func NewSystem(name, basename string, cfg *config.Config, logger logger.Logger) 
 	}
 
 	s.initGinEngine()
-	s.initGrpcServer(logger, cfg.Server)
+	s.initGrpcServer(cfg.Server)
 	s.initWaiter()
 
 	return s, nil
@@ -95,40 +91,43 @@ func (s *System) initGinEngine() {
 	s.gin = router
 }
 
-func (s *System) initGrpcServer(logger logger.Logger, cfg *config.Server) {
-	s.grpcServer = server.NewGrpcServer(logger, cfg)
+func (s *System) initGrpcServer(cfg *config.Server) {
+	s.grpcServer = server.NewGrpcServer(s.logger, cfg)
 }
 func (s *System) initWaiter() {
 	s.waiter = waiter.New(waiter.CatchSignals())
 }
 
-func migrateDB(db *sql.DB) error {
-	goose.SetBaseFS(migrations.FS)
+func (s *System) MigrateDB(fs fs.FS) error {
+	goose.SetBaseFS(fs)
 	if err := goose.SetDialect("postgres"); err != nil {
 		return err
 	}
-	if err := goose.Up(db, "."); err != nil {
+	if err := goose.Up(pkggorm.SqlDB, "."); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (s *System) WaitForWeb(ctx context.Context) error {
-	s.genericHttpServer = server.NewGenericHttpServer(s.gin, s.cfg.Server)
+	s.genericHTTPServer = server.NewGenericHttpServer(s.gin, s.cfg.Server)
 
 	eg, gCtx := errgroup.WithContext(ctx)
 	eg.Go(func() error {
 		s.logger.Infof("web server started: %d", s.cfg.Server.HTTP.Port)
 		defer s.logger.Infof("web server shutdown")
-		return s.genericHttpServer.ListenAndServe(gCtx)
+		err := s.genericHTTPServer.ListenAndServe(gCtx)
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			return err
+		}
+
+		return nil
 	})
 
 	return eg.Wait()
 }
 
 func (s *System) WaitForRPC(ctx context.Context) error {
-	eg, gCtx := errgroup.WithContext(ctx)
-
 	address := fmt.Sprintf("%s:%d", s.cfg.Server.GPPC.Host, s.cfg.Server.GPPC.Port)
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
@@ -136,6 +135,7 @@ func (s *System) WaitForRPC(ctx context.Context) error {
 		return err
 	}
 
+	eg, gCtx := errgroup.WithContext(ctx)
 	eg.Go(func() error {
 		s.logger.Infof("rpc server started: %d", s.cfg.Server.GPPC.Port)
 		defer s.logger.Infof("rpc server shutdown")
@@ -159,6 +159,7 @@ func (s *System) WaitForRPC(ctx context.Context) error {
 		timeout := time.NewTimer(5 * time.Second)
 		select {
 		case <-timeout.C:
+			s.RPC().GRPCServer().Stop()
 			return fmt.Errorf("rpc server failed to stop gracefully")
 		case <-stopped:
 			return nil
@@ -185,5 +186,6 @@ func (app *System) WaitForStream(ctx context.Context) error {
 		<-gCtx.Done()
 		return app.nc.Drain()
 	})
+
 	return eg.Wait()
 }

@@ -1,39 +1,41 @@
 include:
   - docker-compose.infra.yaml
+
 services:
   monolith_debug:
     container_name: monolith_debug
     build:
       context: .
       dockerfile: build/docker/Dockerfile.debug
+    restart: always
     environment:
       - EDA_INFRASTRUCTURE_GORM_DSN=host=postgres user=postgres password=postgres dbname=mallbots port=5432 sslmode=disable TimeZone=Asia/Taipei
       - EDA_INFRASTRUCTURE_NATS_URL=nats://nats:4222
     ports:
-      - 8080:8080
-      - 8081:8081
+      - 8000:8000
+      - 9000:9000
       - 2345:2345
     depends_on:
       - nats
       - postgres
     command: ["/wait-for", "postgres:5432", "--", "/dlv", "exec", "--listen=:2345", "--headless=true", "--continue", "--api-version=2", "--accept-multiclient", "/mallbots/monolith"]
-    networks:
-      eda_network:
-        ipv4_address: 10.5.0.10
     profiles:
       - debug
+    networks:
+      - eda_network
 
   monolith:
     container_name: monolith
     build:
       context: .
       dockerfile: build/docker/Dockerfile
+    restart: always
     environment:
       - EDA_INFRASTRUCTURE_GORM_DSN=host=postgres user=postgres password=postgres dbname=mallbots port=5432 sslmode=disable TimeZone=Asia/Taipei
       - EDA_INFRASTRUCTURE_NATS_URL=nats://nats:4222
     ports:
-      - 8080:8080
-      - 8081:8081
+      - 8000:8000
+      - 9000:9000
     depends_on:
       - nats
       - postgres
@@ -41,8 +43,272 @@ services:
     profiles:
       - monolith
     networks:
-      eda_network:
-        ipv4_address: 10.5.0.10
+      - eda_network
+
+  baskets:
+    container_name: baskets
+    hostname: baskets
+    image: mallbots-baskets
+    build:
+      context: .
+      dockerfile: build/docker/Dockerfile.microservices
+      args:
+        service: basket
+    restart: always
+    expose:
+      - '9000'
+    environment:
+      - EDA_ENVIRONMENT=development
+      - EDA_SERVER_GRPC_SERVICES=STORES=stores:9000,CUSTOMERS=customers:9000
+      - EDA_INFRASTRUCTURE_GORM_DSN=host=postgres user=baskets_user password=baskets_pass dbname=baskets port=5432 sslmode=disable search_path=baskets,public TimeZone=UTC
+      - EDA_INFRASTRUCTURE_NATS_URL=nats://nats:4222
+    volumes:
+      - '$PWD/config.yaml:/config.yaml'
+    depends_on:
+      - nats
+      - postgres
+    command: [ "./wait-for", "postgres:5432", "--", "/mallbots/service" ]
+    profiles:
+      - microservices
+    networks:
+      - eda_network
+
+  cosec:
+    container_name: cosec
+    hostname: cosec
+    image: mallbots-cosec
+    build:
+      context: .
+      dockerfile: build/docker/Dockerfile.microservices
+      args:
+        service: cosec
+    restart: always
+    expose:
+      - '9000'
+    environment:
+      - EDA_ENVIRONMENT=development
+      - EDA_SERVER_GRPC_SERVICES=STORES=stores:9000,CUSTOMERS=customers:9000
+      - EDA_INFRASTRUCTURE_GORM_DSN=host=postgres user=cosec_user password=cosec_pass dbname=cosec port=5432 sslmode=disable search_path=cosec,public TimeZone=UTC
+      - EDA_INFRASTRUCTURE_NATS_URL=nats://nats:4222
+    volumes:
+      - '$PWD/config.yaml:/config.yaml'
+    depends_on:
+      - nats
+      - postgres
+    command: [ "./wait-for", "postgres:5432", "--", "/mallbots/service" ]
+    profiles:
+      - microservices
+    networks:
+      - eda_network
+
+  customers:
+    container_name: customers
+    hostname: customers
+    image: mallbots-customers
+    build:
+      context: .
+      dockerfile: build/docker/Dockerfile.microservices
+      args:
+        service: customer
+    restart: always
+    expose:
+      - '9000'
+    environment:
+      - EDA_ENVIRONMENT=development
+      - EDA_SERVER_GRPC_SERVICES=STORES=stores:9000,CUSTOMERS=customers:9000
+      - EDA_INFRASTRUCTURE_GORM_DSN=host=postgres user=customers_user password=customers_pass dbname=customers port=5432 sslmode=disable search_path=customers,public TimeZone=UTC
+      - EDA_INFRASTRUCTURE_NATS_URL=nats://nats:4222
+    volumes:
+      - '$PWD/config.yaml:/config.yaml'
+    depends_on:
+      - nats
+      - postgres
+    command: [ "./wait-for", "postgres:5432", "--", "/mallbots/service" ]
+    profiles:
+      - microservices
+    networks:
+      - eda_network
+
+  depot:
+    container_name: depot
+    hostname: depot
+    image: mallbots-depot
+    build:
+      context: .
+      dockerfile: build/docker/Dockerfile.microservices
+      args:
+        service: depot
+    restart: always
+    expose:
+      - '9000'
+    environment:
+      - EDA_ENVIRONMENT=development
+      - EDA_SERVER_GRPC_SERVICES=STORES=stores:9000,CUSTOMERS=customers:9000
+      - EDA_INFRASTRUCTURE_GORM_DSN=host=postgres user=depot_user password=depot_pass dbname=depot port=5432 sslmode=disable search_path=depot,public TimeZone=UTC
+      - EDA_INFRASTRUCTURE_NATS_URL=nats://nats:4222
+    volumes:
+      - '$PWD/config.yaml:/config.yaml'
+    depends_on:
+      - nats
+      - postgres
+    command: [ "./wait-for", "postgres:5432", "--", "/mallbots/service" ]
+    profiles:
+      - microservices
+    networks:
+      - eda_network
+
+  notifications:
+    container_name: notifications
+    hostname: notifications
+    image: mallbots-notifications
+    build:
+      context: .
+      dockerfile: build/docker/Dockerfile.microservices
+      args:
+        service: notification
+    restart: always
+    expose:
+      - '9000'
+    environment:
+      - EDA_ENVIRONMENT=development
+      - EDA_SERVER_GRPC_SERVICES=STORES=stores:9000,CUSTOMERS=customers:9000
+      - EDA_INFRASTRUCTURE_GORM_DSN=host=postgres user=notifications_user password=notifications_pass dbname=notifications port=5432 sslmode=disable search_path=notifications,public TimeZone=UTC
+      - EDA_INFRASTRUCTURE_NATS_URL=nats://nats:4222
+    volumes:
+      - '$PWD/config.yaml:/config.yaml'
+    depends_on:
+      - nats
+      - postgres
+    command: [ "./wait-for", "postgres:5432", "--", "/mallbots/service" ]
+    profiles:
+      - microservices
+    networks:
+      - eda_network
+
+  ordering:
+    container_name: ordering
+    hostname: ordering
+    image: mallbots-ordering
+    build:
+      context: .
+      dockerfile: build/docker/Dockerfile.microservices
+      args:
+        service: ordering
+    restart: always
+    expose:
+      - '9000'
+    environment:
+      - EDA_ENVIRONMENT=development
+      - EDA_SERVER_GRPC_SERVICES=STORES=stores:9000,CUSTOMERS=customers:9000
+      - EDA_INFRASTRUCTURE_GORM_DSN=host=postgres user=ordering_user password=ordering_pass dbname=ordering port=5432 sslmode=disable search_path=ordering,public TimeZone=UTC
+      - EDA_INFRASTRUCTURE_NATS_URL=nats://nats:4222
+    volumes:
+      - '$PWD/config.yaml:/config.yaml'
+    depends_on:
+      - nats
+      - postgres
+    command: [ "./wait-for", "postgres:5432", "--", "/mallbots/service" ]
+    profiles:
+      - microservices
+    networks:
+      - eda_network
+
+  payments:
+    container_name: payments
+    hostname: payments
+    image: mallbots-payments
+    build:
+      context: .
+      dockerfile: build/docker/Dockerfile.microservices
+      args:
+        service: payment
+    restart: always
+    expose:
+      - '9000'
+    environment:
+      - EDA_ENVIRONMENT=development
+      - EDA_SERVER_GRPC_SERVICES=STORES=stores:9000,CUSTOMERS=customers:9000
+      - EDA_INFRASTRUCTURE_GORM_DSN=host=postgres user=payments_user password=payments_pass dbname=payments port=5432 sslmode=disable search_path=payments,public TimeZone=UTC
+      - EDA_INFRASTRUCTURE_NATS_URL=nats://nats:4222
+    volumes:
+      - '$PWD/config.yaml:/config.yaml'
+    depends_on:
+      - nats
+      - postgres
+    command: [ "./wait-for", "postgres:5432", "--", "/mallbots/service" ]
+    profiles:
+      - microservices
+    networks:
+      - eda_network
+
+  search:
+    container_name: search
+    hostname: search
+    image: mallbots-search
+    build:
+      context: .
+      dockerfile: build/docker/Dockerfile.microservices
+      args:
+        service: search
+    restart: always
+    expose:
+      - '9000'
+    environment:
+      - EDA_ENVIRONMENT=development
+      - EDA_SERVER_GRPC_SERVICES=STORES=stores:9000,CUSTOMERS=customers:9000
+      - EDA_INFRASTRUCTURE_GORM_DSN=host=postgres user=search_user password=search_pass dbname=search port=5432 sslmode=disable search_path=search,public TimeZone=UTC
+      - EDA_INFRASTRUCTURE_NATS_URL=nats://nats:4222
+    volumes:
+      - '$PWD/config.yaml:/config.yaml'
+    depends_on:
+      - nats
+      - postgres
+    command: [ "./wait-for", "postgres:5432", "--", "/mallbots/service" ]
+    profiles:
+      - microservices
+    networks:
+      - eda_network
+
+  stores:
+    container_name: stores
+    hostname: stores
+    image: mallbots-stores
+    build:
+      context: .
+      dockerfile: build/docker/Dockerfile.microservices
+      args:
+        service: store
+    restart: always
+    expose:
+      - '9000'
+    environment:
+      - EDA_ENVIRONMENT=development
+      - EDA_SERVER_GRPC_SERVICES=STORES=stores:9000,CUSTOMERS=customers:9000
+      - EDA_INFRASTRUCTURE_GORM_DSN=host=postgres user=stores_user password=stores_pass dbname=stores port=5432 sslmode=disable search_path=stores,public TimeZone=UTC
+      - EDA_INFRASTRUCTURE_NATS_URL=nats://nats:4222
+    volumes:
+      - '$PWD/config.yaml:/config.yaml'
+    depends_on:
+      - nats
+      - postgres
+    command: [ "./wait-for", "postgres:5432", "--", "/mallbots/service" ]
+    profiles:
+      - microservices
+    networks:
+      - eda_network
+
+  reverse-proxy:
+    container_name: proxy
+    hostname: proxy
+    image: nginx:alpine
+    ports:
+      - '8080:8080'
+    volumes:
+      - '$PWD/build/docker/nginx.conf:/etc/nginx/nginx.conf'
+    profiles:
+      - microservices
+    networks:
+      - eda_network
 
 networks:
   eda_network:

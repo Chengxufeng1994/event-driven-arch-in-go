@@ -3,6 +3,7 @@
 ## TODO
 
 * [ ] testing
+* [ ] refactor internal config
 * [ ] support interface 'DB'
 * [ ] support broker 'Kafka'
 * [ ] support event store 'EventStoreDB'
@@ -29,3 +30,5 @@
 * [adding postgres connection to pgadmin](https://stackoverflow.com/questions/64620446/adding-postgress-connections-to-pgadmin-in-docker-file)
 * [event driven](https://event-driven.io/en/)
 * [gorm and goose migrations](https://dev.to/kengowada/gorm-and-goose-migrations-1ec)
+
+Only in Chapter11: deployment

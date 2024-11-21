@@ -3,13 +3,14 @@ package gorm
 import (
 	"context"
 
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
+
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/domain/aggregate"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/domain/repository"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/infrastructure/persistence/gorm/po"
 	"github.com/shopspring/decimal"
 	"github.com/stackus/errors"
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 type GormCatalogRepository struct {

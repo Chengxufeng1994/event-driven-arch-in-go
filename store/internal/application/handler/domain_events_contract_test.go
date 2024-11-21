@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"testing"
 
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/am"
@@ -18,6 +19,25 @@ import (
 	"github.com/pact-foundation/pact-go/v2/models"
 	"github.com/pact-foundation/pact-go/v2/provider"
 )
+
+var pactBrokerURL string
+var pactUser string
+var pactPass string
+var pactToken string
+
+func init() {
+	getEnv := func(key, fallback string) string {
+		if value, ok := os.LookupEnv(key); ok {
+			return value
+		}
+		return fallback
+	}
+
+	pactBrokerURL = getEnv("PACT_URL", "http://127.0.0.1:9292")
+	pactUser = getEnv("PACT_USER", "pact_workshop")
+	pactPass = getEnv("PACT_PASS", "pact_workshop")
+	pactToken = getEnv("PACT_TOKEN", "")
+}
 
 func TestStoresProducer(t *testing.T) {
 	var err error
@@ -42,9 +62,10 @@ func TestStoresProducer(t *testing.T) {
 	err = verifier.VerifyProvider(t, provider.VerifyRequest{
 		Provider:                   "stores-pub",
 		ProviderVersion:            "1.0.0",
-		BrokerURL:                  "http://127.0.0.1:9292",
-		BrokerUsername:             "pact_workshop",
-		BrokerPassword:             "pact_workshop",
+		BrokerURL:                  pactBrokerURL,
+		BrokerUsername:             pactUser,
+		BrokerPassword:             pactPass,
+		BrokerToken:                pactToken,
 		PublishVerificationResults: true,
 		AfterEach: func() error {
 			stores.Reset()

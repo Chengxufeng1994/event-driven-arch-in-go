@@ -2,7 +2,6 @@ package basket
 
 import (
 	"context"
-	"fmt"
 
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -41,10 +40,9 @@ var _ system.Module = (*Module)(nil)
 
 func NewModule() *Module { return &Module{} }
 
-func (m *Module) Startup(ctx context.Context, mono system.Service) error {
+func Root(ctx context.Context, svc system.Service) error {
 	container := di.New()
 	// setup Driven adapters
-	endpoint := fmt.Sprintf("%s:%d", mono.Config().Server.GPPC.Host, mono.Config().Server.GPPC.Port)
 	container.AddSingleton("registry", func(c di.Container) (any, error) {
 		reg := registry.New()
 		if err := domain.Registrations(reg); err != nil {
@@ -59,19 +57,19 @@ func (m *Module) Startup(ctx context.Context, mono system.Service) error {
 		return reg, nil
 	})
 	container.AddSingleton("logger", func(c di.Container) (any, error) {
-		return mono.Logger(), nil
+		return svc.Logger(), nil
 	})
 	container.AddSingleton("stream", func(c di.Container) (any, error) {
-		return nats.NewStream(mono.Config().Infrastructure.Nats.Stream, mono.JetStream(), c.Get("logger").(logger.Logger)), nil
+		return nats.NewStream(svc.Config().Infrastructure.Nats.Stream, svc.JetStream(), c.Get("logger").(logger.Logger)), nil
 	})
 	container.AddSingleton("domainEventDispatcher", func(c di.Container) (any, error) {
 		return ddd.NewEventDispatcher[ddd.Event](), nil
 	})
 	container.AddSingleton("db", func(c di.Container) (any, error) {
-		return mono.Database(), nil
+		return svc.Database(), nil
 	})
-	container.AddSingleton("conn", func(c di.Container) (any, error) {
-		return infragrpc.Dial(ctx, endpoint)
+	container.AddSingleton("storesConn", func(c di.Container) (any, error) {
+		return infragrpc.Dial(ctx, svc.Config().Server.GPPC.Service("STORES"))
 	})
 	container.AddSingleton("outboxProcessor", func(c di.Container) (any, error) {
 		return tm.NewOutboxProcessor(
@@ -112,13 +110,13 @@ func (m *Module) Startup(ctx context.Context, mono system.Service) error {
 	container.AddScoped("stores", func(c di.Container) (any, error) {
 		return persistencegorm.NewGormStoreCacheRepository(
 				c.Get("tx").(*gorm.DB),
-				infragrpc.NewGrpcStoreClient(c.Get("conn").(*grpc.ClientConn))),
+				infragrpc.NewGrpcStoreRepository(c.Get("storesConn").(*grpc.ClientConn))),
 			nil
 	})
 	container.AddScoped("products", func(c di.Container) (any, error) {
 		return persistencegorm.NewGormProductCacheRepository(
 				c.Get("tx").(*gorm.DB),
-				infragrpc.NewGrpcProductClient(c.Get("conn").(*grpc.ClientConn))),
+				infragrpc.NewGrpcProductRepository(c.Get("storesConn").(*grpc.ClientConn))),
 			nil
 	})
 
@@ -149,29 +147,34 @@ func (m *Module) Startup(ctx context.Context, mono system.Service) error {
 	})
 
 	// setup Driver adapters
-	if err := grpcv1.RegisterServerTx(container, mono.RPC().GRPCServer()); err != nil {
+	if err := grpcv1.RegisterServerTx(container, svc.RPC().GRPCServer()); err != nil {
 		return err
 	}
-	if err := restv1.RegisterGateway(ctx, mono.Gin(), endpoint); err != nil {
+	if err := restv1.RegisterGateway(ctx, svc.Gin(), svc.Config().Server.GPPC.Address()); err != nil {
 		return err
 	}
-	if err := docs.RegisterSwagger(mono.Gin()); err != nil {
+	if err := docs.RegisterSwagger(svc.Gin()); err != nil {
 		return err
 	}
 	handler.RegisterDomainEventHandlersTx(container)
 	if err := handler.RegisterIntegrationEventHandlersTx(container); err != nil {
 		return err
 	}
-	go m.startOutboxProcessor(ctx, container)
+
+	go startOutboxProcessor(ctx, container)
 
 	return nil
 }
 
-func (m *Module) Name() string {
-	return "basket"
+func (m *Module) Startup(ctx context.Context, svc system.Service) error {
+	return Root(ctx, svc)
 }
 
-func (m *Module) startOutboxProcessor(ctx context.Context, container di.Container) {
+func (m *Module) Name() string {
+	return "baskets"
+}
+
+func startOutboxProcessor(ctx context.Context, container di.Container) {
 	outboxProcessor := container.Get("outboxProcessor").(tm.OutboxProcessor)
 	logger := container.Get("logger").(logger.Logger)
 

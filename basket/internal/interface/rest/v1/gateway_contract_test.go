@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -25,6 +26,25 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/registry"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/web"
 )
+
+var pactBrokerURL string
+var pactUser string
+var pactPass string
+var pactToken string
+
+func init() {
+	getEnv := func(key, fallback string) string {
+		if value, ok := os.LookupEnv(key); ok {
+			return value
+		}
+		return fallback
+	}
+
+	pactBrokerURL = getEnv("PACT_URL", "http://127.0.0.1:9292")
+	pactUser = getEnv("PACT_USER", "pact_workshop")
+	pactPass = getEnv("PACT_PASS", "pact_workshop")
+	pactToken = getEnv("PACT_TOKEN", "")
+}
 
 func TestProvider(t *testing.T) {
 	var err error
@@ -109,9 +129,10 @@ func TestProvider(t *testing.T) {
 		Provider:                   "baskets-api",
 		ProviderBaseURL:            fmt.Sprintf("http://%s", webConfig.Address()),
 		ProviderVersion:            "1.0.0",
-		BrokerURL:                  "http://127.0.0.1:9292",
-		BrokerUsername:             "pact_workshop",
-		BrokerPassword:             "pact_workshop",
+		BrokerURL:                  pactBrokerURL,
+		BrokerUsername:             pactUser,
+		BrokerPassword:             pactPass,
+		BrokerToken:                pactToken,
 		PublishVerificationResults: true,
 		AfterEach: func() error {
 			baskets.Reset()

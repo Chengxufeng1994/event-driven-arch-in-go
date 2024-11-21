@@ -5,7 +5,6 @@ const {
 } = require('@pact-foundation/pact');
 const chai = require('chai');
 const expect = chai.expect;
-//const asPromised = require('chai-as-promised');
 const axios = require('axios');
 
 const { Client } = require('./client');

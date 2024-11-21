@@ -87,8 +87,8 @@ func TestStoresConsumer(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			m := mocks{
-				stores:   &repository.MockStoreCacheRepository{},
-				products: &repository.MockProductCacheRepository{},
+				stores:   repository.NewMockStoreCacheRepository(t),
+				products: repository.NewMockProductCacheRepository(t),
 			}
 			handlers := NewIntegrationEventHandler(m.stores, m.products)
 			if tc.on != nil {
@@ -102,7 +102,6 @@ func TestStoresConsumer(t *testing.T) {
 				if err != nil {
 					panic(err)
 				}
-
 				payload := reg.MustDeserialize(event.Name, data)
 
 				return handlers.HandleEvent(

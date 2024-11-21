@@ -8,33 +8,42 @@ logger:
   file_max_size_mb: 100
   files_keep: 1024000
 
-sever:
+server:
   mode: debug
   enable_profiling: false
   enable_metrics: false
 
-http:
-  host: 0.0.0.0
-  port: 8080
+  http:
+    host: 0.0.0.0
+    port: 8080
 
-https:
-  host: 0.0.0.0
-  port: 8443
-  tls:
-    enabled: false
-    cert_file:
-    key_file:
+  https:
+    host: 0.0.0.0
+    port: 8443
+    tls:
+      enabled: false
+      cert_file:
+      key_file:
 
-grpc:
-  host: 0.0.0.0
-  port: 8081
+  grpc:
+    host: 0.0.0.0
+    port: 9000
 
 infrastructure:
   gorm:
-    debug: true
+    debug: false
     db_type: postgres
     dsn: "host=localhost user=postgres password=postgres dbname=mallbots port=5432 sslmode=disable TimeZone=UTC"
-    max_life_time: 7200
+    # dsn: "host=localhost user=customers_user password=customers_pass dbname=customers port=5432 search_path=customers,public sslmode=disable TimeZone=UTC"
+    # dsn: "host=localhost user=stores_user password=stores_pass dbname=stores port=5432 search_path=stores,public sslmode=disable TimeZone=UTC"
+    # dsn: "host=localhost user=baskets_user password=baskets_pass dbname=baskets port=5432 search_path=baskets,public sslmode=disable TimeZone=UTC"
+    # dsn: "host=localhost user=cosec_user password=cosec_pass dbname=cosec port=5432 search_path=cosec,public sslmode=disable TimeZone=UTC"
+    # dsn: "host=localhost user=depot_user password=depot_pass dbname=depot port=5432 search_path=depot,public sslmode=disable TimeZone=UTC"
+    # dsn: "host=localhost user=notifications_user password=notifications_pass dbname=notifications port=5432 search_path=notifications,public sslmode=disable TimeZone=UTC"
+    # dsn: "host=localhost user=ordering_user password=ordering_pass dbname=ordering port=5432 search_path=ordering,public sslmode=disable TimeZone=UTC"
+    # dsn: "host=localhost user=payments_user password=payments_pass dbname=payments port=5432 search_path=payments,public sslmode=disable TimeZone=UTC"
+    # dsn: "host=localhost user=search_user password=search_pass dbname=search port=5432 search_path=search,public sslmode=disable TimeZone=UTC"
+    x_life_time: 7200
     max_idle_time: 7200
     max_open_conns: 150
     max_idle_conns: 100

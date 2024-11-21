@@ -6,10 +6,11 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/system"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/web"
 	"github.com/fatih/color"
 	"github.com/gin-contrib/static"
+
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/system"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/web"
 )
 
 var progressMessage = color.GreenString("==>")
@@ -19,38 +20,32 @@ type RunFunc func(basename string) error
 type MonolithApplication struct {
 	*system.System
 	modules []system.Module
-	runFunc RunFunc
 }
 
 var _ system.Service = (*MonolithApplication)(nil)
 
 func NewMonolithApplication(
-	// name string,
-	// basename string,
-	// appCfg *config.Config,
-	// logger logger.Logger,
 	system *system.System,
 	modules []system.Module,
 ) *MonolithApplication {
-	mono := &MonolithApplication{
+	return &MonolithApplication{
 		System:  system,
 		modules: modules,
 	}
-
-	return mono
 }
 
 // FIXME:
-func (app *MonolithApplication) startupModules() error {
+func (app MonolithApplication) startupModules() error {
 	for _, module := range app.modules {
 		if err := module.Startup(context.Background(), app); err != nil {
+			app.Logger().Errorf("%v %v\n", "prepare run modules: ", err)
 			return err
 		}
 	}
 	return nil
 }
 
-func (app *MonolithApplication) Run() error {
+func (app MonolithApplication) Run() error {
 	app.Logger().Info("started mallbots application")
 	defer app.Logger().Info("stopped mallbots application")
 	app.printWorkingDir()
@@ -84,7 +79,7 @@ func (app *MonolithApplication) Run() error {
 	return app.Waiter().Wait()
 }
 
-func (app *MonolithApplication) printWorkingDir() {
+func (app MonolithApplication) printWorkingDir() {
 	wd, _ := os.Getwd()
 	app.Logger().Infof("%v workingDir: %s", progressMessage, wd)
 }

@@ -33,7 +33,7 @@ var _ system.Module = (*Module)(nil)
 
 func NewModule() *Module { return &Module{} }
 
-func (m *Module) Startup(ctx context.Context, mono system.Service) (err error) {
+func Root(ctx context.Context, svc system.Service) (err error) {
 	container := di.New()
 	// setup Driver adapters
 	container.AddSingleton("registry", func(c di.Container) (any, error) {
@@ -56,16 +56,16 @@ func (m *Module) Startup(ctx context.Context, mono system.Service) (err error) {
 		return reg, nil
 	})
 	container.AddSingleton("logger", func(c di.Container) (any, error) {
-		return mono.Logger(), nil
+		return svc.Logger(), nil
 	})
 	container.AddSingleton("stream", func(c di.Container) (any, error) {
-		return nats.NewStream(mono.Config().Infrastructure.Nats.Stream, mono.JetStream(), mono.Logger()), nil
+		return nats.NewStream(svc.Config().Infrastructure.Nats.Stream, svc.JetStream(), svc.Logger()), nil
 	})
 	container.AddSingleton("domainEventDispatcher", func(c di.Container) (any, error) {
 		return ddd.NewEventDispatcher[ddd.Event](), nil
 	})
 	container.AddSingleton("db", func(c di.Container) (any, error) {
-		return mono.Database(), nil
+		return svc.Database(), nil
 	})
 	container.AddSingleton("outboxProcessor", func(c di.Container) (any, error) {
 		return tm.NewOutboxProcessor(
@@ -120,7 +120,7 @@ func (m *Module) Startup(ctx context.Context, mono system.Service) (err error) {
 				c.Get("sagaRepository").(sec.SagaRepository[*models.CreateOrderData]),
 				c.Get("commandStream").(am.CommandStream),
 			),
-			"CreateOrderSaga", mono.Logger(),
+			"CreateOrderSaga", svc.Logger(),
 		), nil
 	})
 	container.AddScoped("integrationEventHandlers", func(c di.Container) (any, error) {
@@ -128,7 +128,7 @@ func (m *Module) Startup(ctx context.Context, mono system.Service) (err error) {
 			handlers.NewIntegrationEventHandlers(
 				c.Get("orchestrator").(sec.Orchestrator[*models.CreateOrderData]),
 			),
-			"IntegrationEvents", mono.Logger(),
+			"IntegrationEvents", svc.Logger(),
 		), nil
 	})
 
@@ -139,9 +139,13 @@ func (m *Module) Startup(ctx context.Context, mono system.Service) (err error) {
 	if err = handlers.RegisterReplyHandlersTx(container); err != nil {
 		return err
 	}
-	go m.startOutboxProcessor(ctx, container)
+	go startOutboxProcessor(ctx, container)
 
 	return
+}
+
+func (m *Module) Startup(ctx context.Context, svc system.Service) (err error) {
+	return Root(ctx, svc)
 }
 
 func (m *Module) Name() string {
@@ -159,7 +163,7 @@ func registrations(reg registry.Registry) (err error) {
 	return nil
 }
 
-func (m *Module) startOutboxProcessor(ctx context.Context, container di.Container) {
+func startOutboxProcessor(ctx context.Context, container di.Container) {
 	outboxProcessor := container.Get("outboxProcessor").(tm.OutboxProcessor)
 	logger := container.Get("logger").(logger.Logger)
 

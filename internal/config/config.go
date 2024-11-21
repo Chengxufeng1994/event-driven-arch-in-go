@@ -53,9 +53,43 @@ type HTTPS struct {
 	} `mapstructure:"tls"`
 }
 
+type Services map[string]string
+
 type GPPC struct {
-	Host string `mapstructure:"host"`
-	Port int    `mapstructure:"port"`
+	Host     string            `mapstructure:"host"`
+	Port     int               `mapstructure:"port"`
+	Services map[string]string `mapstructure:"services"`
+}
+
+func (c GPPC) Address() string {
+	return fmt.Sprintf("%s:%d", c.Host, c.Port)
+}
+
+func (c GPPC) Service(service string) string {
+	if address, exists := c.Services[service]; exists {
+		return address
+	}
+	return c.Address()
+}
+
+func (s *Services) Decode(v string) error {
+	services := map[string]string{}
+
+	pairs := strings.Split(v, ",")
+	for _, pair := range pairs {
+		p := strings.TrimSpace(pair)
+		if len(p) == 0 {
+			continue
+		}
+		kv := strings.Split(p, "=")
+		if len(kv) != 2 {
+			return fmt.Errorf("invalid service pair: %q", p)
+		}
+		services[strings.ToUpper(kv[0])] = kv[1]
+	}
+
+	*s = services
+	return nil
 }
 
 type Infrastructure struct {
@@ -141,19 +175,27 @@ func initConfig(cfgFile string) (*Config, error) {
 	} else {
 		logger.Info("Config loaded")
 	}
-
 	return cfg, nil
 }
 
 func newConfig() (*Config, error) {
 	c := &Config{}
 
-	setDefaults()
-
 	err := viper.Unmarshal(c)
 	if err != nil {
 		return nil, err
 	}
+
+	// FIXME:
+	envGrpcServices := viper.GetString("server.grpc.services")
+	if envGrpcServices != "" {
+		var services Services
+		services.Decode(envGrpcServices)
+		c.Server.GPPC.Services = services
+	}
+	s := viper.GetViper().GetString("infrastructure.gorm.dsn")
+	fmt.Println(s)
+	fmt.Println(c.Infrastructure.GORM.DSN)
 
 	// setup logging package
 	logger.SetOutputFormat(c.Logger.Format)

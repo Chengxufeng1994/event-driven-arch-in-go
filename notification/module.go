@@ -22,13 +22,11 @@ type Module struct{}
 
 var _ system.Module = Module{}
 
-func NewModule() *Module {
-	return &Module{}
-}
+func NewModule() *Module { return &Module{} }
 
-func (m Module) Startup(ctx context.Context, mono system.Service) error {
+func Root(ctx context.Context, svc system.Service) error {
 	// setup Driven adapters
-	endpoint := fmt.Sprintf("%s:%d", mono.Config().Server.GPPC.Host, mono.Config().Server.GPPC.Port)
+	endpoint := fmt.Sprintf("%s:%d", svc.Config().Server.GPPC.Host, svc.Config().Server.GPPC.Port)
 	reg := registry.New()
 	if err := customerv1.Registrations(reg); err != nil {
 		return err
@@ -36,22 +34,22 @@ func (m Module) Startup(ctx context.Context, mono system.Service) error {
 	if err := orderv1.Registrations(reg); err != nil {
 		return err
 	}
-	eventStream := am.NewEventStream(reg, nats.NewStream(mono.Config().Infrastructure.Nats.Stream, mono.JetStream(), mono.Logger()))
+	eventStream := am.NewEventStream(reg, nats.NewStream(svc.Config().Infrastructure.Nats.Stream, svc.JetStream(), svc.Logger()))
 	conn, err := grpc.Dial(ctx, endpoint)
 	if err != nil {
 		return err
 	}
-	customer := gorm.NewGormCustomerCacheRepository(mono.Database(), grpc.NewCustomerClient(conn))
+	customer := gorm.NewGormCustomerCacheRepository(svc.Database(), grpc.NewCustomerClient(conn))
 
 	// setup application
-	app := logging.NewLogApplicationAccess(application.New(customer), mono.Logger())
+	app := logging.NewLogApplicationAccess(application.New(customer), svc.Logger())
 	integrationEventHandler := logging.NewLogEventHandlerAccess(
 		handler.NewIntegrationEventHandler(app, customer),
-		"IntegrationEvents", mono.Logger(),
+		"IntegrationEvents", svc.Logger(),
 	)
 
 	// setup Driver adapters
-	if err := v1.RegisterServer(ctx, app, mono.RPC().GRPCServer()); err != nil {
+	if err := v1.RegisterServer(ctx, app, svc.RPC().GRPCServer()); err != nil {
 		return err
 	}
 	if err := handler.RegisterIntegrationEventHandlers(eventStream, integrationEventHandler); err != nil {
@@ -59,6 +57,10 @@ func (m Module) Startup(ctx context.Context, mono system.Service) error {
 	}
 
 	return nil
+}
+
+func (m Module) Startup(ctx context.Context, svc system.Service) error {
+	return Root(ctx, svc)
 }
 
 func (m Module) Name() string {

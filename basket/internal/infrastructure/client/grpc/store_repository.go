@@ -10,17 +10,17 @@ import (
 	"google.golang.org/grpc"
 )
 
-type GrpcStoreClient struct {
+type GrpcStoreRepository struct {
 	client storev1.StoresServiceClient
 }
 
-var _ repository.StoreRepository = (*GrpcStoreClient)(nil)
+var _ repository.StoreRepository = (*GrpcStoreRepository)(nil)
 
-func NewGrpcStoreClient(conn *grpc.ClientConn) *GrpcStoreClient {
-	return &GrpcStoreClient{client: storev1.NewStoresServiceClient(conn)}
+func NewGrpcStoreRepository(conn *grpc.ClientConn) *GrpcStoreRepository {
+	return &GrpcStoreRepository{client: storev1.NewStoresServiceClient(conn)}
 }
 
-func (c *GrpcStoreClient) Find(ctx context.Context, storeID string) (*entity.Store, error) {
+func (c *GrpcStoreRepository) Find(ctx context.Context, storeID string) (*entity.Store, error) {
 	resp, err := c.client.GetStore(ctx, &storev1.GetStoreRequest{
 		Id: storeID,
 	})
@@ -31,6 +31,6 @@ func (c *GrpcStoreClient) Find(ctx context.Context, storeID string) (*entity.Sto
 	return &store, nil
 }
 
-func (c *GrpcStoreClient) storeToDomain(store *storev1.Store) entity.Store {
+func (c *GrpcStoreRepository) storeToDomain(store *storev1.Store) entity.Store {
 	return entity.NewStore(store.GetId(), store.GetName())
 }
