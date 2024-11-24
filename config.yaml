@@ -33,7 +33,7 @@ infrastructure:
   gorm:
     debug: false
     db_type: postgres
-    dsn: "host=localhost user=postgres password=postgres dbname=mallbots port=5432 sslmode=disable TimeZone=UTC"
+    dsn: "host=localhost user=postgres password=postgres dbname=mallbots port=5432 search_path=customers,public sslmode=disable TimeZone=UTC"
     # dsn: "host=localhost user=customers_user password=customers_pass dbname=customers port=5432 search_path=customers,public sslmode=disable TimeZone=UTC"
     # dsn: "host=localhost user=stores_user password=stores_pass dbname=stores port=5432 search_path=stores,public sslmode=disable TimeZone=UTC"
     # dsn: "host=localhost user=baskets_user password=baskets_pass dbname=baskets port=5432 search_path=baskets,public sslmode=disable TimeZone=UTC"
@@ -57,3 +57,7 @@ infrastructure:
   nats:
     url: "nats://localhost:4222"
     stream: "mallbots"
+
+  otel:
+    service_name: mallbots
+    exporter_endpoint: "localhost:4317"

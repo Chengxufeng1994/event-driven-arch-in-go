@@ -89,7 +89,7 @@ func TestApplication_AddItem(t *testing.T) {
 				products:  &repository.MockProductRepository{},
 				publisher: &ddd.MockEventPublisher[ddd.Event]{},
 			}
-			app := NewBasketApplication(m.baskets, m.stores, m.products, m.publisher)
+			app := New(m.baskets, m.stores, m.products, m.publisher)
 			if tt.on != nil {
 				tt.on(m)
 			}

@@ -3,16 +3,15 @@ package handler
 import (
 	"context"
 
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/customer/internal/infrastructure/constants"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/am"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/di"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/registry"
 
 	"gorm.io/gorm"
 )
 
 func RegisterCommandHandlersTx(container di.Container) error {
-	cmdMsgHandler := am.RawMessageHandlerFunc(func(ctx context.Context, msg am.IncomingRawMessage) (err error) {
+	rawMsgHandler := am.MessageHandlerFunc(func(ctx context.Context, msg am.IncomingMessage) (err error) {
 		ctx = container.Scoped(ctx)
 		defer func(tx *gorm.DB) {
 			if p := recover(); p != nil {
@@ -23,21 +22,12 @@ func RegisterCommandHandlersTx(container di.Container) error {
 			} else {
 				err = tx.Commit().Error
 			}
-		}(di.Get(ctx, "tx").(*gorm.DB))
+		}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-		cmdMsgHandlers := am.RawMessageHandlerWithMiddleware(
-			am.NewCommandMessageHandler(
-				container.Get("registry").(registry.Registry),
-				container.Get("replyStream").(am.ReplyStream),
-				container.Get("commandHandlers").(ddd.CommandHandler[ddd.Command]),
-			).(am.RawMessageHandler),
-			container.Get("inboxMiddleware").(am.RawMessageHandlerMiddleware),
-		)
-
-		return cmdMsgHandlers.HandleMessage(ctx, msg)
+		return di.Get(ctx, constants.CommandHandlersKey).(am.MessageHandler).HandleMessage(ctx, msg)
 	})
 
-	subscriber := container.Get("stream").(am.RawMessageStream)
+	subscriber := container.Get(constants.MessageSubscriberKey).(am.MessageSubscriber)
 
-	return RegisterCommandHandlers(subscriber, cmdMsgHandler)
+	return RegisterCommandHandlers(subscriber, rawMsgHandler)
 }

@@ -5,6 +5,7 @@ import (
 
 	customerv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/customer/api/customer/v1"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/customer/internal/application/usecase"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/customer/internal/infrastructure/constants"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/di"
 	"google.golang.org/grpc"
 	"gorm.io/gorm"
@@ -28,9 +29,9 @@ func (s serverTx) RegisterCustomer(ctx context.Context, request *customerv1.Regi
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *gorm.DB) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*gorm.DB))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-	next := server{app: di.Get(ctx, "app").(usecase.CustomerUsecase)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(usecase.CustomerUsecase)}
 
 	return next.RegisterCustomer(ctx, request)
 }
@@ -39,9 +40,9 @@ func (s serverTx) ChangeSmsNumber(ctx context.Context, request *customerv1.Chang
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *gorm.DB) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*gorm.DB))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-	next := server{app: di.Get(ctx, "app").(usecase.CustomerUsecase)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(usecase.CustomerUsecase)}
 
 	return next.ChangeSmsNumber(ctx, request)
 }
@@ -50,9 +51,9 @@ func (s serverTx) AuthorizeCustomer(ctx context.Context, request *customerv1.Aut
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *gorm.DB) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*gorm.DB))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-	next := server{app: di.Get(ctx, "app").(usecase.CustomerUsecase)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(usecase.CustomerUsecase)}
 
 	return next.AuthorizeCustomer(ctx, request)
 }
@@ -61,9 +62,9 @@ func (s serverTx) GetCustomer(ctx context.Context, request *customerv1.GetCustom
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *gorm.DB) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*gorm.DB))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-	next := server{app: di.Get(ctx, "app").(usecase.CustomerUsecase)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(usecase.CustomerUsecase)}
 
 	return next.GetCustomer(ctx, request)
 }
@@ -72,9 +73,9 @@ func (s serverTx) EnableCustomer(ctx context.Context, request *customerv1.Enable
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *gorm.DB) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*gorm.DB))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-	next := server{app: di.Get(ctx, "app").(usecase.CustomerUsecase)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(usecase.CustomerUsecase)}
 
 	return next.EnableCustomer(ctx, request)
 }
@@ -83,9 +84,9 @@ func (s serverTx) DisableCustomer(ctx context.Context, request *customerv1.Disab
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *gorm.DB) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*gorm.DB))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-	next := server{app: di.Get(ctx, "app").(usecase.CustomerUsecase)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(usecase.CustomerUsecase)}
 
 	return next.DisableCustomer(ctx, request)
 }

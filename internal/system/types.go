@@ -5,7 +5,7 @@ import (
 
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/config"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/logger"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/server"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/rpc"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/waiter"
 	"github.com/gin-gonic/gin"
 	"github.com/nats-io/nats.go"
@@ -19,7 +19,7 @@ type Service interface {
 	Config() *config.Config
 	Database() *gorm.DB
 	Gin() *gin.Engine
-	RPC() *server.RPCServer
+	RPC() *rpc.RPCServer
 	JetStream() nats.JetStreamContext
 	Waiter() waiter.Waiter
 }

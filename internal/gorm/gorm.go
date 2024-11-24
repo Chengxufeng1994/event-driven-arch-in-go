@@ -8,10 +8,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/config"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+	"gorm.io/plugin/opentelemetry/tracing"
+
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/config"
 )
 
 type GormConfig[K comparable, V any] map[K]func(config V) gorm.Dialector
@@ -105,6 +107,10 @@ func NewGormDB(config *config.Infrastructure, opts ...GormConfigOption) (*gorm.D
 			SqlDB.SetMaxIdleConns(config.GORM.MaxIdleConns)
 		}
 	})
+
+	if err := db.Use(tracing.NewPlugin()); err != nil {
+		return nil, err
+	}
 
 	return db.Session(&gorm.Session{
 		PrepareStmt: config.GORM.PrepareStmt,

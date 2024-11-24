@@ -29,7 +29,7 @@ type (
 
 var _ usecase.ShoppingListUseCase = (*ShoppingListApplication)(nil)
 
-func NewShoppingListApplication(
+func New(
 	shoppingList repository.ShoppingListRepository,
 	stores repository.StoreCacheRepository,
 	products repository.ProductCacheRepository,

@@ -2,14 +2,19 @@ package handler
 
 import (
 	"context"
+	"time"
 
 	customerv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/customer/api/customer/v1"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/am"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/errorsotel"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/registry"
 	orderv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/api/order/v1"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/search/internal/application/port/out"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/search/internal/domain"
 	storev1 "github.com/Chengxufeng1994/event-driven-arch-in-go/store/api/store/v1"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type integrationEventHandlers[T ddd.Event] struct {
@@ -21,29 +26,28 @@ type integrationEventHandlers[T ddd.Event] struct {
 
 var _ ddd.EventHandler[ddd.Event] = (*integrationEventHandlers[ddd.Event])(nil)
 
-func NewIntegrationEventHandlers(orders out.OrderRepository, customers out.CustomerCacheRepository,
+func NewIntegrationEventHandlers(reg registry.Registry,
+	orders out.OrderRepository, customers out.CustomerCacheRepository,
 	products out.ProductCacheRepository, stores out.StoreCacheRepository,
-) *integrationEventHandlers[ddd.Event] {
-	return &integrationEventHandlers[ddd.Event]{
+	mws ...am.MessageHandlerMiddleware,
+) am.MessageHandler {
+	return am.NewEventHandler(reg, integrationEventHandlers[ddd.Event]{
 		orders:    orders,
 		customers: customers,
 		products:  products,
 		stores:    stores,
-	}
+	}, mws...)
 }
 
-func RegisterIntegrationEventHandlers(subscriber am.EventSubscriber, handlers ddd.EventHandler[ddd.Event]) error {
-	evtMsgHandler := am.MessageHandlerFunc[am.IncomingEventMessage](func(ctx context.Context, eventMsg am.IncomingEventMessage) error {
-		return handlers.HandleEvent(ctx, eventMsg)
-	})
-	_, err := subscriber.Subscribe(customerv1.CustomerAggregateChannel, evtMsgHandler, am.MessageFilter{
+func RegisterIntegrationEventHandlers(subscriber am.MessageSubscriber, handlers am.MessageHandler) error {
+	_, err := subscriber.Subscribe(customerv1.CustomerAggregateChannel, handlers, am.MessageFilter{
 		customerv1.CustomerRegisteredEvent,
 	}, am.GroupName("search-customers"))
 	if err != nil {
 		return err
 	}
 
-	_, err = subscriber.Subscribe(orderv1.OrderAggregateChannel, evtMsgHandler, am.MessageFilter{
+	_, err = subscriber.Subscribe(orderv1.OrderAggregateChannel, handlers, am.MessageFilter{
 		orderv1.OrderCreatedEvent,
 		orderv1.OrderReadiedEvent,
 		orderv1.OrderCanceledEvent,
@@ -53,7 +57,7 @@ func RegisterIntegrationEventHandlers(subscriber am.EventSubscriber, handlers dd
 		return err
 	}
 
-	_, err = subscriber.Subscribe(storev1.ProductAggregateChannel, evtMsgHandler, am.MessageFilter{
+	_, err = subscriber.Subscribe(storev1.ProductAggregateChannel, handlers, am.MessageFilter{
 		storev1.ProductAddedEvent,
 		storev1.ProductRebrandedEvent,
 		storev1.ProductRemovedEvent,
@@ -62,7 +66,7 @@ func RegisterIntegrationEventHandlers(subscriber am.EventSubscriber, handlers dd
 		return err
 	}
 
-	_, err = subscriber.Subscribe(storev1.StoreAggregateChannel, evtMsgHandler, am.MessageFilter{
+	_, err = subscriber.Subscribe(storev1.StoreAggregateChannel, handlers, am.MessageFilter{
 		storev1.StoreCreatedEvent,
 		storev1.StoreRebrandedEvent,
 	}, am.GroupName("search-stores"))
@@ -73,7 +77,24 @@ func RegisterIntegrationEventHandlers(subscriber am.EventSubscriber, handlers dd
 	return nil
 }
 
-func (h *integrationEventHandlers[T]) HandleEvent(ctx context.Context, event T) error {
+func (h integrationEventHandlers[T]) HandleEvent(ctx context.Context, event T) (err error) {
+	span := trace.SpanFromContext(ctx)
+	defer func(started time.Time) {
+		if err != nil {
+			span.AddEvent(
+				"Encountered an error handling integration event",
+				trace.WithAttributes(errorsotel.ErrAttrs(err)...),
+			)
+		}
+		span.AddEvent("Handled integration event", trace.WithAttributes(
+			attribute.Int64("TookMS", time.Since(started).Milliseconds()),
+		))
+	}(time.Now())
+
+	span.AddEvent("Handling integration event", trace.WithAttributes(
+		attribute.String("Event", event.EventName()),
+	))
+
 	switch event.EventName() {
 	case customerv1.CustomerRegisteredEvent:
 		return h.onCustomerRegistered(ctx, event)

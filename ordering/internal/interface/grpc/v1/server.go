@@ -3,6 +3,7 @@ package v1
 import (
 	"context"
 
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/errorsotel"
 	orderv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/api/order/v1"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/application/port/in/command"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/application/port/in/query"
@@ -10,6 +11,9 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/domain/aggregate"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/domain/valueobject"
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
 )
 
@@ -26,10 +30,16 @@ func RegisterServer(application usecase.OrderUseCase, registrar grpc.ServiceRegi
 	return nil
 }
 
-// CreateOrder implements orderv1.OrderingServiceServer.
-// Subtle: this method shadows the method (OrderUseCase).CreateOrder of server.OrderUseCase.
 func (s *server) CreateOrder(ctx context.Context, request *orderv1.CreateOrderRequest) (*orderv1.CreateOrderResponse, error) {
+	span := trace.SpanFromContext(ctx)
+
 	id := uuid.New().String()
+
+	span.SetAttributes(
+		attribute.String("OrderID", id),
+		attribute.String("CustomerID", request.GetCustomerId()),
+		attribute.String("PaymentID", request.GetPaymentId()),
+	)
 
 	items := make([]valueobject.Item, 0, len(request.GetItems()))
 	for _, item := range request.GetItems() {
@@ -43,36 +53,73 @@ func (s *server) CreateOrder(ctx context.Context, request *orderv1.CreateOrderRe
 		Items:      items,
 	}
 	err := s.app.CreateOrder(ctx, cmd)
+	if err != nil {
+		span.RecordError(err, trace.WithAttributes(errorsotel.ErrAttrs(err)...))
+		span.SetStatus(codes.Error, err.Error())
+	}
 
 	return &orderv1.CreateOrderResponse{Id: id}, err
 }
 
-// CancelOrder implements orderv1.OrderingServiceServer.
-// Subtle: this method shadows the method (OrderUseCase).CancelOrder of server.OrderUseCase.
 func (s *server) CancelOrder(ctx context.Context, request *orderv1.CancelOrderRequest) (*orderv1.CancelOrderResponse, error) {
+	span := trace.SpanFromContext(ctx)
+
+	span.SetAttributes(
+		attribute.String("OrderID", request.GetId()),
+	)
+
 	err := s.app.CancelOrder(ctx, command.CancelOrder{ID: request.GetId()})
+	if err != nil {
+		span.RecordError(err, trace.WithAttributes(errorsotel.ErrAttrs(err)...))
+		span.SetStatus(codes.Error, err.Error())
+	}
+
 	return &orderv1.CancelOrderResponse{}, err
 }
 
-// ReadyOrder implements orderv1.OrderingServiceServer.
-// Subtle: this method shadows the method (OrderUseCase).ReadyOrder of server.OrderUseCase.
 func (s *server) ReadyOrder(ctx context.Context, request *orderv1.ReadyOrderRequest) (*orderv1.ReadyOrderResponse, error) {
+	span := trace.SpanFromContext(ctx)
+
+	span.SetAttributes(
+		attribute.String("OrderID", request.GetId()),
+	)
+
 	err := s.app.ReadyOrder(ctx, command.ReadyOrder{ID: request.GetId()})
+	if err != nil {
+		span.RecordError(err, trace.WithAttributes(errorsotel.ErrAttrs(err)...))
+		span.SetStatus(codes.Error, err.Error())
+	}
+
 	return &orderv1.ReadyOrderResponse{}, err
 }
 
-// CompleteOrder implements orderv1.OrderingServiceServer.
-// Subtle: this method shadows the method (OrderUseCase).CompleteOrder of server.OrderUseCase.
 func (s *server) CompleteOrder(ctx context.Context, request *orderv1.CompleteOrderRequest) (*orderv1.CompleteOrderResponse, error) {
+	span := trace.SpanFromContext(ctx)
+
+	span.SetAttributes(
+		attribute.String("OrderID", request.GetId()),
+	)
+
 	err := s.app.CompleteOrder(ctx, command.CompleteOrder{ID: request.GetId()})
+	if err != nil {
+		span.RecordError(err, trace.WithAttributes(errorsotel.ErrAttrs(err)...))
+		span.SetStatus(codes.Error, err.Error())
+	}
+
 	return &orderv1.CompleteOrderResponse{}, err
 }
 
-// GetOrder implements orderv1.OrderingServiceServer.
-// Subtle: this method shadows the method (OrderUseCase).GetOrder of server.OrderUseCase.
 func (s *server) GetOrder(ctx context.Context, request *orderv1.GetOrderRequest) (*orderv1.GetOrderResponse, error) {
+	span := trace.SpanFromContext(ctx)
+
+	span.SetAttributes(
+		attribute.String("OrderID", request.GetId()),
+	)
+
 	orderAgg, err := s.app.GetOrder(ctx, query.GetOrder{OrderID: request.GetId()})
 	if err != nil {
+		span.RecordError(err, trace.WithAttributes(errorsotel.ErrAttrs(err)...))
+		span.SetStatus(codes.Error, err.Error())
 		return nil, err
 	}
 

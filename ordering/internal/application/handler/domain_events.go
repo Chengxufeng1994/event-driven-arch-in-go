@@ -2,19 +2,28 @@ package handler
 
 import (
 	"context"
+	"time"
 
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/am"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/errorsotel"
 	orderv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/api/order/v1"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/domain/aggregate"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/domain/event"
+	domainevent "github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/domain/event"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type domainEventHandlers[T ddd.Event] struct {
-	publisher am.MessagePublisher[ddd.Event]
+	publisher am.EventPublisher
 }
 
 var _ ddd.EventHandler[ddd.Event] = (*domainEventHandlers[ddd.Event])(nil)
+
+func NewDomainEventHandler(publisher am.EventPublisher) domainEventHandlers[ddd.Event] {
+	return domainEventHandlers[ddd.Event]{publisher: publisher}
+}
 
 func RegisterDomainEventHandlers(subscriber ddd.EventSubscriber[ddd.Event], handlers ddd.EventHandler[ddd.Event]) {
 	subscriber.Subscribe(handlers,
@@ -27,20 +36,33 @@ func RegisterDomainEventHandlers(subscriber ddd.EventSubscriber[ddd.Event], hand
 	)
 }
 
-func NewDomainEventHandler(publisher am.MessagePublisher[ddd.Event]) domainEventHandlers[ddd.Event] {
-	return domainEventHandlers[ddd.Event]{publisher: publisher}
-}
+func (h domainEventHandlers[T]) HandleEvent(ctx context.Context, event T) (err error) {
+	span := trace.SpanFromContext(ctx)
+	defer func(started time.Time) {
+		if err != nil {
+			span.AddEvent(
+				"Encountered an error handling domain event",
+				trace.WithAttributes(errorsotel.ErrAttrs(err)...),
+			)
+		}
+		span.AddEvent("Handled domain event", trace.WithAttributes(
+			attribute.Int64("TookMS", time.Since(started).Milliseconds()),
+		))
+	}(time.Now())
 
-func (h domainEventHandlers[T]) HandleEvent(ctx context.Context, e T) error {
-	switch e.EventName() {
-	case event.OrderCreatedEvent:
-		return h.onOrderCreated(ctx, e)
-	case event.OrderReadiedEvent:
-		return h.onOrderReadied(ctx, e)
-	case event.OrderCanceledEvent:
-		return h.onOrderCanceled(ctx, e)
-	case event.OrderCompletedEvent:
-		return h.onOrderCompleted(ctx, e)
+	span.AddEvent("Handling domain event", trace.WithAttributes(
+		attribute.String("Event", event.EventName()),
+	))
+
+	switch event.EventName() {
+	case domainevent.OrderCreatedEvent:
+		return h.onOrderCreated(ctx, event)
+	case domainevent.OrderReadiedEvent:
+		return h.onOrderReadied(ctx, event)
+	case domainevent.OrderCanceledEvent:
+		return h.onOrderCanceled(ctx, event)
+	case domainevent.OrderCompletedEvent:
+		return h.onOrderCompleted(ctx, event)
 	}
 	return nil
 }

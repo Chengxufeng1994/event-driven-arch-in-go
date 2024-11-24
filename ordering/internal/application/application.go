@@ -30,7 +30,7 @@ type (
 
 var _ usecase.OrderUseCase = (*OrderApplication)(nil)
 
-func NewOrderApplication(
+func New(
 	orderRepository repository.OrderRepository,
 	publisher ddd.EventPublisher[ddd.Event],
 ) *OrderApplication {

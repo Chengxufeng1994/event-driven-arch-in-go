@@ -9,22 +9,16 @@ openapiOptions:
   method:
     - method: api.customer.v1.CustomersService.RegisterCustomer
       option:
-        operationId: createCustomer
+        operationId: registerCustomer
         tags:
           - Customer
-        summary: Create a new customer
+        summary: Register a new customer
     - method: api.customer.v1.CustomersService.ChangeSmsNumber
       option:
         operationId: changeSmsNumber
         tags:
           - Customer
         summary: Change a customers SMS number
-    - method: api.customer.v1.CustomersService.GetCustomer
-      option:
-        operationId: getCustomer
-        tags:
-          - Customer
-        summary: Get a customer
     - method: api.customer.v1.CustomersService.EnableCustomer
       option:
         operationId: enableCustomer
@@ -37,3 +31,9 @@ openapiOptions:
         tags:
           - Customer
         summary: Disable a customer
+    - method: api.customer.v1.CustomersService.GetCustomer
+      option:
+        operationId: getCustomer
+        tags:
+          - Customer
+        summary: Get a customer

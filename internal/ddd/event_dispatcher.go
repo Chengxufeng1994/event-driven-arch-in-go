@@ -30,7 +30,6 @@ type (
 	}
 
 	EventDispatcherBase[T Event] struct {
-		// handlers map[string][]EventHandler[T]
 		handlers []eventHandler[T]
 		mu       sync.Mutex
 	}
@@ -46,9 +45,9 @@ func NewEventDispatcher[T Event]() *EventDispatcherBase[T] {
 }
 
 // Subscribe implements EventDispatcherIntf.
-func (e *EventDispatcherBase[T]) Subscribe(handler EventHandler[T], events ...string) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
+func (h *EventDispatcherBase[T]) Subscribe(handler EventHandler[T], events ...string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 
 	var filters map[string]struct{}
 	if len(events) > 0 {
@@ -58,7 +57,7 @@ func (e *EventDispatcherBase[T]) Subscribe(handler EventHandler[T], events ...st
 		}
 	}
 
-	e.handlers = append(e.handlers, eventHandler[T]{
+	h.handlers = append(h.handlers, eventHandler[T]{
 		h:       handler,
 		filters: filters,
 	})

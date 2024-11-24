@@ -6,13 +6,12 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/am"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/di"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/registry"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/payment/internal/infrastructure/constants"
 )
 
 func RegisterIntegrationEventHandlersTx(container di.Container) error {
-	evtMsgHandler := am.RawMessageHandlerFunc(func(ctx context.Context, msg am.IncomingRawMessage) (err error) {
+	rawMsgHandler := am.MessageHandlerFunc(func(ctx context.Context, msg am.IncomingMessage) (err error) {
 		ctx = container.Scoped(ctx)
 		defer func(tx *gorm.DB) {
 			if p := recover(); p != nil {
@@ -23,20 +22,11 @@ func RegisterIntegrationEventHandlersTx(container di.Container) error {
 			} else {
 				err = tx.Commit().Error
 			}
-		}(di.Get(ctx, "tx").(*gorm.DB))
-
-		evtHandlers := am.RawMessageHandlerWithMiddleware(
-			am.NewEventMessageHandler(
-				di.Get(ctx, "registry").(registry.Registry),
-				di.Get(ctx, "integrationEventHandlers").(ddd.EventHandler[ddd.Event]),
-			),
-			di.Get(ctx, "inboxMiddleware").(am.RawMessageHandlerMiddleware),
-		)
-
-		return evtHandlers.HandleMessage(ctx, msg)
+		}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
+		return di.Get(ctx, constants.IntegrationEventHandlersKey).(am.MessageHandler).HandleMessage(ctx, msg)
 	})
 
-	subscriber := container.Get("stream").(am.RawMessageStream)
+	subscriber := container.Get(constants.MessageSubscriberKey).(am.MessageSubscriber)
 
-	return RegisterIntegrationEventHandlers(subscriber, evtMsgHandler)
+	return RegisterIntegrationEventHandlers(subscriber, rawMsgHandler)
 }

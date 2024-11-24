@@ -62,7 +62,7 @@ func TestProvider(t *testing.T) {
 	dispatcher := ddd.NewEventDispatcher[ddd.Event]()
 
 	// init app
-	app := application.NewBasketApplication(baskets, stores, products, dispatcher)
+	app := application.New(baskets, stores, products, dispatcher)
 
 	// start grpc
 	rpcConfig := config.GPPC{

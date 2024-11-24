@@ -94,6 +94,10 @@ clean-monolith:
 clean-microservices:
 	docker image rm mallbots-baskets mallbots-cosec mallbots-customers mallbots-depot mallbots-notifications mallbots-ordering mallbots-payments mallbots-search mallbots-stores
 
+.PHONY: busywork
+busywork:
+	@go run ./cmd/busywork/ -otlp=localhost:4317 -clients=10
+
 .PHONY: prepare-configmap
 prepare-configmap:
 	@kubectl delete cm --namespace mallbots initdb

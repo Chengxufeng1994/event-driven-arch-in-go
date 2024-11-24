@@ -30,5 +30,15 @@
 * [adding postgres connection to pgadmin](https://stackoverflow.com/questions/64620446/adding-postgress-connections-to-pgadmin-in-docker-file)
 * [event driven](https://event-driven.io/en/)
 * [gorm and goose migrations](https://dev.to/kengowada/gorm-and-goose-migrations-1ec)
+* [jaeger](https://www.jaegertracing.io)
+* [go-grpc-otel](https://www.liwenzhou.com/posts/Go/go-grpc-otel/)
+* [gorm-otel](https://www.liwenzhou.com/posts/Go/gorm-otel/)
+* [otel-go-contrib](https://github.com/open-telemetry/opentelemetry-go-contrib/tree/main)
+* [時光之鏡：透視過去、現在與未來的 Observability](https://ithelp.ithome.com.tw/users/20162175/ironman/6445)
 
 Only in Chapter11: deployment
+Only in Chapter12/cmd: busywork
+Only in Chapter12/deployment/application: .terraform.lock.hcl
+Only in Chapter12/deployment/infrastructure: .terraform.lock.hcl
+Only in Chapter12/internal: postgresotel
+Files Chapter11/internal/system/system.go and Chapter12/internal/system/system.go differ

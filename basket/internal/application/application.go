@@ -29,7 +29,7 @@ type (
 
 var _ usecase.BasketUseCase = (*BasketApplication)(nil)
 
-func NewBasketApplication(
+func New(
 	baskets repository.BasketRepository,
 	stores repository.StoreRepository,
 	products repository.ProductRepository,

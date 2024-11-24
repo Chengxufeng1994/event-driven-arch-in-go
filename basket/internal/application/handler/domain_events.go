@@ -2,21 +2,25 @@ package handler
 
 import (
 	"context"
+	"time"
 
 	basketv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/basket/api/basket/v1"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/aggregate"
 	domainevent "github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/event"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/am"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/errorsotel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type DomainEventHandler[T ddd.Event] struct {
-	publisher am.MessagePublisher[ddd.Event]
+	publisher am.EventPublisher
 }
 
 var _ ddd.EventHandler[ddd.Event] = (*DomainEventHandler[ddd.Event])(nil)
 
-func NewDomainEventHandler(publisher am.MessagePublisher[ddd.Event]) *DomainEventHandler[ddd.Event] {
+func NewDomainEventHandlers(publisher am.EventPublisher) *DomainEventHandler[ddd.Event] {
 	return &DomainEventHandler[ddd.Event]{
 		publisher: publisher,
 	}
@@ -29,7 +33,24 @@ func RegisterDomainEventHandlers(subscriber ddd.EventSubscriber[ddd.Event], hand
 	)
 }
 
-func (h *DomainEventHandler[T]) HandleEvent(ctx context.Context, event ddd.Event) error {
+func (h *DomainEventHandler[T]) HandleEvent(ctx context.Context, event ddd.Event) (err error) {
+	span := trace.SpanFromContext(ctx)
+	defer func(started time.Time) {
+		if err != nil {
+			span.AddEvent(
+				"Encountered an error handling domain event",
+				trace.WithAttributes(errorsotel.ErrAttrs(err)...),
+			)
+		}
+		span.AddEvent("Handled domain event", trace.WithAttributes(
+			attribute.Int64("TookMS", time.Since(started).Milliseconds()),
+		))
+	}(time.Now())
+
+	span.AddEvent("Handling domain event", trace.WithAttributes(
+		attribute.String("Event", event.EventName()),
+	))
+
 	switch event.EventName() {
 	case domainevent.BasketStartedEvent:
 		return h.onBasketStarted(ctx, event)

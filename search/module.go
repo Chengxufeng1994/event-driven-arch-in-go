@@ -3,14 +3,14 @@ package search
 import (
 	"context"
 
-	"google.golang.org/grpc"
 	"gorm.io/gorm"
 
 	customerv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/customer/api/customer/v1"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/am"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/amotel"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/amprom"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/broker/nats"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/di"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/logger"
 	outboxstoregorm "github.com/Chengxufeng1994/event-driven-arch-in-go/internal/outboxstore/gorm"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/registry"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/system"
@@ -20,8 +20,8 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/search/internal/application"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/search/internal/application/handler"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/search/internal/application/port/out"
-	infragrpc "github.com/Chengxufeng1994/event-driven-arch-in-go/search/internal/infrastructure/client/grpc"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/search/internal/infrastructure/logging"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/search/internal/infrastructure/client/grpc"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/search/internal/infrastructure/constants"
 	persistencegorm "github.com/Chengxufeng1994/event-driven-arch-in-go/search/internal/infrastructure/persistence/gorm"
 	v1 "github.com/Chengxufeng1994/event-driven-arch-in-go/search/internal/interface/grpc/v1"
 	restv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/search/internal/interface/rest/v1"
@@ -38,7 +38,7 @@ func Root(ctx context.Context, svc system.Service) error {
 	container := di.New()
 
 	// setup Driven adapters
-	container.AddSingleton("registry", func(c di.Container) (any, error) {
+	container.AddSingleton(constants.RegistryKey, func(c di.Container) (any, error) {
 		reg := registry.New()
 		if err := orderv1.Registrations(reg); err != nil {
 			return nil, err
@@ -51,68 +51,59 @@ func Root(ctx context.Context, svc system.Service) error {
 		}
 		return reg, nil
 	})
-	container.AddSingleton("logger", func(c di.Container) (any, error) {
-		return svc.Logger(), nil
+	stream := nats.NewStream(svc.Config().Infrastructure.Nats.Stream, svc.JetStream(), svc.Logger())
+	container.AddScoped(constants.DatabaseTransactionKey, func(c di.Container) (any, error) {
+		return svc.Database().Begin(), nil
 	})
-	container.AddSingleton("stream", func(c di.Container) (any, error) {
-		return nats.NewStream(svc.Config().Infrastructure.Nats.Stream, svc.JetStream(), svc.Logger()), nil
+	container.AddSingleton(constants.MessageSubscriberKey, func(c di.Container) (any, error) {
+		return am.NewMessageSubscriber(
+			stream,
+			amotel.OtelMessageContextExtractor(),
+			amprom.ReceivedMessagesCounter(constants.ServiceName),
+		), nil
 	})
-	container.AddSingleton("db", func(c di.Container) (any, error) {
-		return svc.Database(), nil
+	container.AddScoped(constants.InboxStoreKey, func(c di.Container) (any, error) {
+		tx := c.Get(constants.DatabaseTransactionKey).(*gorm.DB)
+		return outboxstoregorm.NewInboxStore(constants.InboxTableName, tx), nil
 	})
-	container.AddSingleton("storesConn", func(c di.Container) (any, error) {
-		return infragrpc.Dial(ctx, svc.Config().Server.GPPC.Service("STORES"))
-	})
-	container.AddSingleton("customersConn", func(c di.Container) (any, error) {
-		return infragrpc.Dial(ctx, svc.Config().Server.GPPC.Service("CUSTOMERS"))
-	})
-	container.AddScoped("tx", func(c di.Container) (any, error) {
-		db := c.Get("db").(*gorm.DB)
-		return db.Begin(), nil
-	})
-	container.AddScoped("inboxMiddleware", func(c di.Container) (any, error) {
-		tx := c.Get("tx").(*gorm.DB)
-		inboxStore := outboxstoregorm.NewInboxStore("search.inbox", tx)
-		return tm.NewInboxHandlerMiddleware(inboxStore), nil
-	})
-	container.AddScoped("customers", func(c di.Container) (any, error) {
+	container.AddScoped(constants.CustomersRepoKey, func(c di.Container) (any, error) {
 		return persistencegorm.NewGormCustomerCacheRepository(
-			c.Get("tx").(*gorm.DB),
-			infragrpc.NewCustomerClient(c.Get("customersConn").(*grpc.ClientConn)),
+			c.Get(constants.DatabaseTransactionKey).(*gorm.DB),
+			grpc.NewGrpcCustomerRepository(svc.Config().Server.GRPC.Service(constants.CustomersServiceName)),
 		), nil
 	})
-	container.AddScoped("stores", func(c di.Container) (any, error) {
+	container.AddScoped(constants.StoresRepoKey, func(c di.Container) (any, error) {
 		return persistencegorm.NewGormStoreCacheRepository(
-			c.Get("tx").(*gorm.DB),
-			infragrpc.NewStoreClient(c.Get("storesConn").(*grpc.ClientConn)),
+			c.Get(constants.DatabaseTransactionKey).(*gorm.DB),
+			grpc.NewGrpcStoreRepository(svc.Config().Server.GRPC.Service(constants.StoresServiceName)),
 		), nil
 	})
-	container.AddScoped("products", func(c di.Container) (any, error) {
+	container.AddScoped(constants.ProductsRepoKey, func(c di.Container) (any, error) {
 		return persistencegorm.NewGormProductCacheRepository(
-			c.Get("tx").(*gorm.DB),
-			infragrpc.NewProductClient(c.Get("storesConn").(*grpc.ClientConn)),
+			c.Get(constants.DatabaseTransactionKey).(*gorm.DB),
+			grpc.NewGrpcProductRepository(svc.Config().Server.GRPC.Service(constants.StoresServiceName)),
 		), nil
 	})
-	container.AddScoped("orders", func(c di.Container) (any, error) {
-		return persistencegorm.NewGormOrderRepository(c.Get("tx").(*gorm.DB)), nil
+	container.AddScoped(constants.OrdersRepoKey, func(c di.Container) (any, error) {
+		return persistencegorm.NewGormOrderRepository(
+			c.Get(constants.DatabaseTransactionKey).(*gorm.DB),
+		), nil
 	})
 
 	// setup application
-	container.AddScoped("app", func(c di.Container) (any, error) {
-		return logging.NewLogApplicationAccess(
-			application.New(c.Get("orders").(*persistencegorm.GormOrderRepository)),
-			c.Get("logger").(logger.Logger),
+	container.AddScoped(constants.ApplicationKey, func(c di.Container) (any, error) {
+		return application.New(
+			c.Get(constants.OrdersRepoKey).(*persistencegorm.GormOrderRepository),
 		), nil
 	})
-	container.AddScoped("integrationEventHandlers", func(c di.Container) (any, error) {
-		return logging.NewLogEventHandlerAccess[ddd.Event](
-			handler.NewIntegrationEventHandlers(
-				c.Get("orders").(out.OrderRepository),
-				c.Get("customers").(out.CustomerCacheRepository),
-				c.Get("products").(out.ProductCacheRepository),
-				c.Get("stores").(out.StoreCacheRepository),
-			),
-			"IntegrationEvents", c.Get("logger").(logger.Logger),
+	container.AddScoped(constants.IntegrationEventHandlersKey, func(c di.Container) (any, error) {
+		return handler.NewIntegrationEventHandlers(
+			c.Get(constants.RegistryKey).(registry.Registry),
+			c.Get(constants.OrdersRepoKey).(out.OrderRepository),
+			c.Get(constants.CustomersRepoKey).(out.CustomerCacheRepository),
+			c.Get(constants.ProductsRepoKey).(out.ProductCacheRepository),
+			c.Get(constants.StoresRepoKey).(out.StoreCacheRepository),
+			tm.InboxHandler(c.Get(constants.InboxStoreKey).(tm.InboxStore)),
 		), nil
 	})
 
@@ -120,7 +111,7 @@ func Root(ctx context.Context, svc system.Service) error {
 	if err := v1.RegisterServerTx(container, svc.RPC().GRPCServer()); err != nil {
 		return err
 	}
-	if err := restv1.RegisterGateway(ctx, svc.Gin(), svc.Config().Server.GPPC.Address()); err != nil {
+	if err := restv1.RegisterGateway(ctx, svc.Gin(), svc.Config().Server.GRPC.Address()); err != nil {
 		return err
 	}
 	if err := docs.RegisterSwagger(svc.Gin()); err != nil {

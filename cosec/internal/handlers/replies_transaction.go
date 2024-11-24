@@ -3,17 +3,14 @@ package handlers
 import (
 	"context"
 
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/cosec/internal"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/cosec/internal/models"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/cosec/internal/constants"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/am"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/di"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/registry"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/sec"
 	"gorm.io/gorm"
 )
 
 func RegisterReplyHandlersTx(container di.Container) error {
-	replyMsgHandler := am.RawMessageHandlerFunc(func(ctx context.Context, msg am.IncomingRawMessage) (err error) {
+	replyMsgHandler := am.MessageHandlerFunc(func(ctx context.Context, msg am.IncomingMessage) (err error) {
 		ctx = container.Scoped(ctx)
 		defer func(tx *gorm.DB) {
 			if p := recover(); p != nil {
@@ -24,21 +21,12 @@ func RegisterReplyHandlersTx(container di.Container) error {
 			} else {
 				err = tx.Commit().Error
 			}
-		}(di.Get(ctx, "tx").(*gorm.DB))
+		}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-		replyHandlers := am.RawMessageHandlerWithMiddleware(
-			am.NewReplyMessageHandler(
-				di.Get(ctx, "registry").(registry.Registry),
-				di.Get(ctx, "orchestrator").(sec.Orchestrator[*models.CreateOrderData]),
-			),
-			di.Get(ctx, "inboxMiddleware").(am.RawMessageHandlerMiddleware),
-		)
-
-		return replyHandlers.HandleMessage(ctx, msg)
+		return di.Get(ctx, constants.ReplyHandlersKey).(am.MessageHandler).HandleMessage(ctx, msg)
 	})
 
-	subscriber := container.Get("stream").(am.RawMessageStream)
+	subscriber := container.Get(constants.MessageSubscriberKey).(am.MessageSubscriber)
 
-	_, err := subscriber.Subscribe(internal.CreateOrderReplyChannel, replyMsgHandler, am.GroupName("cosec-replies"))
-	return err
+	return RegisterReplyHandlers(subscriber, replyMsgHandler)
 }

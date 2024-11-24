@@ -18,6 +18,7 @@ services:
     depends_on:
       - nats
       - postgres
+      - collector
     command: ["/wait-for", "postgres:5432", "--", "/dlv", "exec", "--listen=:2345", "--headless=true", "--continue", "--api-version=2", "--accept-multiclient", "/mallbots/monolith"]
     profiles:
       - debug
@@ -39,6 +40,7 @@ services:
     depends_on:
       - nats
       - postgres
+      - collector
     command: [ "./wait-for", "postgres:5432", "--", "/mallbots/monolith" ]
     profiles:
       - monolith
@@ -62,11 +64,14 @@ services:
       - EDA_SERVER_GRPC_SERVICES=STORES=stores:9000,CUSTOMERS=customers:9000
       - EDA_INFRASTRUCTURE_GORM_DSN=host=postgres user=baskets_user password=baskets_pass dbname=baskets port=5432 sslmode=disable search_path=baskets,public TimeZone=UTC
       - EDA_INFRASTRUCTURE_NATS_URL=nats://nats:4222
+      - EDA_INFRASTRUCTURE_OTEL_SERVICE_NAME=baskets
+      - EDA_INFRASTRUCTURE_OTEL_EXPORTER_ENDPOINT=collector:4317
     volumes:
       - '$PWD/config.yaml:/config.yaml'
     depends_on:
       - nats
       - postgres
+      - collector
     command: [ "./wait-for", "postgres:5432", "--", "/mallbots/service" ]
     profiles:
       - microservices
@@ -90,11 +95,14 @@ services:
       - EDA_SERVER_GRPC_SERVICES=STORES=stores:9000,CUSTOMERS=customers:9000
       - EDA_INFRASTRUCTURE_GORM_DSN=host=postgres user=cosec_user password=cosec_pass dbname=cosec port=5432 sslmode=disable search_path=cosec,public TimeZone=UTC
       - EDA_INFRASTRUCTURE_NATS_URL=nats://nats:4222
+      - EDA_INFRASTRUCTURE_OTEL_SERVICE_NAME=cosec
+      - EDA_INFRASTRUCTURE_OTEL_EXPORTER_ENDPOINT=collector:4317
     volumes:
       - '$PWD/config.yaml:/config.yaml'
     depends_on:
       - nats
       - postgres
+      - collector
     command: [ "./wait-for", "postgres:5432", "--", "/mallbots/service" ]
     profiles:
       - microservices
@@ -118,11 +126,14 @@ services:
       - EDA_SERVER_GRPC_SERVICES=STORES=stores:9000,CUSTOMERS=customers:9000
       - EDA_INFRASTRUCTURE_GORM_DSN=host=postgres user=customers_user password=customers_pass dbname=customers port=5432 sslmode=disable search_path=customers,public TimeZone=UTC
       - EDA_INFRASTRUCTURE_NATS_URL=nats://nats:4222
+      - EDA_INFRASTRUCTURE_OTEL_SERVICE_NAME=customers
+      - EDA_INFRASTRUCTURE_OTEL_EXPORTER_ENDPOINT=collector:4317
     volumes:
       - '$PWD/config.yaml:/config.yaml'
     depends_on:
       - nats
       - postgres
+      - collector
     command: [ "./wait-for", "postgres:5432", "--", "/mallbots/service" ]
     profiles:
       - microservices
@@ -146,11 +157,14 @@ services:
       - EDA_SERVER_GRPC_SERVICES=STORES=stores:9000,CUSTOMERS=customers:9000
       - EDA_INFRASTRUCTURE_GORM_DSN=host=postgres user=depot_user password=depot_pass dbname=depot port=5432 sslmode=disable search_path=depot,public TimeZone=UTC
       - EDA_INFRASTRUCTURE_NATS_URL=nats://nats:4222
+      - EDA_INFRASTRUCTURE_OTEL_SERVICE_NAME=depot
+      - EDA_INFRASTRUCTURE_OTEL_EXPORTER_ENDPOINT=collector:4317
     volumes:
       - '$PWD/config.yaml:/config.yaml'
     depends_on:
       - nats
       - postgres
+      - collector
     command: [ "./wait-for", "postgres:5432", "--", "/mallbots/service" ]
     profiles:
       - microservices
@@ -174,11 +188,14 @@ services:
       - EDA_SERVER_GRPC_SERVICES=STORES=stores:9000,CUSTOMERS=customers:9000
       - EDA_INFRASTRUCTURE_GORM_DSN=host=postgres user=notifications_user password=notifications_pass dbname=notifications port=5432 sslmode=disable search_path=notifications,public TimeZone=UTC
       - EDA_INFRASTRUCTURE_NATS_URL=nats://nats:4222
+      - EDA_INFRASTRUCTURE_OTEL_SERVICE_NAME=notification
+      - EDA_INFRASTRUCTURE_OTEL_EXPORTER_ENDPOINT=collector:4317
     volumes:
       - '$PWD/config.yaml:/config.yaml'
     depends_on:
       - nats
       - postgres
+      - collector
     command: [ "./wait-for", "postgres:5432", "--", "/mallbots/service" ]
     profiles:
       - microservices
@@ -202,11 +219,14 @@ services:
       - EDA_SERVER_GRPC_SERVICES=STORES=stores:9000,CUSTOMERS=customers:9000
       - EDA_INFRASTRUCTURE_GORM_DSN=host=postgres user=ordering_user password=ordering_pass dbname=ordering port=5432 sslmode=disable search_path=ordering,public TimeZone=UTC
       - EDA_INFRASTRUCTURE_NATS_URL=nats://nats:4222
+      - EDA_INFRASTRUCTURE_OTEL_SERVICE_NAME=ordering
+      - EDA_INFRASTRUCTURE_OTEL_EXPORTER_ENDPOINT=collector:4317
     volumes:
       - '$PWD/config.yaml:/config.yaml'
     depends_on:
       - nats
       - postgres
+      - collector
     command: [ "./wait-for", "postgres:5432", "--", "/mallbots/service" ]
     profiles:
       - microservices
@@ -230,11 +250,14 @@ services:
       - EDA_SERVER_GRPC_SERVICES=STORES=stores:9000,CUSTOMERS=customers:9000
       - EDA_INFRASTRUCTURE_GORM_DSN=host=postgres user=payments_user password=payments_pass dbname=payments port=5432 sslmode=disable search_path=payments,public TimeZone=UTC
       - EDA_INFRASTRUCTURE_NATS_URL=nats://nats:4222
+      - EDA_INFRASTRUCTURE_OTEL_SERVICE_NAME=payments
+      - EDA_INFRASTRUCTURE_OTEL_EXPORTER_ENDPOINT=collector:4317
     volumes:
       - '$PWD/config.yaml:/config.yaml'
     depends_on:
       - nats
       - postgres
+      - collector
     command: [ "./wait-for", "postgres:5432", "--", "/mallbots/service" ]
     profiles:
       - microservices
@@ -258,11 +281,14 @@ services:
       - EDA_SERVER_GRPC_SERVICES=STORES=stores:9000,CUSTOMERS=customers:9000
       - EDA_INFRASTRUCTURE_GORM_DSN=host=postgres user=search_user password=search_pass dbname=search port=5432 sslmode=disable search_path=search,public TimeZone=UTC
       - EDA_INFRASTRUCTURE_NATS_URL=nats://nats:4222
+      - EDA_INFRASTRUCTURE_OTEL_SERVICE_NAME=search
+      - EDA_INFRASTRUCTURE_OTEL_EXPORTER_ENDPOINT=collector:4317
     volumes:
       - '$PWD/config.yaml:/config.yaml'
     depends_on:
       - nats
       - postgres
+      - collector
     command: [ "./wait-for", "postgres:5432", "--", "/mallbots/service" ]
     profiles:
       - microservices
@@ -286,11 +312,14 @@ services:
       - EDA_SERVER_GRPC_SERVICES=STORES=stores:9000,CUSTOMERS=customers:9000
       - EDA_INFRASTRUCTURE_GORM_DSN=host=postgres user=stores_user password=stores_pass dbname=stores port=5432 sslmode=disable search_path=stores,public TimeZone=UTC
       - EDA_INFRASTRUCTURE_NATS_URL=nats://nats:4222
+      - EDA_INFRASTRUCTURE_OTEL_SERVICE_NAME=stores
+      - EDA_INFRASTRUCTURE_OTEL_EXPORTER_ENDPOINT=collector:4317
     volumes:
       - '$PWD/config.yaml:/config.yaml'
     depends_on:
       - nats
       - postgres
+      - collector
     command: [ "./wait-for", "postgres:5432", "--", "/mallbots/service" ]
     profiles:
       - microservices
@@ -301,6 +330,7 @@ services:
     container_name: proxy
     hostname: proxy
     image: nginx:alpine
+    restart: always
     ports:
       - '8080:8080'
     volumes:

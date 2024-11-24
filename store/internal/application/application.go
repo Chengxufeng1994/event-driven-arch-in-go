@@ -37,7 +37,7 @@ type (
 
 var _ usecase.StoreUseCase = (*StoreApplication)(nil)
 
-func NewStoreApplication(
+func New(
 	stores repository.StoreRepository,
 	products repository.ProductRepository,
 	mall repository.MallRepository,

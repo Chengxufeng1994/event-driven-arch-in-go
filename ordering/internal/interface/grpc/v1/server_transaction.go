@@ -6,6 +6,7 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/di"
 	orderv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/api/order/v1"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/application/usecase"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/ordering/internal/infrastructure/constants"
 	"google.golang.org/grpc"
 	"gorm.io/gorm"
 )
@@ -26,9 +27,9 @@ func (s serverTx) CreateOrder(ctx context.Context, request *orderv1.CreateOrderR
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *gorm.DB) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*gorm.DB))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-	next := server{app: di.Get(ctx, "app").(usecase.OrderUseCase)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(usecase.OrderUseCase)}
 
 	return next.CreateOrder(ctx, request)
 }
@@ -37,9 +38,9 @@ func (s serverTx) CancelOrder(ctx context.Context, request *orderv1.CancelOrderR
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *gorm.DB) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*gorm.DB))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-	next := server{app: di.Get(ctx, "app").(usecase.OrderUseCase)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(usecase.OrderUseCase)}
 
 	return next.CancelOrder(ctx, request)
 }
@@ -48,9 +49,9 @@ func (s serverTx) ReadyOrder(ctx context.Context, request *orderv1.ReadyOrderReq
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *gorm.DB) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*gorm.DB))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-	next := server{app: di.Get(ctx, "app").(usecase.OrderUseCase)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(usecase.OrderUseCase)}
 
 	return next.ReadyOrder(ctx, request)
 }
@@ -59,9 +60,9 @@ func (s serverTx) CompleteOrder(ctx context.Context, request *orderv1.CompleteOr
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *gorm.DB) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*gorm.DB))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-	next := server{app: di.Get(ctx, "app").(usecase.OrderUseCase)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(usecase.OrderUseCase)}
 
 	return next.CompleteOrder(ctx, request)
 }
@@ -70,9 +71,9 @@ func (s serverTx) GetOrder(ctx context.Context, request *orderv1.GetOrderRequest
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *gorm.DB) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*gorm.DB))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-	next := server{app: di.Get(ctx, "app").(usecase.OrderUseCase)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(usecase.OrderUseCase)}
 
 	return next.GetOrder(ctx, request)
 }

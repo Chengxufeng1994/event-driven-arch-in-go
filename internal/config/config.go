@@ -31,7 +31,7 @@ type Server struct {
 	Mode            string `mapstructure:"mode"`
 	EnableProfiling bool   `mapstructure:"enable_profiling"`
 	EnableMetrics   bool   `mapstructure:"enable_metrics"`
-	GPPC            *GPPC  `mapstructure:"grpc"`
+	GRPC            *GPPC  `mapstructure:"grpc"`
 	HTTP            *HTTP  `mapstructure:"http"`
 	HTTPS           *HTTPS `mapstructure:"https"`
 }
@@ -95,6 +95,7 @@ func (s *Services) Decode(v string) error {
 type Infrastructure struct {
 	GORM *GORM `mapstructure:"gorm"`
 	Nats *Nats `mapstructure:"nats"`
+	Otel *Otel `mapstructure:"otel"`
 }
 
 type GORM struct {
@@ -129,6 +130,11 @@ type GORM struct {
 type Nats struct {
 	URL    string `mapstructure:"url"`
 	Stream string `mapstructure:"stream"`
+}
+
+type Otel struct {
+	ServiceName      string `mapstructure:"service_name"`
+	ExporterEndpoint string `mapstructure:"exporter_endpoint"`
 }
 
 const (
@@ -191,11 +197,8 @@ func newConfig() (*Config, error) {
 	if envGrpcServices != "" {
 		var services Services
 		services.Decode(envGrpcServices)
-		c.Server.GPPC.Services = services
+		c.Server.GRPC.Services = services
 	}
-	s := viper.GetViper().GetString("infrastructure.gorm.dsn")
-	fmt.Println(s)
-	fmt.Println(c.Infrastructure.GORM.DSN)
 
 	// setup logging package
 	logger.SetOutputFormat(c.Logger.Format)

@@ -8,6 +8,7 @@ import (
 
 	depotv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/depot/api/depot/v1"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/application/usecase"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/infastructure/constants"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/di"
 )
 
@@ -29,9 +30,9 @@ func (s serverTx) CreateShoppingList(ctx context.Context, request *depotv1.Creat
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *gorm.DB) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*gorm.DB))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-	next := server{app: di.Get(ctx, "app").(usecase.ShoppingListUseCase)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(usecase.ShoppingListUseCase)}
 
 	return next.CreateShoppingList(ctx, request)
 }
@@ -40,9 +41,9 @@ func (s serverTx) CancelShoppingList(ctx context.Context, request *depotv1.Cance
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *gorm.DB) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*gorm.DB))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-	next := server{app: di.Get(ctx, "app").(usecase.ShoppingListUseCase)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(usecase.ShoppingListUseCase)}
 
 	return next.CancelShoppingList(ctx, request)
 }
@@ -51,9 +52,9 @@ func (s serverTx) AssignShoppingList(ctx context.Context, request *depotv1.Assig
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *gorm.DB) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*gorm.DB))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-	next := server{app: di.Get(ctx, "app").(usecase.ShoppingListUseCase)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(usecase.ShoppingListUseCase)}
 
 	return next.AssignShoppingList(ctx, request)
 }
@@ -62,9 +63,9 @@ func (s serverTx) CompleteShoppingList(ctx context.Context, request *depotv1.Com
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *gorm.DB) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*gorm.DB))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-	next := server{app: di.Get(ctx, "app").(usecase.ShoppingListUseCase)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(usecase.ShoppingListUseCase)}
 
 	return next.CompleteShoppingList(ctx, request)
 }

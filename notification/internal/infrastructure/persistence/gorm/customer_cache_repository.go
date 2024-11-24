@@ -15,12 +15,12 @@ import (
 
 type GormCustomerCacheRepository struct {
 	db       *gorm.DB
-	fallback client.CustomerClient
+	fallback client.CustomerRepository
 }
 
 var _ repository.CustomerCacheRepository = (*GormCustomerCacheRepository)(nil)
 
-func NewGormCustomerCacheRepository(db *gorm.DB, fallback client.CustomerClient) *GormCustomerCacheRepository {
+func NewGormCustomerCacheRepository(db *gorm.DB, fallback client.CustomerRepository) *GormCustomerCacheRepository {
 	return &GormCustomerCacheRepository{
 		db:       db,
 		fallback: fallback,

@@ -11,21 +11,19 @@ import (
 )
 
 type DomainEventHandler[T ddd.Event] struct {
-	publisher am.MessagePublisher[ddd.Event]
+	publisher am.EventPublisher
 }
 
 var _ ddd.EventHandler[ddd.Event] = (*DomainEventHandler[ddd.Event])(nil)
 
-func NewDomainEventHandlers(publisher am.MessagePublisher[ddd.Event]) ddd.EventHandler[ddd.Event] {
+func NewDomainEventHandlers(publisher am.EventPublisher) ddd.EventHandler[ddd.Event] {
 	return &DomainEventHandler[ddd.Event]{
 		publisher: publisher,
 	}
 }
 
 func RegisterDomainEventHandlers(subscriber ddd.EventSubscriber[ddd.Event], handlers ddd.EventHandler[ddd.Event]) {
-	subscriber.Subscribe(handlers,
-		domainevent.InvoicePaidEvent,
-	)
+	subscriber.Subscribe(handlers, domainevent.InvoicePaidEvent)
 }
 
 func (h *DomainEventHandler[T]) HandleEvent(ctx context.Context, event T) error {

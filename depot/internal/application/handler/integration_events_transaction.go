@@ -3,16 +3,14 @@ package handler
 import (
 	"context"
 
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/infastructure/constants"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/am"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/di"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/registry"
-	storev1 "github.com/Chengxufeng1994/event-driven-arch-in-go/store/api/store/v1"
 	"gorm.io/gorm"
 )
 
 func RegisterIntegrationEventHandlersTx(container di.Container) error {
-	evtMsgHandler := am.RawMessageHandlerFunc(func(ctx context.Context, msg am.IncomingRawMessage) (err error) {
+	rawMsgHandlers := am.MessageHandlerFunc(func(ctx context.Context, msg am.IncomingMessage) (err error) {
 		ctx = container.Scoped(ctx)
 		defer func(tx *gorm.DB) {
 			if p := recover(); p != nil {
@@ -23,34 +21,12 @@ func RegisterIntegrationEventHandlersTx(container di.Container) error {
 			} else {
 				err = tx.Commit().Error
 			}
-		}(di.Get(ctx, "tx").(*gorm.DB))
+		}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-		evtHandlers := am.RawMessageHandlerWithMiddleware(
-			am.NewEventMessageHandler(
-				di.Get(ctx, "registry").(registry.Registry),
-				di.Get(ctx, "integrationEventHandlers").(ddd.EventHandler[ddd.Event]),
-			),
-			di.Get(ctx, "inboxMiddleware").(am.RawMessageHandlerMiddleware),
-		)
-
-		return evtHandlers.HandleMessage(ctx, msg)
+		return di.Get(ctx, constants.IntegrationEventHandlersKey).(am.MessageHandler).HandleMessage(ctx, msg)
 	})
 
-	subscriber := container.Get("stream").(am.RawMessageStream)
+	subscriber := container.Get(constants.MessageSubscriberKey).(am.MessageSubscriber)
 
-	_, err := subscriber.Subscribe(storev1.StoreAggregateChannel, evtMsgHandler, am.MessageFilter{
-		storev1.StoreCreatedEvent,
-		storev1.StoreRebrandedEvent,
-	}, am.GroupName("depot-stores"))
-	if err != nil {
-		return err
-	}
-
-	_, err = subscriber.Subscribe(storev1.ProductAggregateChannel, evtMsgHandler, am.MessageFilter{
-		storev1.ProductAddedEvent,
-		storev1.ProductRebrandedEvent,
-		storev1.ProductRemovedEvent,
-	}, am.GroupName("depot-products"))
-
-	return err
+	return RegisterIntegrationEventHandlers(subscriber, rawMsgHandlers)
 }

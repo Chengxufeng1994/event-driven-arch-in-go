@@ -9,6 +9,7 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/di"
 	storev1 "github.com/Chengxufeng1994/event-driven-arch-in-go/store/api/store/v1"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/application/usecase"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/store/internal/infrastructure/constants"
 )
 
 type serverTx struct {
@@ -29,9 +30,9 @@ func (s serverTx) CreateStore(ctx context.Context, request *storev1.CreateStoreR
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *gorm.DB) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*gorm.DB))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-	next := server{app: di.Get(ctx, "app").(usecase.StoreUseCase)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(usecase.StoreUseCase)}
 
 	return next.CreateStore(ctx, request)
 }
@@ -40,9 +41,9 @@ func (s serverTx) EnableParticipation(ctx context.Context, request *storev1.Enab
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *gorm.DB) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*gorm.DB))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-	next := server{app: di.Get(ctx, "app").(usecase.StoreUseCase)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(usecase.StoreUseCase)}
 
 	return next.EnableParticipation(ctx, request)
 }
@@ -51,9 +52,9 @@ func (s serverTx) DisableParticipation(ctx context.Context, request *storev1.Dis
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *gorm.DB) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*gorm.DB))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-	next := server{app: di.Get(ctx, "app").(usecase.StoreUseCase)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(usecase.StoreUseCase)}
 
 	return next.DisableParticipation(ctx, request)
 }
@@ -62,19 +63,20 @@ func (s serverTx) RebrandStore(ctx context.Context, request *storev1.RebrandStor
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *gorm.DB) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*gorm.DB))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-	next := server{app: di.Get(ctx, "app").(usecase.StoreUseCase)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(usecase.StoreUseCase)}
 
 	return next.RebrandStore(ctx, request)
 }
+
 func (s serverTx) GetStore(ctx context.Context, request *storev1.GetStoreRequest) (resp *storev1.GetStoreResponse, err error) {
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *gorm.DB) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*gorm.DB))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-	next := server{app: di.Get(ctx, "app").(usecase.StoreUseCase)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(usecase.StoreUseCase)}
 
 	return next.GetStore(ctx, request)
 }
@@ -83,9 +85,9 @@ func (s serverTx) GetStores(ctx context.Context, request *storev1.GetStoresReque
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *gorm.DB) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*gorm.DB))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-	next := server{app: di.Get(ctx, "app").(usecase.StoreUseCase)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(usecase.StoreUseCase)}
 
 	return next.GetStores(ctx, request)
 }
@@ -94,9 +96,9 @@ func (s serverTx) GetParticipatingStores(ctx context.Context, request *storev1.G
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *gorm.DB) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*gorm.DB))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-	next := server{app: di.Get(ctx, "app").(usecase.StoreUseCase)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(usecase.StoreUseCase)}
 
 	return next.GetParticipatingStores(ctx, request)
 }
@@ -105,9 +107,9 @@ func (s serverTx) AddProduct(ctx context.Context, request *storev1.AddProductReq
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *gorm.DB) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*gorm.DB))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-	next := server{app: di.Get(ctx, "app").(usecase.StoreUseCase)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(usecase.StoreUseCase)}
 
 	return next.AddProduct(ctx, request)
 }
@@ -116,9 +118,9 @@ func (s serverTx) RebrandProduct(ctx context.Context, request *storev1.RebrandPr
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *gorm.DB) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*gorm.DB))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-	next := server{app: di.Get(ctx, "app").(usecase.StoreUseCase)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(usecase.StoreUseCase)}
 
 	return next.RebrandProduct(ctx, request)
 }
@@ -127,9 +129,9 @@ func (s serverTx) IncreaseProductPrice(ctx context.Context, request *storev1.Inc
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *gorm.DB) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*gorm.DB))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-	next := server{app: di.Get(ctx, "app").(usecase.StoreUseCase)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(usecase.StoreUseCase)}
 
 	return next.IncreaseProductPrice(ctx, request)
 }
@@ -138,9 +140,9 @@ func (s serverTx) DecreaseProductPrice(ctx context.Context, request *storev1.Dec
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *gorm.DB) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*gorm.DB))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-	next := server{app: di.Get(ctx, "app").(usecase.StoreUseCase)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(usecase.StoreUseCase)}
 
 	return next.DecreaseProductPrice(ctx, request)
 }
@@ -149,9 +151,9 @@ func (s serverTx) RemoveProduct(ctx context.Context, request *storev1.RemoveProd
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *gorm.DB) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*gorm.DB))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-	next := server{app: di.Get(ctx, "app").(usecase.StoreUseCase)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(usecase.StoreUseCase)}
 
 	return next.RemoveProduct(ctx, request)
 }
@@ -160,21 +162,20 @@ func (s serverTx) GetProduct(ctx context.Context, request *storev1.GetProductReq
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *gorm.DB) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*gorm.DB))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-	next := server{app: di.Get(ctx, "app").(usecase.StoreUseCase)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(usecase.StoreUseCase)}
 
 	return next.GetProduct(ctx, request)
 }
 
 func (s serverTx) GetCatalog(ctx context.Context, request *storev1.GetCatalogRequest) (resp *storev1.GetCatalogResponse, err error) {
-
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *gorm.DB) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*gorm.DB))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-	next := server{app: di.Get(ctx, "app").(usecase.StoreUseCase)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(usecase.StoreUseCase)}
 
 	return next.GetCatalog(ctx, request)
 }

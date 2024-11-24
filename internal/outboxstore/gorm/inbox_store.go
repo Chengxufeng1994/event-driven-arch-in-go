@@ -2,8 +2,8 @@ package gorm
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
-	"time"
 
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/am"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/outboxstore/gorm/model"
@@ -27,7 +27,12 @@ func NewInboxStore(tableName string, db *gorm.DB) *InboxStore {
 	}
 }
 
-func (s *InboxStore) Save(ctx context.Context, msg am.RawMessage) error {
+func (s *InboxStore) Save(ctx context.Context, msg am.IncomingMessage) error {
+	metadata, err := json.Marshal(msg.Metadata())
+	if err != nil {
+		return err
+	}
+
 	result := s.db.WithContext(ctx).
 		Table(s.tableName).
 		Create(&model.Inbox{
@@ -35,7 +40,9 @@ func (s *InboxStore) Save(ctx context.Context, msg am.RawMessage) error {
 			Name:       msg.MessageName(),
 			Subject:    msg.Subject(),
 			Data:       msg.Data(),
-			ReceivedAt: time.Now(),
+			Metadata:   metadata,
+			SentAt:     msg.SentAt(),
+			ReceivedAt: msg.ReceivedAt(),
 		})
 
 	if result.Error != nil {

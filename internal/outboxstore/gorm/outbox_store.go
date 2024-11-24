@@ -2,16 +2,19 @@ package gorm
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
 
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/am"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/outboxstore/gorm/model"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/tm"
 	"github.com/jackc/pgerrcode"
 	"github.com/lib/pq"
 	"gorm.io/gorm"
+
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/am"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/outboxstore/gorm/model"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/tm"
 )
 
 type OutboxStore struct {
@@ -20,14 +23,16 @@ type OutboxStore struct {
 }
 
 type outboxMessage struct {
-	id      string
-	name    string
-	subject string
-	data    []byte
+	id       string
+	name     string
+	subject  string
+	data     []byte
+	metadata ddd.Metadata
+	sentAt   time.Time
 }
 
 var _ tm.OutboxStore = (*OutboxStore)(nil)
-var _ am.RawMessage = (*outboxMessage)(nil)
+var _ am.Message = (*outboxMessage)(nil)
 
 func NewOutboxStore(tableName string, db *gorm.DB) *OutboxStore {
 	return &OutboxStore{
@@ -37,12 +42,17 @@ func NewOutboxStore(tableName string, db *gorm.DB) *OutboxStore {
 }
 
 // Save implements tm.OutboxStore.
-func (s *OutboxStore) Save(ctx context.Context, msg am.RawMessage) error {
-	const query = "INSERT INTO %s (id, name, subject, data) VALUES ($1, $2, $3, $4)"
-	stmt := fmt.Sprintf(query, s.tableName)
+func (s *OutboxStore) Save(ctx context.Context, msg am.Message) error {
+	const query = "INSERT INTO %s (id, name, subject, data, metadata, sent_at) VALUES ($1, $2, $3, $4, $5, $6)"
 
+	metadata, err := json.Marshal(msg.Metadata())
+	if err != nil {
+		return err
+	}
+
+	stmt := fmt.Sprintf(query, s.tableName)
 	result := s.db.WithContext(ctx).
-		Exec(stmt, msg.ID(), msg.MessageName(), msg.Subject(), msg.Data())
+		Exec(stmt, msg.ID(), msg.MessageName(), msg.Subject(), msg.Data(), metadata, msg.SentAt())
 
 	if result.Error != nil {
 		var pqErr *pq.Error
@@ -58,27 +68,35 @@ func (s *OutboxStore) Save(ctx context.Context, msg am.RawMessage) error {
 }
 
 // FindUnpublished implements tm.OutboxStore.
-func (s *OutboxStore) FindUnpublished(ctx context.Context, limit int) ([]am.RawMessage, error) {
-	var msgs []model.Outbox
+func (s *OutboxStore) FindUnpublished(ctx context.Context, limit int) ([]am.Message, error) {
+	var rows []model.Outbox
 
-	result := s.db.WithContext(ctx).
+	err := s.db.WithContext(ctx).
 		Table(s.tableName).
 		Where("published_at IS NULL").
 		Limit(limit).
-		Find(&msgs)
-
-	if result.Error != nil {
-		return nil, result.Error
+		Find(&rows).
+		Error
+	if err != nil {
+		return nil, err
 	}
 
-	outboxMsgs := make([]am.RawMessage, 0, len(msgs))
-	for _, msg := range msgs {
-		outboxMsgs = append(outboxMsgs, &outboxMessage{
-			id:      msg.ID,
-			name:    msg.Name,
-			subject: msg.Subject,
-			data:    msg.Data,
-		})
+	outboxMsgs := make([]am.Message, 0, len(rows))
+	for _, row := range rows {
+		msg := outboxMessage{
+			id:      row.ID,
+			name:    row.Name,
+			subject: row.Subject,
+			data:    row.Data,
+			sentAt:  row.SentAt,
+		}
+
+		err = json.Unmarshal(row.Metadata, &msg.metadata)
+		if err != nil {
+			return nil, err
+		}
+
+		outboxMsgs = append(outboxMsgs, msg)
 	}
 
 	return outboxMsgs, nil
@@ -98,7 +116,9 @@ func (s *OutboxStore) MarkPublished(ctx context.Context, ids ...string) error {
 	return nil
 }
 
-func (o *outboxMessage) ID() string          { return o.id }
-func (o *outboxMessage) MessageName() string { return o.name }
-func (o *outboxMessage) Subject() string     { return o.subject }
-func (o *outboxMessage) Data() []byte        { return o.data }
+func (m outboxMessage) ID() string             { return m.id }
+func (m outboxMessage) Subject() string        { return m.subject }
+func (m outboxMessage) MessageName() string    { return m.name }
+func (m outboxMessage) Data() []byte           { return m.data }
+func (m outboxMessage) Metadata() ddd.Metadata { return m.metadata }
+func (m outboxMessage) SentAt() time.Time      { return m.sentAt }

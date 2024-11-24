@@ -1,3 +1,5 @@
+//go:build contract
+
 package handler
 
 import (
@@ -90,7 +92,7 @@ func TestStoresConsumer(t *testing.T) {
 				stores:   repository.NewMockStoreCacheRepository(t),
 				products: repository.NewMockProductCacheRepository(t),
 			}
-			handlers := NewIntegrationEventHandler(m.stores, m.products)
+			handlers := NewIntegrationEventHandlers(m.stores, m.products)
 			if tc.on != nil {
 				tc.on(m)
 			}

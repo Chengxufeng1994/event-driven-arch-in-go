@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
@@ -14,53 +13,51 @@ import (
 
 type (
 	EventMessage interface {
-		Message
+		MessageBase
 		ddd.Event
 	}
 
 	IncomingEventMessage interface {
-		IncomingMessage
+		IncomingMessageBase
 		ddd.Event
 	}
 
-	EventPublisher  = MessagePublisher[ddd.Event]
-	EventSubscriber = MessageSubscriber[IncomingEventMessage]
-	EventStream     = MessageStream[ddd.Event, IncomingEventMessage]
+	EventPublisher interface {
+		Publish(ctx context.Context, topicName string, event ddd.Event) error
+	}
 
-	eventStream struct {
-		reg    registry.Registry
-		stream RawMessageStream
+	eventPublisher struct {
+		reg       registry.Registry
+		publisher MessagePublisher
 	}
 
 	eventMessage struct {
 		id         string
 		name       string
 		payload    ddd.EventPayload
-		metadata   ddd.Metadata
 		occurredAt time.Time
-		msg        IncomingMessage
+		msg        IncomingMessageBase
+	}
+
+	eventMsgHandler struct {
+		reg     registry.Registry
+		handler ddd.EventHandler[ddd.Event]
 	}
 )
 
 var _ EventMessage = (*eventMessage)(nil)
+var _ EventPublisher = (*eventPublisher)(nil)
+var _ MessageHandler = (*eventMsgHandler)(nil)
 
-var _ EventStream = (*eventStream)(nil)
-
-func NewEventStream(reg registry.Registry, stream RawMessageStream) EventStream {
-	return eventStream{
-		reg:    reg,
-		stream: stream,
+func NewEventPublisher(reg registry.Registry, msgPublisher MessagePublisher, mws ...MessagePublisherMiddleware) EventPublisher {
+	return eventPublisher{
+		reg:       reg,
+		publisher: MessagePublisherWithMiddleware(msgPublisher, mws...),
 	}
 }
 
-// Publish implements MessageStream.
-func (es eventStream) Publish(ctx context.Context, topicName string, event ddd.Event) error {
-	metadata, err := structpb.NewStruct(event.Metadata())
-	if err != nil {
-		return err
-	}
-
-	payload, err := es.reg.Serialize(event.EventName(), event.Payload())
+func (e eventPublisher) Publish(ctx context.Context, topicName string, event ddd.Event) error {
+	payload, err := e.reg.Serialize(event.EventName(), event.Payload())
 	if err != nil {
 		return err
 	}
@@ -68,97 +65,43 @@ func (es eventStream) Publish(ctx context.Context, topicName string, event ddd.E
 	data, err := proto.Marshal(&EventMessageData{
 		Payload:    payload,
 		OccurredAt: timestamppb.New(event.OccurredAt()),
-		Metadata:   metadata,
 	})
 	if err != nil {
 		return err
 	}
 
-	return es.stream.Publish(ctx, topicName, rawMessage{
-		id:      event.ID(),
-		name:    event.EventName(),
-		subject: topicName,
-		data:    data,
+	return e.publisher.Publish(ctx, topicName, message{
+		id:       event.ID(),
+		name:     event.EventName(),
+		subject:  topicName,
+		data:     data,
+		metadata: event.Metadata(),
+		sentAt:   time.Now(),
 	})
-}
-
-func (es eventStream) Subscribe(topicName string, handler MessageHandler[IncomingEventMessage], options ...SubscriberOption) (Subscription, error) {
-	cfg := NewSubscriberConfig(options)
-
-	var filters map[string]struct{}
-	if len(cfg.MessageFilters()) > 0 {
-		filters = make(map[string]struct{})
-		for _, key := range cfg.MessageFilters() {
-			filters[key] = struct{}{}
-		}
-	}
-
-	fn := MessageHandlerFunc[IncomingRawMessage](func(ctx context.Context, msg IncomingRawMessage) error {
-		var eventData EventMessageData
-
-		if filters != nil {
-			if _, exists := filters[msg.MessageName()]; !exists {
-				return nil
-			}
-		}
-
-		err := proto.Unmarshal(msg.Data(), &eventData)
-		if err != nil {
-			return err
-		}
-
-		eventName := msg.MessageName()
-
-		payload, err := es.reg.Deserialize(eventName, eventData.GetPayload())
-		if err != nil {
-			return err
-		}
-
-		eventMsg := eventMessage{
-			id:         msg.ID(),
-			name:       eventName,
-			payload:    payload,
-			metadata:   eventData.GetMetadata().AsMap(),
-			occurredAt: eventData.GetOccurredAt().AsTime(),
-			msg:        msg,
-		}
-
-		return handler.HandleMessage(ctx, eventMsg)
-	})
-
-	return es.stream.Subscribe(topicName, fn, options...)
-}
-func (s eventStream) Unsubscribe() error {
-	return s.stream.Unsubscribe()
 }
 
 func (e eventMessage) ID() string                { return e.id }
 func (e eventMessage) EventName() string         { return e.name }
 func (e eventMessage) Payload() ddd.EventPayload { return e.payload }
-func (e eventMessage) Metadata() ddd.Metadata    { return e.metadata }
+func (e eventMessage) Metadata() ddd.Metadata    { return e.msg.Metadata() }
 func (e eventMessage) OccurredAt() time.Time     { return e.occurredAt }
 func (e eventMessage) Subject() string           { return e.msg.Subject() }
 func (e eventMessage) MessageName() string       { return e.msg.MessageName() }
+func (e eventMessage) SentAt() time.Time         { return e.msg.SentAt() }
+func (e eventMessage) ReceivedAt() time.Time     { return e.msg.ReceivedAt() }
 func (e eventMessage) Ack() error                { return e.msg.Ack() }
 func (e eventMessage) NAck() error               { return e.msg.NAck() }
 func (e eventMessage) Extend() error             { return e.msg.Extend() }
 func (e eventMessage) Kill() error               { return e.msg.Kill() }
 
-type eventMsgHandler struct {
-	reg     registry.Registry
-	handler ddd.EventHandler[ddd.Event]
-}
-
-var _ RawMessageHandler = (*eventMsgHandler)(nil)
-
-func NewEventMessageHandler(registry registry.Registry, handler ddd.EventHandler[ddd.Event]) RawMessageHandler {
-	return eventMsgHandler{
-		reg:     registry,
+func NewEventHandler(reg registry.Registry, handler ddd.EventHandler[ddd.Event], mws ...MessageHandlerMiddleware) MessageHandler {
+	return MessageHandlerWithMiddleware(eventMsgHandler{
+		reg:     reg,
 		handler: handler,
-	}
+	}, mws...)
 }
 
-func (h eventMsgHandler) HandleMessage(ctx context.Context, msg IncomingRawMessage) error {
+func (h eventMsgHandler) HandleMessage(ctx context.Context, msg IncomingMessage) error {
 	var eventData EventMessageData
 
 	err := proto.Unmarshal(msg.Data(), &eventData)
@@ -177,7 +120,6 @@ func (h eventMsgHandler) HandleMessage(ctx context.Context, msg IncomingRawMessa
 		id:         msg.ID(),
 		name:       eventName,
 		payload:    payload,
-		metadata:   eventData.GetMetadata().AsMap(),
 		occurredAt: eventData.GetOccurredAt().AsTime(),
 		msg:        msg,
 	}

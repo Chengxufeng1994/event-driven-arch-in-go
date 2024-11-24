@@ -9,7 +9,7 @@ import (
 
 const (
 	messageLimit    = 50
-	pollingInterval = 500 * time.Millisecond
+	pollingInterval = 333 * time.Millisecond
 )
 
 type OutboxProcessor interface {
@@ -17,13 +17,13 @@ type OutboxProcessor interface {
 }
 
 type outboxProcessor struct {
-	publisher am.RawMessagePublisher
+	publisher am.MessagePublisher
 	store     OutboxStore
 }
 
 var _ OutboxProcessor = (*outboxProcessor)(nil)
 
-func NewOutboxProcessor(publisher am.RawMessagePublisher, store OutboxStore) OutboxProcessor {
+func NewOutboxProcessor(publisher am.MessagePublisher, store OutboxStore) OutboxProcessor {
 	return &outboxProcessor{
 		publisher: publisher,
 		store:     store,
@@ -48,12 +48,12 @@ func (p outboxProcessor) Start(ctx context.Context) error {
 }
 
 func (p outboxProcessor) processMessages(ctx context.Context) error {
+	timer := time.NewTimer(0)
 	for {
 		msgs, err := p.store.FindUnpublished(ctx, messageLimit)
 		if err != nil {
 			return err
 		}
-
 		if len(msgs) > 0 {
 			ids := make([]string, len(msgs))
 			for i, msg := range msgs {
@@ -68,14 +68,24 @@ func (p outboxProcessor) processMessages(ctx context.Context) error {
 				return err
 			}
 
+			// poll again immediately
 			continue
 		}
+
+		if !timer.Stop() {
+			select {
+			case <-timer.C:
+			default:
+			}
+		}
+
+		// wait a short time before polling again
+		timer.Reset(pollingInterval)
 
 		select {
 		case <-ctx.Done():
 			return nil
-		// wait a short time before polling again
-		case <-time.After(pollingInterval):
+		case <-timer.C:
 		}
 	}
 }

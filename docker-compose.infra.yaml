@@ -20,8 +20,7 @@ services:
       start_period: 30s
       timeout: 10s
     networks:
-      eda_network:
-        ipv4_address: 10.5.0.21
+      - eda_network
 
   pgadmin:
     container_name: pgadmin
@@ -40,8 +39,7 @@ services:
     links:
       - "postgres:db"
     networks:
-      eda_network:
-        ipv4_address: 10.5.0.22
+      - eda_network
     configs:
       - source: servers.json
         target: /pgadmin4/servers.json
@@ -64,8 +62,7 @@ services:
     volumes:
       - jsdata:/var/lib/nats/data
     networks:
-      eda_network:
-        ipv4_address: 10.5.0.23
+      - eda_network
 
   pact-broker:
     container_name: pact
@@ -88,10 +85,72 @@ services:
       PACT_BROKER_WEBHOOK_SCHEME_WHITELIST: http
       PACT_BROKER_WEBHOOK_HOST_WHITELIST: host.docker.internal
     networks:
-      eda_network:
-        ipv4_address: 10.5.0.24
+      - eda_network
     profiles:
       - testing
+
+  collector:
+      container_name: collector
+      hostname: collector
+      image: otel/opentelemetry-collector-contrib:0.114.0
+      command: [
+        "--config=/etc/otel-config.yml",
+      ]
+      depends_on:
+        - jaeger
+      volumes:
+        - $PWD/build/docker/otel/otel-config.yml:/etc/otel-config.yml
+      ports:
+        - "1888:1888"   # pprof extension
+        - "8888:8888"   # Prometheus metrics exposed by the collector
+        - "8889:8889"   # Prometheus exporter metrics
+        - "13133:13133" # health_check extension
+        - "4317:4317"   # OTLP gRPC receiver
+        - "4318:4318"   # OTLP http receiver
+        - "55679:55679" # zpages extension
+      networks:
+        - eda_network
+
+  jaeger:
+    container_name: jaeger
+    hostname: jaeger
+    image: jaegertracing/all-in-one:1.63.0
+    command:
+      - "--prometheus.server-url=http://prometheus:9090"
+      - "--prometheus.query.normalize-duration=true"
+      - "--prometheus.query.normalize-calls=true"
+    ports:
+      - "16686:16686"
+    environment:
+      - METRICS_STORAGE_TYPE=prometheus
+    networks:
+      - eda_network
+
+  prometheus:
+    container_name: prometheus
+    hostname: prometheus
+    image: prom/prometheus:v3.0.0
+    command: [
+      "--config.file=/etc/prometheus/prometheus-config.yml",
+    ]
+    volumes:
+      - $PWD/build/docker/prometheus/prometheus-config.yml:/etc/prometheus/prometheus-config.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - eda_network
+
+  grafana:
+    container_name: grafana
+    hostname: grafana
+    image: grafana/grafana:9.0.9
+    volumes:
+      - $PWD/build/docker/grafana/grafana.ini:/etc/grafana/grafana.ini
+      - $PWD/build/docker/grafana/provisioning/:/etc/grafana/provisioning/
+    ports:
+      - "3000:3000"
+    networks:
+      - eda_network
 
 configs:
   pgpass:

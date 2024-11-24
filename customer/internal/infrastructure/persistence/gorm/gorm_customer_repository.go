@@ -19,15 +19,16 @@ type GormCustomerRepository struct {
 
 var _ repository.CustomerRepository = (*GormCustomerRepository)(nil)
 
-func NewGormCustomerRepository(db *gorm.DB) *GormCustomerRepository {
-	return &GormCustomerRepository{
+func NewGormCustomerRepository(db *gorm.DB) GormCustomerRepository {
+	return GormCustomerRepository{
 		db:     db,
 		mapper: mapper.NewCustomerMapper(),
 	}
 }
 
-func (r *GormCustomerRepository) Save(ctx context.Context, customer *aggregate.Customer) error {
+func (r GormCustomerRepository) Save(ctx context.Context, customer *aggregate.Customer) error {
 	customerPO := r.mapper.ToPersistent(customer)
+
 	result := r.db.WithContext(ctx).
 		Model(&po.Customer{}).
 		Clauses(clause.OnConflict{
@@ -45,7 +46,7 @@ func (r *GormCustomerRepository) Save(ctx context.Context, customer *aggregate.C
 	return nil
 }
 
-func (r *GormCustomerRepository) Update(ctx context.Context, customer *aggregate.Customer) error {
+func (r GormCustomerRepository) Update(ctx context.Context, customer *aggregate.Customer) error {
 	customerPO := r.mapper.ToPersistent(customer)
 	result := r.db.WithContext(ctx).
 		Model(&po.Customer{}).
@@ -64,7 +65,7 @@ func (r *GormCustomerRepository) Update(ctx context.Context, customer *aggregate
 	return nil
 }
 
-func (r *GormCustomerRepository) Find(ctx context.Context, customerID string) (*aggregate.Customer, error) {
+func (r GormCustomerRepository) Find(ctx context.Context, customerID string) (*aggregate.Customer, error) {
 	var customerPO *po.Customer
 	result := r.db.WithContext(ctx).
 		Model(&po.Customer{}).

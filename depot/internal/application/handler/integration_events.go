@@ -2,11 +2,16 @@ package handler
 
 import (
 	"context"
+	"time"
 
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/domain/repository"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/am"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/errorsotel"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/registry"
 	storev1 "github.com/Chengxufeng1994/event-driven-arch-in-go/store/api/store/v1"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type integrationEventHandlers[T ddd.Event] struct {
@@ -16,14 +21,18 @@ type integrationEventHandlers[T ddd.Event] struct {
 
 var _ ddd.EventHandler[ddd.Event] = (*integrationEventHandlers[ddd.Event])(nil)
 
-func NewIntegrationEventHandlers(products repository.ProductCacheRepository, stores repository.StoreCacheRepository) *integrationEventHandlers[ddd.Event] {
-	return &integrationEventHandlers[ddd.Event]{
+func NewIntegrationEventHandlers(
+	reg registry.Registry,
+	products repository.ProductCacheRepository,
+	stores repository.StoreCacheRepository,
+	mws ...am.MessageHandlerMiddleware) am.MessageHandler {
+	return am.NewEventHandler(reg, &integrationEventHandlers[ddd.Event]{
 		products: products,
 		stores:   stores,
-	}
+	}, mws...)
 }
 
-func RegisterIntegrationEventHandlers(subscriber am.RawMessageStream, handlers am.RawMessageHandler) error {
+func RegisterIntegrationEventHandlers(subscriber am.MessageSubscriber, handlers am.MessageHandler) error {
 	_, err := subscriber.Subscribe(storev1.StoreAggregateChannel, handlers, am.MessageFilter{
 		storev1.StoreCreatedEvent,
 		storev1.StoreRebrandedEvent,
@@ -41,7 +50,24 @@ func RegisterIntegrationEventHandlers(subscriber am.RawMessageStream, handlers a
 	return err
 }
 
-func (h integrationEventHandlers[T]) HandleEvent(ctx context.Context, event T) error {
+func (h integrationEventHandlers[T]) HandleEvent(ctx context.Context, event T) (err error) {
+	span := trace.SpanFromContext(ctx)
+	defer func(started time.Time) {
+		if err != nil {
+			span.AddEvent(
+				"Encountered an error handling integration event",
+				trace.WithAttributes(errorsotel.ErrAttrs(err)...),
+			)
+		}
+		span.AddEvent("Handled integration event", trace.WithAttributes(
+			attribute.Int64("TookMS", time.Since(started).Milliseconds()),
+		))
+	}(time.Now())
+
+	span.AddEvent("Handling integration event", trace.WithAttributes(
+		attribute.String("Event", event.EventName()),
+	))
+
 	switch event.EventName() {
 	case storev1.StoreCreatedEvent:
 		return h.onStoreCreated(ctx, event)

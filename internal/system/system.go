@@ -9,20 +9,29 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/config"
-	pkggorm "github.com/Chengxufeng1994/event-driven-arch-in-go/internal/gorm"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/jetstream"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/logger"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/server"
-	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/waiter"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/requestid"
 	"github.com/gin-gonic/gin"
 	"github.com/nats-io/nats.go"
 	"github.com/pressly/goose/v3"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"gorm.io/gorm"
+
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/config"
+	pkggorm "github.com/Chengxufeng1994/event-driven-arch-in-go/internal/gorm"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/jetstream"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/logger"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/rpc"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/server"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/waiter"
 )
 
 type RunFunc func(basename string) error
@@ -32,13 +41,14 @@ type System struct {
 	basename          string
 	logger            logger.Logger
 	cfg               *config.Config
-	gormDB            *gorm.DB
-	gin               *gin.Engine
-	grpcServer        *server.RPCServer
-	genericHTTPServer *server.GenericHTTPServer
+	db                *gorm.DB
 	nc                *nats.Conn
 	js                nats.JetStreamContext
+	gin               *gin.Engine
+	genericHTTPServer *server.GenericHTTPServer
+	grpcServer        *rpc.RPCServer
 	waiter            waiter.Waiter
+	tp                *sdktrace.TracerProvider
 }
 
 var _ Service = (*System)(nil)
@@ -51,7 +61,9 @@ func NewSystem(name, basename string, cfg *config.Config, logger logger.Logger) 
 		logger:   logger,
 	}
 
-	s.gormDB, err = pkggorm.NewGormDB(cfg.Infrastructure)
+	s.initWaiter()
+
+	s.db, err = pkggorm.NewGormDB(cfg.Infrastructure)
 	if err != nil {
 		return nil, errors.New("failed to connect to database")
 	}
@@ -62,12 +74,15 @@ func NewSystem(name, basename string, cfg *config.Config, logger logger.Logger) 
 	}
 	s.js, err = jetstream.NewJetStream(cfg.Infrastructure, s.nc)
 	if err != nil {
+		return nil, errors.New("failed to connect to jetstream")
+	}
+
+	if err = s.initOpenTelemetry(); err != nil {
 		return nil, err
 	}
 
 	s.initGinEngine()
 	s.initGrpcServer(cfg.Server)
-	s.initWaiter()
 
 	return s, nil
 }
@@ -75,12 +90,49 @@ func NewSystem(name, basename string, cfg *config.Config, logger logger.Logger) 
 func (s System) Name() string                     { return s.name }
 func (s System) Basename() string                 { return s.basename }
 func (s System) Config() *config.Config           { return s.cfg }
-func (s System) Database() *gorm.DB               { return s.gormDB }
+func (s System) Database() *gorm.DB               { return s.db }
 func (s System) Gin() *gin.Engine                 { return s.gin }
 func (s System) JetStream() nats.JetStreamContext { return s.js }
 func (s System) Logger() logger.Logger            { return s.logger }
-func (s System) RPC() *server.RPCServer           { return s.grpcServer }
+func (s System) RPC() *rpc.RPCServer              { return s.grpcServer }
 func (s System) Waiter() waiter.Waiter            { return s.waiter }
+
+func (s *System) initOpenTelemetry() error {
+	exporter, err := otlptracegrpc.New(context.Background(),
+		otlptracegrpc.WithEndpoint(s.cfg.Infrastructure.Otel.ExporterEndpoint),
+		otlptracegrpc.WithInsecure(),
+	)
+	if err != nil {
+		return err
+	}
+
+	res, err := resource.New(
+		context.Background(),
+		resource.WithAttributes(
+			semconv.ServiceName(s.cfg.Infrastructure.Otel.ServiceName)),
+	)
+	if err != nil {
+		return err
+	}
+
+	s.tp = sdktrace.NewTracerProvider(
+		sdktrace.WithResource(res),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithBatcher(exporter),
+	)
+
+	otel.SetTracerProvider(s.tp)
+
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
+
+	s.waiter.Cleanup(func() {
+		if err := s.tp.Shutdown(context.Background()); err != nil {
+			s.logger.WithError(err).Error("ran into an issue shutting down the tracer provider")
+		}
+	})
+
+	return nil
+}
 
 func (s *System) initGinEngine() {
 	router := gin.New()
@@ -88,12 +140,20 @@ func (s *System) initGinEngine() {
 	router.Use(cors.Default())
 	router.Use(requestid.New())
 	router.Use(gin.Logger())
+	router.GET("/liveness", HealthCheck)
+	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	s.gin = router
 }
 
-func (s *System) initGrpcServer(cfg *config.Server) {
-	s.grpcServer = server.NewGrpcServer(s.logger, cfg)
+func HealthCheck(c *gin.Context) {
+	message := "OK"
+	c.String(http.StatusOK, "\n"+message)
 }
+
+func (s *System) initGrpcServer(cfg *config.Server) {
+	s.grpcServer = rpc.NewGrpcServer(s.logger, cfg)
+}
+
 func (s *System) initWaiter() {
 	s.waiter = waiter.New(waiter.CatchSignals())
 }
@@ -128,7 +188,7 @@ func (s *System) WaitForWeb(ctx context.Context) error {
 }
 
 func (s *System) WaitForRPC(ctx context.Context) error {
-	address := fmt.Sprintf("%s:%d", s.cfg.Server.GPPC.Host, s.cfg.Server.GPPC.Port)
+	address := fmt.Sprintf("%s:%d", s.cfg.Server.GRPC.Host, s.cfg.Server.GRPC.Port)
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
 		s.logger.Fatalf("failed to listen: %v", err)
@@ -137,7 +197,7 @@ func (s *System) WaitForRPC(ctx context.Context) error {
 
 	eg, gCtx := errgroup.WithContext(ctx)
 	eg.Go(func() error {
-		s.logger.Infof("rpc server started: %d", s.cfg.Server.GPPC.Port)
+		s.logger.Infof("rpc server started: %d", s.cfg.Server.GRPC.Port)
 		defer s.logger.Infof("rpc server shutdown")
 		err := s.RPC().GRPCServer().Serve(lis)
 		if err != nil && !errors.Is(err, grpc.ErrServerStopped) {
@@ -156,7 +216,7 @@ func (s *System) WaitForRPC(ctx context.Context) error {
 			s.RPC().GRPCServer().GracefulStop()
 			close(stopped)
 		}()
-		timeout := time.NewTimer(5 * time.Second)
+		timeout := time.NewTimer(30 * time.Second)
 		select {
 		case <-timeout.C:
 			s.RPC().GRPCServer().Stop()

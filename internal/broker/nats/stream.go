@@ -3,9 +3,12 @@ package nats
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/nats-io/nats.go"
 	"google.golang.org/protobuf/proto"
+	structpb "google.golang.org/protobuf/types/known/structpb"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/am"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/logger"
@@ -21,7 +24,7 @@ type Stream struct {
 	logger     logger.Logger
 }
 
-var _ am.RawMessageStream = (*Stream)(nil)
+var _ am.MessageStream = (*Stream)(nil)
 
 func NewStream(streamName string, js nats.JetStreamContext, logger logger.Logger) *Stream {
 	return &Stream{
@@ -31,13 +34,20 @@ func NewStream(streamName string, js nats.JetStreamContext, logger logger.Logger
 	}
 }
 
-func (s *Stream) Publish(ctx context.Context, topicName string, rawMsg am.RawMessage) (err error) {
+func (s *Stream) Publish(ctx context.Context, topicName string, rawMsg am.Message) (err error) {
 	var data []byte
 
+	metadata, err := structpb.NewStruct(rawMsg.Metadata())
+	if err != nil {
+		return err
+	}
+
 	data, err = proto.Marshal(&StreamMessage{
-		Id:   rawMsg.ID(),
-		Name: rawMsg.MessageName(),
-		Data: rawMsg.Data(),
+		Id:       rawMsg.ID(),
+		Name:     rawMsg.MessageName(),
+		Data:     rawMsg.Data(),
+		Metadata: metadata,
+		SentAt:   timestamppb.New(rawMsg.SentAt()),
 	})
 	if err != nil {
 		return
@@ -61,17 +71,16 @@ func (s *Stream) Publish(ctx context.Context, topicName string, rawMsg am.RawMes
 			case <-future.Ok(): // publish acknowledged
 				return
 			case <-future.Err(): // error ignored; try again
-				// TODO: add some variable delay between tries
+				// TODO add some variable delay between tries
 				tries = tries - 1
 				if tries <= 0 {
-					// TODO: do more than give up
 					s.logger.Errorf("unable to publish message after %d tries", maxRetries)
 					return
 				}
 				future, err = s.js.PublishMsgAsync(future.Msg())
 				if err != nil {
-					// TODO: do more than give up
-					s.logger.WithError(err).Error("failed to publish message")
+					// TODO do more than give up
+					s.logger.WithError(err).Errorf("failed to publish a message")
 					return
 				}
 			}
@@ -81,7 +90,7 @@ func (s *Stream) Publish(ctx context.Context, topicName string, rawMsg am.RawMes
 	return
 }
 
-func (s *Stream) Subscribe(topicName string, handler am.RawMessageHandler, options ...am.SubscriberOption) (am.Subscription, error) {
+func (s *Stream) Subscribe(topicName string, handler am.MessageHandler, options ...am.SubscriberOption) (am.Subscription, error) {
 	var err error
 
 	s.mu.Lock()
@@ -148,7 +157,7 @@ func (s *Stream) Unsubscribe() error {
 	return nil
 }
 
-func (s *Stream) handleMsg(cfg am.SubscriberConfig, handler am.RawMessageHandler) func(*nats.Msg) {
+func (s *Stream) handleMsg(cfg am.SubscriberConfig, handler am.MessageHandler) func(*nats.Msg) {
 	var filters map[string]struct{}
 	if len(cfg.MessageFilters()) > 0 {
 		filters = make(map[string]struct{})
@@ -178,15 +187,18 @@ func (s *Stream) handleMsg(cfg am.SubscriberConfig, handler am.RawMessageHandler
 		}
 
 		msg := &rawMessage{
-			id:       m.GetId(),
-			name:     m.GetName(),
-			subject:  natsMsg.Subject,
-			data:     m.GetData(),
-			acked:    false,
-			ackFn:    func() error { return natsMsg.Ack() },
-			nackFn:   func() error { return natsMsg.Nak() },
-			extendFn: func() error { return natsMsg.InProgress() },
-			killFn:   func() error { return natsMsg.Term() },
+			id:         m.GetId(),
+			name:       m.GetName(),
+			subject:    natsMsg.Subject,
+			data:       m.GetData(),
+			metadata:   m.GetMetadata().AsMap(),
+			sentAt:     m.SentAt.AsTime(),
+			receivedAt: time.Now(),
+			acked:      false,
+			ackFn:      func() error { return natsMsg.Ack() },
+			nackFn:     func() error { return natsMsg.Nak() },
+			extendFn:   func() error { return natsMsg.InProgress() },
+			killFn:     func() error { return natsMsg.Term() },
 		}
 
 		wCtx, cancel := context.WithTimeout(context.Background(), cfg.AckWait())

@@ -8,6 +8,7 @@ import (
 
 	basketv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/basket/api/basket/v1"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/application/usecase"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/infrastructure/constants"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/di"
 )
 
@@ -29,9 +30,9 @@ func (s serverTx) StartBasket(ctx context.Context, request *basketv1.StartBasket
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *gorm.DB) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*gorm.DB))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-	next := server{app: di.Get(ctx, "app").(usecase.BasketUseCase)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(usecase.BasketUseCase)}
 
 	return next.StartBasket(ctx, request)
 }
@@ -40,9 +41,9 @@ func (s serverTx) CancelBasket(ctx context.Context, request *basketv1.CancelBask
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *gorm.DB) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*gorm.DB))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-	next := server{app: di.Get(ctx, "app").(usecase.BasketUseCase)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(usecase.BasketUseCase)}
 
 	return next.CancelBasket(ctx, request)
 }
@@ -51,9 +52,9 @@ func (s serverTx) CheckoutBasket(ctx context.Context, request *basketv1.Checkout
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *gorm.DB) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*gorm.DB))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-	next := server{app: di.Get(ctx, "app").(usecase.BasketUseCase)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(usecase.BasketUseCase)}
 
 	return next.CheckoutBasket(ctx, request)
 }
@@ -62,9 +63,9 @@ func (s serverTx) AddItem(ctx context.Context, request *basketv1.AddItemRequest)
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *gorm.DB) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*gorm.DB))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-	next := server{app: di.Get(ctx, "app").(usecase.BasketUseCase)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(usecase.BasketUseCase)}
 
 	return next.AddItem(ctx, request)
 }
@@ -73,9 +74,9 @@ func (s serverTx) RemoveItem(ctx context.Context, request *basketv1.RemoveItemRe
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *gorm.DB) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*gorm.DB))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-	next := server{app: di.Get(ctx, "app").(usecase.BasketUseCase)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(usecase.BasketUseCase)}
 
 	return next.RemoveItem(ctx, request)
 }
@@ -84,9 +85,9 @@ func (s serverTx) GetBasket(ctx context.Context, request *basketv1.GetBasketRequ
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *gorm.DB) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*gorm.DB))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*gorm.DB))
 
-	next := server{app: di.Get(ctx, "app").(usecase.BasketUseCase)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(usecase.BasketUseCase)}
 
 	return next.GetBasket(ctx, request)
 }

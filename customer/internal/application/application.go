@@ -29,17 +29,17 @@ type (
 
 var _ usecase.CustomerUsecase = (*CustomerApplication)(nil)
 
-func NewCustomerApplication(
+func New(
 	customerRepository repository.CustomerRepository,
-	domainEventDispatcher ddd.EventPublisher[ddd.AggregateEvent],
+	domainEventPublisher ddd.EventPublisher[ddd.AggregateEvent],
 ) *CustomerApplication {
 	return &CustomerApplication{
 		appCommands: appCommands{
-			RegisterCustomerHandler:  command.NewRegisterCustomerHandler(customerRepository, domainEventDispatcher),
-			ChangeSmsNumberHandler:   command.NewChangeSmsNumberHandler(customerRepository, domainEventDispatcher),
-			AuthorizeCustomerHandler: command.NewAuthorizeCustomerHandler(customerRepository, domainEventDispatcher),
-			EnableCustomerHandler:    command.NewEnableCustomerHandler(customerRepository, domainEventDispatcher),
-			DisableCustomerHandler:   command.NewDisableCustomerHandler(customerRepository, domainEventDispatcher),
+			RegisterCustomerHandler:  command.NewRegisterCustomerHandler(customerRepository, domainEventPublisher),
+			ChangeSmsNumberHandler:   command.NewChangeSmsNumberHandler(customerRepository, domainEventPublisher),
+			AuthorizeCustomerHandler: command.NewAuthorizeCustomerHandler(customerRepository, domainEventPublisher),
+			EnableCustomerHandler:    command.NewEnableCustomerHandler(customerRepository, domainEventPublisher),
+			DisableCustomerHandler:   command.NewDisableCustomerHandler(customerRepository, domainEventPublisher),
 		},
 		appQueries: appQueries{
 			GetCustomerHandler: query.NewGetCustomerHandler(customerRepository),

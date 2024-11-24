@@ -76,9 +76,9 @@ func TestStoresProducer(t *testing.T) {
 			"a StoreCreated message": func(states []models.ProviderState) (message.Body, message.Metadata, error) {
 				// Assign
 				dispatcher := ddd.NewEventDispatcher[ddd.Event]()
-				app := application.NewStoreApplication(stores, products, mall, catalog, dispatcher)
-				publisher := am.NewFakeMessagePublisher[ddd.Event]()
-				handler := NewDomainEventHandler(publisher)
+				app := application.New(stores, products, mall, catalog, dispatcher)
+				publisher := am.NewFakeEventPublisher()
+				handler := NewDomainEventHandlers(publisher)
 				RegisterDomainEventHandlers(dispatcher, handler)
 
 				// Act
@@ -106,9 +106,9 @@ func TestStoresProducer(t *testing.T) {
 			},
 			"a StoreRebranded message": func(states []models.ProviderState) (message.Body, message.Metadata, error) {
 				dispatcher := ddd.NewEventDispatcher[ddd.Event]()
-				app := application.NewStoreApplication(stores, products, mall, catalog, dispatcher)
-				publisher := am.NewFakeMessagePublisher[ddd.Event]()
-				handler := NewDomainEventHandler(publisher)
+				app := application.New(stores, products, mall, catalog, dispatcher)
+				publisher := am.NewFakeEventPublisher()
+				handler := NewDomainEventHandlers(publisher)
 				RegisterDomainEventHandlers(dispatcher, handler)
 
 				store := aggregate.NewStore("store-id")

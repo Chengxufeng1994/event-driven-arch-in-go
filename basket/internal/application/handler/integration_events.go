@@ -2,32 +2,34 @@ package handler
 
 import (
 	"context"
+	"time"
 
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/basket/internal/domain/repository"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/am"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/errorsotel"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/registry"
 	storev1 "github.com/Chengxufeng1994/event-driven-arch-in-go/store/api/store/v1"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
-type IntegrationEventHandler[T ddd.Event] struct {
-	storeCacheRepository   repository.StoreCacheRepository
-	productCacheRepository repository.ProductCacheRepository
+type integrationEventHandler[T ddd.Event] struct {
+	stores   repository.StoreCacheRepository
+	products repository.ProductCacheRepository
 }
 
-var _ ddd.EventHandler[ddd.Event] = (*IntegrationEventHandler[ddd.Event])(nil)
+var _ ddd.EventHandler[ddd.Event] = (*integrationEventHandler[ddd.Event])(nil)
 
-func NewIntegrationEventHandler(storeCacheRepository repository.StoreCacheRepository, productCacheRepository repository.ProductCacheRepository) ddd.EventHandler[ddd.Event] {
-	return &IntegrationEventHandler[ddd.Event]{
-		storeCacheRepository:   storeCacheRepository,
-		productCacheRepository: productCacheRepository,
-	}
+func NewIntegrationEventHandlers(reg registry.Registry, stores repository.StoreCacheRepository, products repository.ProductCacheRepository, mws ...am.MessageHandlerMiddleware) am.MessageHandler {
+	return am.NewEventHandler(reg, integrationEventHandler[ddd.Event]{
+		stores:   stores,
+		products: products,
+	}, mws...)
 }
 
-func RegisterIntegrationEventHandlers(subscriber am.EventSubscriber, handler ddd.EventHandler[ddd.Event]) error {
-	evtMsgHandler := am.MessageHandlerFunc[am.IncomingEventMessage](func(ctx context.Context, eventMsg am.IncomingEventMessage) error {
-		return handler.HandleEvent(ctx, eventMsg)
-	})
-	_, err := subscriber.Subscribe(storev1.StoreAggregateChannel, evtMsgHandler, am.MessageFilter{
+func RegisterIntegrationEventHandlers(subscriber am.MessageSubscriber, handlers am.MessageHandler) error {
+	_, err := subscriber.Subscribe(storev1.StoreAggregateChannel, handlers, am.MessageFilter{
 		storev1.StoreCreatedEvent,
 		storev1.StoreRebrandedEvent,
 	}, am.GroupName("baskets-stores"))
@@ -35,7 +37,7 @@ func RegisterIntegrationEventHandlers(subscriber am.EventSubscriber, handler ddd
 		return err
 	}
 
-	_, err = subscriber.Subscribe(storev1.ProductAggregateChannel, evtMsgHandler, am.MessageFilter{
+	_, err = subscriber.Subscribe(storev1.ProductAggregateChannel, handlers, am.MessageFilter{
 		storev1.ProductAddedEvent,
 		storev1.ProductRebrandedEvent,
 		storev1.ProductPriceIncreasedEvent,
@@ -46,7 +48,24 @@ func RegisterIntegrationEventHandlers(subscriber am.EventSubscriber, handler ddd
 	return err
 }
 
-func (h IntegrationEventHandler[T]) HandleEvent(ctx context.Context, event T) error {
+func (h integrationEventHandler[T]) HandleEvent(ctx context.Context, event T) (err error) {
+	span := trace.SpanFromContext(ctx)
+	defer func(started time.Time) {
+		if err != nil {
+			span.AddEvent(
+				"Encountered an error handling integration event",
+				trace.WithAttributes(errorsotel.ErrAttrs(err)...),
+			)
+		}
+		span.AddEvent("Handled integration event", trace.WithAttributes(
+			attribute.Int64("TookMS", time.Since(started).Milliseconds()),
+		))
+	}(time.Now())
+
+	span.AddEvent("Handling integration event", trace.WithAttributes(
+		attribute.String("Event", event.EventName()),
+	))
+
 	switch event.EventName() {
 	case storev1.StoreCreatedEvent:
 		return h.onStoreCreated(ctx, event)
@@ -65,31 +84,31 @@ func (h IntegrationEventHandler[T]) HandleEvent(ctx context.Context, event T) er
 
 	return nil
 }
-func (h IntegrationEventHandler[T]) onStoreCreated(ctx context.Context, event ddd.Event) error {
+func (h integrationEventHandler[T]) onStoreCreated(ctx context.Context, event ddd.Event) error {
 	payload := event.Payload().(*storev1.StoreCreated)
-	return h.storeCacheRepository.Add(ctx, payload.GetId(), payload.GetName())
+	return h.stores.Add(ctx, payload.GetId(), payload.GetName())
 }
 
-func (h IntegrationEventHandler[T]) onStoreRebranded(ctx context.Context, event ddd.Event) error {
+func (h integrationEventHandler[T]) onStoreRebranded(ctx context.Context, event ddd.Event) error {
 	payload := event.Payload().(*storev1.StoreRebranded)
-	return h.storeCacheRepository.Rename(ctx, payload.GetId(), payload.GetName())
+	return h.stores.Rename(ctx, payload.GetId(), payload.GetName())
 }
-func (h IntegrationEventHandler[T]) onProductAdded(ctx context.Context, event ddd.Event) error {
+func (h integrationEventHandler[T]) onProductAdded(ctx context.Context, event ddd.Event) error {
 	payload := event.Payload().(*storev1.ProductAdded)
-	return h.productCacheRepository.Add(ctx, payload.GetId(), payload.GetStoreId(), payload.GetName(), payload.GetPrice())
+	return h.products.Add(ctx, payload.GetId(), payload.GetStoreId(), payload.GetName(), payload.GetPrice())
 }
 
-func (h IntegrationEventHandler[T]) onProductRebranded(ctx context.Context, event ddd.Event) error {
+func (h integrationEventHandler[T]) onProductRebranded(ctx context.Context, event ddd.Event) error {
 	payload := event.Payload().(*storev1.ProductRebranded)
-	return h.productCacheRepository.Rebrand(ctx, payload.GetId(), payload.GetName())
+	return h.products.Rebrand(ctx, payload.GetId(), payload.GetName())
 }
 
-func (h IntegrationEventHandler[T]) onProductPriceChanged(ctx context.Context, event ddd.Event) error {
+func (h integrationEventHandler[T]) onProductPriceChanged(ctx context.Context, event ddd.Event) error {
 	payload := event.Payload().(*storev1.ProductPriceChanged)
-	return h.productCacheRepository.UpdatePrice(ctx, payload.GetId(), payload.GetDelta())
+	return h.products.UpdatePrice(ctx, payload.GetId(), payload.GetDelta())
 }
 
-func (h IntegrationEventHandler[T]) onProductRemoved(ctx context.Context, event ddd.Event) error {
+func (h integrationEventHandler[T]) onProductRemoved(ctx context.Context, event ddd.Event) error {
 	payload := event.Payload().(*storev1.ProductRemoved)
-	return h.productCacheRepository.Remove(ctx, payload.GetId())
+	return h.products.Remove(ctx, payload.GetId())
 }

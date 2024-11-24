@@ -141,4 +141,3 @@ message GetProductRequest {
 message GetProductResponse {
   Product product = 1;
 }
-

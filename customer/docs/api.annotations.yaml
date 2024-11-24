@@ -8,11 +8,11 @@ http:
     - selector: api.customer.v1.CustomersService.ChangeSmsNumber
       put: /api/v1/customers/{id}/change-sms
       body: "*"
-    - selector: api.customer.v1.CustomersService.GetCustomer
-      get: /api/v1/customers/{id}
     - selector: api.customer.v1.CustomersService.EnableCustomer
       put: /api/v1/customers/{id}/enable
       body: "*"
     - selector: api.customer.v1.CustomersService.DisableCustomer
       put: /api/v1/customers/{id}/disable
       body: "*"
+    - selector: api.customer.v1.CustomersService.GetCustomer
+      get: /api/v1/customers/{id}

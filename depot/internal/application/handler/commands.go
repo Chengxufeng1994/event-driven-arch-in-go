@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"time"
 
 	depotv1 "github.com/Chengxufeng1994/event-driven-arch-in-go/depot/api/depot/v1"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/application/port/in/command"
@@ -9,22 +10,26 @@ import (
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/depot/internal/domain/valueobject"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/am"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/ddd"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/errorsotel"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/registry"
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
-type CommandHandlers[T ddd.Command] struct {
+type commandHandlers struct {
 	app usecase.ShoppingListUseCase
 }
 
-var _ ddd.CommandHandler[ddd.Command] = (*CommandHandlers[ddd.Command])(nil)
+var _ ddd.CommandHandler[ddd.Command] = (*commandHandlers)(nil)
 
-func NewCommandHandlers(app usecase.ShoppingListUseCase) ddd.CommandHandler[ddd.Command] {
-	return &CommandHandlers[ddd.Command]{
+func NewCommandHandlers(reg registry.Registry, app usecase.ShoppingListUseCase, replyPublisher am.ReplyPublisher, mws ...am.MessageHandlerMiddleware) am.MessageHandler {
+	return am.NewCommandHandler(reg, replyPublisher, commandHandlers{
 		app: app,
-	}
+	}, mws...)
 }
 
-func RegisterCommandHandlers(subscriber am.RawMessageSubscriber, handlers am.RawMessageHandler) error {
+func RegisterCommandHandlers(subscriber am.MessageSubscriber, handlers am.MessageHandler) error {
 	_, err := subscriber.Subscribe(depotv1.CommandChannel, handlers, am.MessageFilter{
 		depotv1.CreateShoppingListCommand,
 		depotv1.CancelShoppingListCommand,
@@ -33,7 +38,24 @@ func RegisterCommandHandlers(subscriber am.RawMessageSubscriber, handlers am.Raw
 	return err
 }
 
-func (h *CommandHandlers[T]) HandleCommand(ctx context.Context, cmd T) (ddd.Reply, error) {
+func (h commandHandlers) HandleCommand(ctx context.Context, cmd ddd.Command) (reply ddd.Reply, err error) {
+	span := trace.SpanFromContext(ctx)
+	defer func(started time.Time) {
+		if err != nil {
+			span.AddEvent(
+				"Encountered an error handling command",
+				trace.WithAttributes(errorsotel.ErrAttrs(err)...),
+			)
+		}
+		span.AddEvent("Handled command", trace.WithAttributes(
+			attribute.Int64("TookMS", time.Since(started).Milliseconds()),
+		))
+	}(time.Now())
+
+	span.AddEvent("Handling command", trace.WithAttributes(
+		attribute.String("Command", cmd.CommandName()),
+	))
+
 	switch cmd.CommandName() {
 	case depotv1.CreateShoppingListCommand:
 		return h.doCreateShoppingList(ctx, cmd)
@@ -46,7 +68,7 @@ func (h *CommandHandlers[T]) HandleCommand(ctx context.Context, cmd T) (ddd.Repl
 	return nil, nil
 }
 
-func (h CommandHandlers[T]) doCreateShoppingList(ctx context.Context, cmd T) (ddd.Reply, error) {
+func (h commandHandlers) doCreateShoppingList(ctx context.Context, cmd ddd.Command) (ddd.Reply, error) {
 	payload := cmd.Payload().(*depotv1.CreateShoppingList)
 
 	id := uuid.New().String()
@@ -69,7 +91,7 @@ func (h CommandHandlers[T]) doCreateShoppingList(ctx context.Context, cmd T) (dd
 	return ddd.NewReply(depotv1.CreatedShoppingListReply, &depotv1.CreatedShoppingList{Id: id}), err
 }
 
-func (h CommandHandlers[T]) doCancelShoppingList(ctx context.Context, cmd T) (ddd.Reply, error) {
+func (h commandHandlers) doCancelShoppingList(ctx context.Context, cmd ddd.Command) (ddd.Reply, error) {
 	payload := cmd.Payload().(*depotv1.CancelShoppingList)
 
 	err := h.app.CancelShoppingList(ctx, command.CancelShoppingList{ID: payload.GetId()})
@@ -77,7 +99,7 @@ func (h CommandHandlers[T]) doCancelShoppingList(ctx context.Context, cmd T) (dd
 	return nil, err
 }
 
-func (h CommandHandlers[T]) doInitiateShopping(ctx context.Context, cmd T) (ddd.Reply, error) {
+func (h commandHandlers) doInitiateShopping(ctx context.Context, cmd ddd.Command) (ddd.Reply, error) {
 	payload := cmd.Payload().(*depotv1.InitiateShopping)
 
 	err := h.app.InitiateShopping(ctx, command.InitiateShopping{ID: payload.GetId()})
