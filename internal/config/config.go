@@ -7,6 +7,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/discovery/consul"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/logger"
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
@@ -93,9 +94,10 @@ func (s *Services) Decode(v string) error {
 }
 
 type Infrastructure struct {
-	GORM *GORM `mapstructure:"gorm"`
-	Nats *Nats `mapstructure:"nats"`
-	Otel *Otel `mapstructure:"otel"`
+	GORM   *GORM                              `mapstructure:"gorm"`
+	Nats   *Nats                              `mapstructure:"nats"`
+	Otel   *Otel                              `mapstructure:"otel"`
+	Consul *consul.ConsulDiscoverClientConfig `mapstructure:"consul"`
 }
 
 type GORM struct {

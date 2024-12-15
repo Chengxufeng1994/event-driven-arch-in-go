@@ -152,6 +152,18 @@ services:
     networks:
       - eda_network
 
+  consul:
+    container_name: consul
+    hostname: consul
+    image: consul:1.15.4
+    restart: always
+    ports:
+      - "8500:8500"
+    environment:
+      - CONSUL_BIND_INTERFACE=eth0
+    networks:
+      - eda_network
+
 configs:
   pgpass:
     content: db:5432:*:postgres:postgres

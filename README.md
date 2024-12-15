@@ -15,6 +15,7 @@
 * [Pointer Receiver 不能使用 value Type 賦值給 interface value](https://mileslin.github.io/2020/08/Golang/為什麼-Pointer-Receiver-不能使用-Value-Type-賦值給-Interface-Value/)
 * [nats.io](https://docs.nats.io)
 * [event driven architecture in golan](https://www.packtpub.com/en-us/product/event-driven-architecture-in-golang-9781803238012)
+* [microservices with go: building scalable and reliable microservices with go](https://www.packtpub.com/en-us/product/microservices-with-go-9781804618196)
 * [Medium - the real clean architecture](https://medium.com/clean-android-dev/the-real-clean-architecture-in-android-part-1-s-o-l-i-d-6a661b103451)
 * [Github - ardanlabs/service](https://github.com/ardanlabs/service)
 * [Github - IDDD Samples](https://github.com/VaughnVernon/IDDD_Samples/tree/master)
@@ -35,10 +36,4 @@
 * [gorm-otel](https://www.liwenzhou.com/posts/Go/gorm-otel/)
 * [otel-go-contrib](https://github.com/open-telemetry/opentelemetry-go-contrib/tree/main)
 * [時光之鏡：透視過去、現在與未來的 Observability](https://ithelp.ithome.com.tw/users/20162175/ironman/6445)
-
-Only in Chapter11: deployment
-Only in Chapter12/cmd: busywork
-Only in Chapter12/deployment/application: .terraform.lock.hcl
-Only in Chapter12/deployment/infrastructure: .terraform.lock.hcl
-Only in Chapter12/internal: postgresotel
-Files Chapter11/internal/system/system.go and Chapter12/internal/system/system.go differ
+* [Microservice Registration And Discovery With Consul In Go](https://www.youtube.com/watch?v=OvVJRCEREto)

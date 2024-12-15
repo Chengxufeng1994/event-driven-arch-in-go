@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log"
 	"net"
 	"net/http"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/requestid"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
 	"github.com/pressly/goose/v3"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -26,6 +28,8 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/config"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/discovery"
+	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/discovery/consul"
 	pkggorm "github.com/Chengxufeng1994/event-driven-arch-in-go/internal/gorm"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/jetstream"
 	"github.com/Chengxufeng1994/event-driven-arch-in-go/internal/logger"
@@ -49,6 +53,7 @@ type System struct {
 	grpcServer        *rpc.RPCServer
 	waiter            waiter.Waiter
 	tp                *sdktrace.TracerProvider
+	discovery         discovery.Discovery
 }
 
 var _ Service = (*System)(nil)
@@ -83,6 +88,29 @@ func NewSystem(name, basename string, cfg *config.Config, logger logger.Logger) 
 
 	s.initGinEngine()
 	s.initGrpcServer(cfg.Server)
+	s.initConsul(cfg.Infrastructure.Consul)
+
+	// config := consulapi.DefaultConfig()
+	// cli, err := consulapi.NewClient(config)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// reg := &consulapi.AgentServiceRegistration{
+	// 	// ID:      fmt.Sprintf("%s-%s", s.basename, uuid),
+	// 	ID:      fmt.Sprintf("monolith"),
+	// 	Name:    s.basename,
+	// 	Port:    8000,
+	// 	Address: "host.docker.internal",
+	// 	Check: &consulapi.AgentServiceCheck{
+	// 		HTTP:     fmt.Sprintf("http://%s:%d/health", "host.docker.internal", 8000),
+	// 		Interval: "5s",
+	// 		Timeout:  "5s",
+	// 	},
+	// }
+
+	// if err := cli.Agent().ServiceRegister(reg); err != nil {
+	// 	return nil, err
+	// }
 
 	return s, nil
 }
@@ -152,6 +180,10 @@ func HealthCheck(c *gin.Context) {
 
 func (s *System) initGrpcServer(cfg *config.Server) {
 	s.grpcServer = rpc.NewGrpcServer(s.logger, cfg)
+}
+
+func (s *System) initConsul(cfg *consul.ConsulDiscoverClientConfig) {
+	s.discovery = consul.New(cfg)
 }
 
 func (s *System) initWaiter() {
@@ -248,4 +280,59 @@ func (app *System) WaitForStream(ctx context.Context) error {
 	})
 
 	return eg.Wait()
+}
+
+func (app *System) WaitForDiscovery(ctx context.Context) error {
+	serviceName := app.cfg.Infrastructure.Consul.ServiceName
+	instanceID := fmt.Sprintf("%s-%s", serviceName, uuid.New().String())
+	host := GetLocalIP()
+	port := app.cfg.Server.HTTP.Port
+
+	eg, gCtx := errgroup.WithContext(ctx)
+	eg.Go(func() error {
+		defer app.logger.Infof("register service: %s", serviceName)
+
+		err := app.discovery.Register(
+			ctx,
+			serviceName,
+			instanceID,
+			host,
+			port,
+		)
+
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
+	eg.Go(func() error {
+		<-gCtx.Done()
+		return app.discovery.DeRegister(ctx, serviceName, instanceID)
+	})
+	return eg.Wait()
+}
+
+// 獲取本機 IP 地址
+func GetLocalIP() string {
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		log.Fatalf("Error getting network interfaces: %v", err)
+	}
+
+	for _, i := range interfaces {
+		addrs, err := i.Addrs()
+		if err != nil {
+			log.Fatalf("Error getting addresses: %v", err)
+		}
+
+		for _, addr := range addrs {
+			// 過濾 IPv4 地址
+			if ipNet, ok := addr.(*net.IPNet); ok && !ipNet.IP.IsLoopback() && ipNet.IP.To4() != nil {
+				return ipNet.IP.String()
+			}
+		}
+	}
+	log.Fatal("No valid IP address found")
+	return ""
 }

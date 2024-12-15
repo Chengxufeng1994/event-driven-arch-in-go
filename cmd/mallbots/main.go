@@ -47,7 +47,7 @@ func newMonolith() *monolith.MonolithApplication {
 		}
 	})
 
-	s, err := system.NewSystem("MALL BOTS", "mallbots-system", cfg, log)
+	s, err := system.NewSystem("MALL BOTS", "monolith", cfg, log)
 	if err != nil {
 		log.Errorf("failed to new system: %v", err)
 		return nil

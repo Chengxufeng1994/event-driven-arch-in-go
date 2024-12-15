@@ -15,7 +15,7 @@ server:
 
   http:
     host: 0.0.0.0
-    port: 8080
+    port: 8000
 
   https:
     host: 0.0.0.0
@@ -43,7 +43,7 @@ infrastructure:
     # dsn: "host=localhost user=ordering_user password=ordering_pass dbname=ordering port=5432 search_path=ordering,public sslmode=disable TimeZone=UTC"
     # dsn: "host=localhost user=payments_user password=payments_pass dbname=payments port=5432 search_path=payments,public sslmode=disable TimeZone=UTC"
     # dsn: "host=localhost user=search_user password=search_pass dbname=search port=5432 search_path=search,public sslmode=disable TimeZone=UTC"
-    x_life_time: 7200
+    max_life_time: 7200
     max_idle_time: 7200
     max_open_conns: 150
     max_idle_conns: 100
@@ -61,3 +61,8 @@ infrastructure:
   otel:
     service_name: mallbots
     exporter_endpoint: "localhost:4317"
+
+  consul:
+    consul_host: "localhost"
+    consul_port: 8500
+    service_name: monolith
