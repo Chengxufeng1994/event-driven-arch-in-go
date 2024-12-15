@@ -65,7 +65,7 @@ func (app MonolithApplication) Run() error {
 	// 	static.ServeHTTP(ctx.Writer, ctx.Request)
 	// })
 
-	app.Waiter().Add(app.WaitForWeb, app.WaitForRPC, app.WaitForStream)
+	app.Waiter().Add(app.WaitForWeb, app.WaitForRPC, app.WaitForStream, app.WaitForDiscovery)
 
 	go func() {
 		for {

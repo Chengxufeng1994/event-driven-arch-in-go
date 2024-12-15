@@ -15,7 +15,7 @@ server:
 
   http:
     host: 0.0.0.0
-    port: 8080
+    port: 8000
 
   https:
     host: 0.0.0.0
@@ -61,3 +61,8 @@ infrastructure:
   otel:
     service_name: mallbots
     exporter_endpoint: "localhost:4317"
+
+  consul:
+    consul_host: "localhost"
+    consul_port: 8500
+    service_name: monolith
